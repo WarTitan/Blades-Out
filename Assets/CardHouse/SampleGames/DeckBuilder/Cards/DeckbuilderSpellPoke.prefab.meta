@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: b1e465bac1d7a8b45bcdeaf2d9885bb8
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/SampleGames/DeckBuilder/Cards/DeckbuilderSpellPoke.prefab
+  uploadId: 742285

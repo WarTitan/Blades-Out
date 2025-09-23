@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: db9764226ef1ab442be8bd6f197f76e6
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/TestScenes/MultiplayerBoardTest.unity
+  uploadId: 742285

@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 29c04dc99e21a1443b6d6f3e5fd1a6a3
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/Scripts/Seekers/Vector3/AnimCurveVector3Seeker.cs
+  uploadId: 742285

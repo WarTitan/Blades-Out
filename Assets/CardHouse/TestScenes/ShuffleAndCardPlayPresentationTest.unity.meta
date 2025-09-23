@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: df3c8ae92faf7ee458268a66b7fc52c7
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/TestScenes/ShuffleAndCardPlayPresentationTest.unity
+  uploadId: 742285

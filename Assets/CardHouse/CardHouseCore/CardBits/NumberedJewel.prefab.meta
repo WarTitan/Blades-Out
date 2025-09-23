@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 87f1a8534e86b1647b89173caa696976
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/CardBits/NumberedJewel.prefab
+  uploadId: 742285

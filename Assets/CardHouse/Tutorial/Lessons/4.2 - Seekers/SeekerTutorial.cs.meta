@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: ff416c77c15ed654fb551097470157c5
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/Tutorial/Lessons/4.2 - Seekers/SeekerTutorial.cs
+  uploadId: 742285

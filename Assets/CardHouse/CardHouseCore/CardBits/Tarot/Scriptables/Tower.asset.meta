@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 0f46268dd668c5e4dbe3d7cb8ffcf4a5
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/CardBits/Tarot/Scriptables/Tower.asset
+  uploadId: 742285

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 90297d653f6674f47bc3ae0d66e198a4
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/Tutorial/Overlay/EventSystem.prefab
+  uploadId: 742285

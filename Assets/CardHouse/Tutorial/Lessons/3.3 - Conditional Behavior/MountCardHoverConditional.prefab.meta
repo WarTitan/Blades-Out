@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 904000ecd8c9e9045a4965cafd9367ce
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/Tutorial/Lessons/3.3 - Conditional Behavior/MountCardHoverConditional.prefab
+  uploadId: 742285

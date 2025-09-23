@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: ce368de8d04591549af795cbd8bdb534
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/CardBits/Poker/Scriptables/Standard/Clubs
+    4.asset
+  uploadId: 742285

@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 95c96a97b6e17d141ac6955fc92b0826
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/Scripts/ConditionalOperators/GroupConditional.cs
+  uploadId: 742285

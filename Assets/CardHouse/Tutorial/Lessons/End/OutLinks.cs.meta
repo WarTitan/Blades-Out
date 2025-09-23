@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 02e529802f8a9484cb4937f6b49e1aae
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/Tutorial/Lessons/End/OutLinks.cs
+  uploadId: 742285

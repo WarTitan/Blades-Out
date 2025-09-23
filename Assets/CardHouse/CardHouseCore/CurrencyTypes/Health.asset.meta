@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f66e6e18bb53e3541afcb59796d42820
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/CurrencyTypes/Health.asset
+  uploadId: 742285

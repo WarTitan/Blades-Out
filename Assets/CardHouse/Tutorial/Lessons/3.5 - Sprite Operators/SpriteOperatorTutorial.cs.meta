@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 5f5e0128154b5974c8da3865b6524415
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/Tutorial/Lessons/3.5 - Sprite Operators/SpriteOperatorTutorial.cs
+  uploadId: 742285

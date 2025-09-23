@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 0690a212d3a9cf14ca87a4d5ffce5357
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/Third-Party Notices/CC0_Creative_Commons_License.txt
+  uploadId: 742285

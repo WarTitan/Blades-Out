@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 152cdcf1c1c4575459620fe5c3501847
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/SampleGames/MemoryMatch/Prefabs/ParticleBurst.prefab
+  uploadId: 742285

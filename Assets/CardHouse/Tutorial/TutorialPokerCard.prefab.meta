@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: cfa7a50959dca0c459aac886086df76f
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/Tutorial/TutorialPokerCard.prefab
+  uploadId: 742285

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 212771e626ce09b4fb35a62643ee67d0
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/CurrencyTypes/Gems.asset
+  uploadId: 742285

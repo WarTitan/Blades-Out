@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 45f50b39a6ea6564b868df1154ff84a8
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/Scripts/Seekers/Components/BaseSeekerComponent.cs
+  uploadId: 742285

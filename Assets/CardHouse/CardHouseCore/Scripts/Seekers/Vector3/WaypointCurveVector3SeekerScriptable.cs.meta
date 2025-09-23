@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 505f32ab6a28d8446aae2c4c5662d8d5
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/Scripts/Seekers/Vector3/WaypointCurveVector3SeekerScriptable.cs
+  uploadId: 742285

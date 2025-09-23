@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 53fb01ad21cac614ab99a4266027eda2
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/Tutorial/Lessons/5.3 - Custom Gates/PlantGates.prefab
+  uploadId: 742285

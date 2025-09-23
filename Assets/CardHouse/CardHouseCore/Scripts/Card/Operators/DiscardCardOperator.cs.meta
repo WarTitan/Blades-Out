@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 646b9e362b160ff49a610f21f39a87e4
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/Scripts/Card/Operators/DiscardCardOperator.cs
+  uploadId: 742285

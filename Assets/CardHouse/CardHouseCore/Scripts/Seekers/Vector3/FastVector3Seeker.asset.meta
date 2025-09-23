@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: bdfff31d81ccf7f4a97fc021aceea5ac
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/Scripts/Seekers/Vector3/FastVector3Seeker.asset
+  uploadId: 742285

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 0ba2a742026126f498ca76981686a7ad
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/CardGroupPrefabs/CardStackDiscard.prefab
+  uploadId: 742285

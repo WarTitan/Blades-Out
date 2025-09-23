@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f3a6adeecd7ab35429b4cc154c4f0d57
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/CardBits/Tarot/Scriptables/Wands 3.asset
+  uploadId: 742285

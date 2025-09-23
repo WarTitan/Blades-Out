@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 5a8117b2823986c4da039a74b821753c
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/Tutorial/Lessons/3.4 - Clickable Focus/MountCardClickable.prefab
+  uploadId: 742285

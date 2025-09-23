@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 960e2db663bb236418f72b00647d834f
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/CardBits/Poker/Scripts/PokerCard.cs
+  uploadId: 742285

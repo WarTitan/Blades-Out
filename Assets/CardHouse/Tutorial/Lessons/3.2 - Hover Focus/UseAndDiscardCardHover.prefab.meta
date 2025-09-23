@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: d6d5ea3128ba6cd4290fe15cc78d4975
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/Tutorial/Lessons/3.2 - Hover Focus/UseAndDiscardCardHover.prefab
+  uploadId: 742285

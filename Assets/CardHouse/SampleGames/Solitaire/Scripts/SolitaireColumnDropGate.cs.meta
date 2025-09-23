@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: d9760a2d33cef3240944698bab4c0744
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/SampleGames/Solitaire/Scripts/SolitaireColumnDropGate.cs
+  uploadId: 742285

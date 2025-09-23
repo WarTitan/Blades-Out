@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: f4f43c36b03d81e478d02b7973b5e064
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/TestScenes/MultiplayerBoardAssets/DestroyTargetCard.prefab
+  uploadId: 742285

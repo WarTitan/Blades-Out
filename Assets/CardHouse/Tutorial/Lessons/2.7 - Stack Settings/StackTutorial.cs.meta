@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: ab9f598e425e5054aac9e589bc63eb9c
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/Tutorial/Lessons/2.7 - Stack Settings/StackTutorial.cs
+  uploadId: 742285

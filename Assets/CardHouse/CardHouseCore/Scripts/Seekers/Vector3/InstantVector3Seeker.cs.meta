@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: d6266ee9bd121434586c4814633e7366
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/Scripts/Seekers/Vector3/InstantVector3Seeker.cs
+  uploadId: 742285

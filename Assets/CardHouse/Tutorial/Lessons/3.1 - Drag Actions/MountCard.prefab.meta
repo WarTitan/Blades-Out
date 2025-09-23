@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: dfce346e72820094e977f8e5f7fdfffd
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/Tutorial/Lessons/3.1 - Drag Actions/MountCard.prefab
+  uploadId: 742285

@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 3f0915d3c3fc566419408b5f0d2dbda8
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/Scripts/Seekers/Float/WaypointCurveFloatAngleSeeker.cs
+  uploadId: 742285

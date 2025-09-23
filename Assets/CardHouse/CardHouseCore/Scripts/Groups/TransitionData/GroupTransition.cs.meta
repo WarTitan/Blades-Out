@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: ea166e70ce3e0f842874eebc49d77f4e
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/Scripts/Groups/TransitionData/GroupTransition.cs
+  uploadId: 742285

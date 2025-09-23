@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: ca2531f5ef83e3c43abf20ae764714d9
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/SampleGames/Solitaire/Scripts/SolitaireDeckClickHandler.cs
+  uploadId: 742285

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 05657680e1739914c9f4f18986b28884
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/Tutorial/Lessons/3.1 - Drag Actions/UseOnTargetCard.prefab
+  uploadId: 742285

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: ea2d720db1a50eb4692b084dcf8c34b6
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/TestScenes/BoardTest.unity
+  uploadId: 742285

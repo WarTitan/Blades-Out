@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 6bd7b659a38631f41abda00c47575d37
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/Tutorial/Lessons/8.1 - Multiplayer Cameras/UseAndDiscardCardPresentation.prefab
+  uploadId: 742285

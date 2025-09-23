@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 7a8f343f94a0dc744971006b1df24d33
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/Tutorial/Lessons/3.2 - Hover Focus/MountCardHover.prefab
+  uploadId: 742285

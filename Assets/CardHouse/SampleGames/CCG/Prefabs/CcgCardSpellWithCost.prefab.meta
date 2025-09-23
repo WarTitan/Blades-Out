@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 714a647ab9490d54bb88d098b7164df8
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/SampleGames/CCG/Prefabs/CcgCardSpellWithCost.prefab
+  uploadId: 742285

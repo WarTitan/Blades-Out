@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: b8b5776e2349a634a9768bf5e5e2b2fb
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/CardBits/Tarot/Scripts/TarotSuit.cs
+  uploadId: 742285

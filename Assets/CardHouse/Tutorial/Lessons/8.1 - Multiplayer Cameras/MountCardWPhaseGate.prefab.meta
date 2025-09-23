@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 684590f75011d574bbf98be7a22a419c
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/Tutorial/Lessons/8.1 - Multiplayer Cameras/MountCardWPhaseGate.prefab
+  uploadId: 742285

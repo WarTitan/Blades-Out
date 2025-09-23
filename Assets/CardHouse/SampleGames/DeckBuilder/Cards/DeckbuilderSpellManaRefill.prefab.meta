@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: ffe2c4a12080af34c9715d50208ced17
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/SampleGames/DeckBuilder/Cards/DeckbuilderSpellManaRefill.prefab
+  uploadId: 742285

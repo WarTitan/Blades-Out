@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 0e7d459c0a686d94282d49a8b0828610
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/Scenes/CardTable.unity
+  uploadId: 742285

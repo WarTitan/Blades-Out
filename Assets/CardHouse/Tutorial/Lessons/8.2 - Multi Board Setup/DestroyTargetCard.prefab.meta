@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 0cad0ed943f9c5d4db5057f92626e953
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/Tutorial/Lessons/8.2 - Multi Board Setup/DestroyTargetCard.prefab
+  uploadId: 742285

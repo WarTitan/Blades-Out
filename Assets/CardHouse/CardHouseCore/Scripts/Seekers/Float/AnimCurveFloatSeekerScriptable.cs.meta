@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 4aac922e01abb3d47b0be8f6fe0a000b
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/Scripts/Seekers/Float/AnimCurveFloatSeekerScriptable.cs
+  uploadId: 742285

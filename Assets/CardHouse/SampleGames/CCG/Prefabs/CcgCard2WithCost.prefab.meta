@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 449d9ceafdab4584da7a72a7d3dc43eb
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/SampleGames/CCG/Prefabs/CcgCard2WithCost.prefab
+  uploadId: 742285

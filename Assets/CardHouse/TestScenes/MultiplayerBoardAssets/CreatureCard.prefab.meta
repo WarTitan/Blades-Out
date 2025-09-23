@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 185b2698cc16a0c47980958c4ab3277a
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/TestScenes/MultiplayerBoardAssets/CreatureCard.prefab
+  uploadId: 742285

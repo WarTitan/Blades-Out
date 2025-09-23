@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 96d997ce754706f46981777a82207772
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/CardBits/Poker/Scriptables/Standard/Spades
+    7.asset
+  uploadId: 742285

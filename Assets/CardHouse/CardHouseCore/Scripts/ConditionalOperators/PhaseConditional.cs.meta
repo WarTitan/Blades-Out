@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: c9cb55a12c0c2884ab3e6419d0725725
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/Scripts/ConditionalOperators/PhaseConditional.cs
+  uploadId: 742285

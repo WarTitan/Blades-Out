@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 84c907ed25fea4f40aa2238aa2527f04
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/UIPrefabs/CurrencyCanvas.prefab
+  uploadId: 742285

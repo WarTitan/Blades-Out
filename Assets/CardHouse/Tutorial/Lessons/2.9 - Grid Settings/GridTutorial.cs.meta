@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: f8c55e7fa4db5a241ba2426d3299028c
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/Tutorial/Lessons/2.9 - Grid Settings/GridTutorial.cs
+  uploadId: 742285

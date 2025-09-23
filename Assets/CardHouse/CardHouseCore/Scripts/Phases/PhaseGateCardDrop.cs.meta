@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: fa3cad9f9ec754d4daae7090f94e286c
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/Scripts/Phases/PhaseGateCardDrop.cs
+  uploadId: 742285

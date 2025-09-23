@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 1822a4c45dab2d04994dbcf20195b096
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/Tutorial/Lessons/1.1 - Card Drag/TutorialVector3Seeker.asset
+  uploadId: 742285

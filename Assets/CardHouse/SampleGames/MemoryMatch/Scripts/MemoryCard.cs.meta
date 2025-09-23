@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 4fab1f36d6b8edc49b6973e43f3352ca
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/SampleGames/MemoryMatch/Scripts/MemoryCard.cs
+  uploadId: 742285

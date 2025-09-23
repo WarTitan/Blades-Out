@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: c048e32eadd5cfc4fb362463ec56b520
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264045
+  packageName: CardHouse
+  packageVersion: 1.0.4
+  assetPath: Assets/CardHouse/CardHouseCore/Scripts/Phases/PhaseGateCardDragStart.cs
+  uploadId: 742285
