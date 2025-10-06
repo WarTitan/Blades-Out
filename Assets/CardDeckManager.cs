@@ -1,4 +1,4 @@
-// 9/23/2025 AI-Tag
+// 10/6/2025 AI-Tag
 // This was created with the help of Assistant, a Unity Artificial Intelligence product.
 
 using UnityEngine;
@@ -31,21 +31,13 @@ public class CardDeckManager : MonoBehaviour
         // Enable the Input Actions
         inputActions.Enable();
 
-        // Bind the DrawCard action to the method
-        inputActions.Player.DrawCard.performed += OnDrawCard;
+        // Removed the binding for DrawCard
     }
 
     private void OnDisable()
     {
-        // Unbind the action and disable the Input Actions
-        inputActions.Player.DrawCard.performed -= OnDrawCard;
-        inputActions.Disable(); // Correctly disabling the input actions
-    }
-
-    private void OnDrawCard(InputAction.CallbackContext context)
-    {
-        // Trigger the DrawCard method when the action is performed
-        DrawCard();
+        // Disable the Input Actions
+        inputActions.Disable();
     }
 
     public void ShuffleDeck()
