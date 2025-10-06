@@ -93,24 +93,35 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
             ""id"": ""d139fc3a-8e94-48e7-af10-26568dadcdfc"",
             ""actions"": [
                 {
-                    ""name"": ""DrawCard"",
-                    ""type"": ""Button"",
-                    ""id"": ""4a748f9c-0847-4c23-a4e1-433c33e025df"",
-                    ""expectedControlType"": """",
+                    ""name"": ""look"",
+                    ""type"": ""Value"",
+                    ""id"": ""5eb6dc0e-e019-40a9-94c0-07a05f702508"",
+                    ""expectedControlType"": ""Vector2"",
                     ""processors"": """",
                     ""interactions"": """",
-                    ""initialStateCheck"": false
+                    ""initialStateCheck"": true
                 }
             ],
             ""bindings"": [
                 {
                     ""name"": """",
-                    ""id"": ""60480629-7db6-4e44-8793-7d93233b7a5d"",
-                    ""path"": ""<Keyboard>/space"",
+                    ""id"": ""2dcddf7b-6e58-405f-840a-a0eb538826ea"",
+                    ""path"": """",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""DrawCard"",
+                    ""action"": ""look"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""73a4e39b-d282-420a-b897-2469c33e05e3"",
+                    ""path"": ""<Mouse>/delta"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""look"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -121,7 +132,7 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
 }");
         // Player
         m_Player = asset.FindActionMap("Player", throwIfNotFound: true);
-        m_Player_DrawCard = m_Player.FindAction("DrawCard", throwIfNotFound: true);
+        m_Player_look = m_Player.FindAction("look", throwIfNotFound: true);
     }
 
     ~@PlayerInputActions()
@@ -202,7 +213,7 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
     // Player
     private readonly InputActionMap m_Player;
     private List<IPlayerActions> m_PlayerActionsCallbackInterfaces = new List<IPlayerActions>();
-    private readonly InputAction m_Player_DrawCard;
+    private readonly InputAction m_Player_look;
     /// <summary>
     /// Provides access to input actions defined in input action map "Player".
     /// </summary>
@@ -215,9 +226,9 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         /// </summary>
         public PlayerActions(@PlayerInputActions wrapper) { m_Wrapper = wrapper; }
         /// <summary>
-        /// Provides access to the underlying input action "Player/DrawCard".
+        /// Provides access to the underlying input action "Player/look".
         /// </summary>
-        public InputAction @DrawCard => m_Wrapper.m_Player_DrawCard;
+        public InputAction @look => m_Wrapper.m_Player_look;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -244,9 +255,9 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         {
             if (instance == null || m_Wrapper.m_PlayerActionsCallbackInterfaces.Contains(instance)) return;
             m_Wrapper.m_PlayerActionsCallbackInterfaces.Add(instance);
-            @DrawCard.started += instance.OnDrawCard;
-            @DrawCard.performed += instance.OnDrawCard;
-            @DrawCard.canceled += instance.OnDrawCard;
+            @look.started += instance.OnLook;
+            @look.performed += instance.OnLook;
+            @look.canceled += instance.OnLook;
         }
 
         /// <summary>
@@ -258,9 +269,9 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         /// <seealso cref="PlayerActions" />
         private void UnregisterCallbacks(IPlayerActions instance)
         {
-            @DrawCard.started -= instance.OnDrawCard;
-            @DrawCard.performed -= instance.OnDrawCard;
-            @DrawCard.canceled -= instance.OnDrawCard;
+            @look.started -= instance.OnLook;
+            @look.performed -= instance.OnLook;
+            @look.canceled -= instance.OnLook;
         }
 
         /// <summary>
@@ -302,11 +313,11 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
     public interface IPlayerActions
     {
         /// <summary>
-        /// Method invoked when associated input action "DrawCard" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// Method invoked when associated input action "look" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnDrawCard(InputAction.CallbackContext context);
+        void OnLook(InputAction.CallbackContext context);
     }
 }

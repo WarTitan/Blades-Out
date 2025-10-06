@@ -7,24 +7,35 @@
             "id": "d139fc3a-8e94-48e7-af10-26568dadcdfc",
             "actions": [
                 {
-                    "name": "DrawCard",
-                    "type": "Button",
-                    "id": "4a748f9c-0847-4c23-a4e1-433c33e025df",
-                    "expectedControlType": "",
+                    "name": "look",
+                    "type": "Value",
+                    "id": "5eb6dc0e-e019-40a9-94c0-07a05f702508",
+                    "expectedControlType": "Vector2",
                     "processors": "",
                     "interactions": "",
-                    "initialStateCheck": false
+                    "initialStateCheck": true
                 }
             ],
             "bindings": [
                 {
                     "name": "",
-                    "id": "60480629-7db6-4e44-8793-7d93233b7a5d",
-                    "path": "<Keyboard>/space",
+                    "id": "2dcddf7b-6e58-405f-840a-a0eb538826ea",
+                    "path": "",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "DrawCard",
+                    "action": "look",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "73a4e39b-d282-420a-b897-2469c33e05e3",
+                    "path": "<Mouse>/delta",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "look",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
