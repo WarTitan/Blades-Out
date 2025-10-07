@@ -1,26 +1,27 @@
-// 10/7/2025 AI-Tag
-// This was created with the help of Assistant, a Unity Artificial Intelligence product.
-
 using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class CameraController : MonoBehaviour
 {
-    [Header("Display Settings")]
-    public int targetDisplay = 1; // Set this in the Inspector for each camera (1 for Display 1, 2 for Display 2, etc.)
+    [Header("Target & Look")]
+    public Transform target;                      // center of the table
+    public float lookSpeed = 100f;
 
-    [Header("Camera Look Settings")]
-    public float lookSpeed = 100f; // Speed of camera rotation
-    public Transform target; // The target object the camera should look at (e.g., CENTER Q)
-    public bool alwaysLookAtTarget = false; // Toggle to control whether the camera always looks at the target
-    public bool smoothLookOnSwitch = true; // Smoothly rotate toward target when switching displays
+    [Header("Robust alignment")]
+    public int alignFrames = 4;                   // how many consecutive frames we force the alignment
+    public float ignoreInputSecs = 0.25f;         // how long we ignore player input after switching
+    public bool debugLogs = false;
 
-    private Vector2 lookInput; // Stores input for looking around
+    // input system
     private PlayerInputActions inputActions;
-    private float yaw; // Tracks horizontal rotation
-    private float pitch; // Tracks vertical rotation
-    private bool justSwitchedDisplay = false; // Tracks if the display was just switched
+    private Vector2 lookInput;
+    private float yaw;
+    private float pitch;
+
+    // runtime
+    private float ignoreInputUntil = 0f;
+    private Coroutine alignCoroutine;
 
     private void Awake()
     {
@@ -33,9 +34,11 @@ public class CameraController : MonoBehaviour
         inputActions.Player.look.canceled += OnLook;
         inputActions.Enable();
 
-        // Hide and lock the cursor
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+
+        // Always try to align when enabled (robust multi-frame)
+        StartAligning();
     }
 
     private void OnDisable()
@@ -44,115 +47,104 @@ public class CameraController : MonoBehaviour
         inputActions.Player.look.canceled -= OnLook;
         inputActions.Disable();
 
-        // Restore the cursor state
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-    }
 
-    private void OnLook(InputAction.CallbackContext context)
-    {
-        lookInput = context.ReadValue<Vector2>();
-    }
-
-    void Start()
-    {
-        // Ensure the camera is rendering to the correct display
-        if (Display.displays.Length >= targetDisplay)
+        if (alignCoroutine != null)
         {
-            Display.displays[targetDisplay - 1].Activate();
-            GetComponent<Camera>().targetDisplay = targetDisplay - 1;
-        }
-
-        // Initialize yaw and pitch based on the camera's current rotation
-        Vector3 eulerAngles = transform.eulerAngles;
-        yaw = eulerAngles.y;
-        pitch = eulerAngles.x;
-
-        // Ensure the camera points to the target initially
-        if (target != null)
-        {
-            LookAtTarget();
+            StopCoroutine(alignCoroutine);
+            alignCoroutine = null;
         }
     }
 
-    void Update()
+    private void OnLook(InputAction.CallbackContext ctx)
     {
-        // Rotate the camera based on input
+        // ignore look input while we're ignoring it
+        if (Time.unscaledTime < ignoreInputUntil) return;
+        lookInput = ctx.ReadValue<Vector2>();
+    }
+
+    private void Update()
+    {
+        // ignore rotating while being forced to align
+        if (Time.unscaledTime < ignoreInputUntil) return;
+
         if (lookInput != Vector2.zero)
-        {
             RotateCamera();
-            justSwitchedDisplay = false;
-        }
-        else if (justSwitchedDisplay && target != null)
-        {
-            // If we just switched displays, ensure the camera looks at the target
-            LookAtTarget();
-            justSwitchedDisplay = false;
-        }
-        else if (alwaysLookAtTarget && target != null)
-        {
-            // Smoothly rotate to look at the target when the toggle is enabled
-            Vector3 directionToTarget = target.position - transform.position;
-            Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * lookSpeed);
-        }
     }
 
     private void RotateCamera()
     {
         yaw += lookInput.x * lookSpeed * Time.deltaTime;
         pitch -= lookInput.y * lookSpeed * Time.deltaTime;
-        pitch = Mathf.Clamp(pitch, -90f, 90f);
+        pitch = Mathf.Clamp(pitch, -89f, 89f);
         transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
     }
 
-    private void LookAtTarget()
+    // Public call used by the switcher
+    public void SwitchDisplay()
     {
-        if (target == null) return;
+        // clear any leftover raw input
+        lookInput = Vector2.zero;
 
-        Vector3 directionToTarget = target.position - transform.position;
-        Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
-        transform.rotation = targetRotation;
+        // ignore input for a short time to avoid immediate override
+        ignoreInputUntil = Time.unscaledTime + ignoreInputSecs;
 
-        // Update yaw and pitch to match the new rotation
-        Vector3 eulerAngles = transform.eulerAngles;
-        yaw = eulerAngles.y;
-        pitch = eulerAngles.x;
+        // restart align coroutine
+        StartAligning();
+
+        if (debugLogs) Debug.Log($"{name}: SwitchDisplay() called, ignoring input until {ignoreInputUntil:F3}");
     }
 
-    private IEnumerator SmoothLookAtTarget()
+    private void StartAligning()
+    {
+        if (alignCoroutine != null) StopCoroutine(alignCoroutine);
+        alignCoroutine = StartCoroutine(AlignForFramesCoroutine(alignFrames));
+    }
+
+    // This coroutine forces the camera to look at the target for N frames.
+    // That overrides other scripts/animators that might modify rotation after OnEnable.
+    private IEnumerator AlignForFramesCoroutine(int frames)
     {
         if (target == null) yield break;
 
-        Quaternion startRot = transform.rotation;
-        Quaternion endRot = Quaternion.LookRotation(target.position - transform.position);
-        float duration = 0.5f; // how long the smooth turn takes
-        float t = 0f;
+        // make sure we ignore input while aligning
+        ignoreInputUntil = Mathf.Max(ignoreInputUntil, Time.unscaledTime + ignoreInputSecs);
 
-        while (t < 1f)
+        int i = 0;
+        while (i < frames)
         {
-            t += Time.deltaTime / duration;
-            transform.rotation = Quaternion.Slerp(startRot, endRot, t);
-            yield return null;
+            // Wait until end of frame so LateUpdate modifications are included in next iteration.
+            yield return new WaitForEndOfFrame();
+
+            Vector3 dir = (target.position - transform.position);
+            if (dir.sqrMagnitude < 0.0001f) break;
+
+            // Compute a world-space rotation looking at target with world up
+            Quaternion worldLook = Quaternion.LookRotation(dir.normalized, Vector3.up);
+
+            // Apply world rotation (this sets localRotation appropriately under any parent)
+            transform.rotation = worldLook;
+
+            // Clear any roll that might be left and sync yaw/pitch for later manual look
+            Vector3 euler = transform.rotation.eulerAngles;
+            yaw = euler.y;
+            pitch = euler.x > 180f ? euler.x - 360f : euler.x;
+            pitch = Mathf.Clamp(pitch, -89f, 89f);
+            transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
+
+            if (debugLogs)
+            {
+                Debug.Log($"{name}: Align frame {i+1}/{frames} -> rot={transform.rotation.eulerAngles} yaw={yaw:F2} pitch={pitch:F2}");
+            }
+
+            i++;
         }
 
-        // Sync yaw and pitch with new orientation
-        Vector3 eulerAngles = transform.eulerAngles;
-        yaw = eulerAngles.y;
-        pitch = eulerAngles.x;
-    }
+        // small extra frame to ensure we stay stable
+        yield return new WaitForEndOfFrame();
 
-    public void SwitchDisplay()
-    {
-        justSwitchedDisplay = true;
-        Debug.Log("SwitchDisplay called, camera reorienting to target.");
-
-        if (target != null)
-        {
-            if (smoothLookOnSwitch)
-                StartCoroutine(SmoothLookAtTarget());
-            else
-                LookAtTarget();
-        }
+        alignCoroutine = null;
+        if (debugLogs) Debug.Log($"{name}: Finished aligning for {frames} frames.");
     }
 }
