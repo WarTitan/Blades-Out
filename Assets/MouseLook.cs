@@ -4,32 +4,17 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class MouseLook : MonoBehaviour, PlayerInputActions.IPlayerActions
+public class MouseLook : MonoBehaviour
 {
     public float mouseSensitivity = 100f; // Sensitivity of the mouse
     public Transform playerBody;         // Reference to the player's body for rotation
 
     private float xRotation = 0f;        // To keep track of vertical rotation
     private Vector2 mouseDelta;          // Stores mouse movement
-    private PlayerInputActions inputActions;
 
-    void Awake()
+    public void OnLook(InputAction.CallbackContext context)
     {
-        // Initialize the Input Actions
-        inputActions = new PlayerInputActions();
-        inputActions.Player.SetCallbacks(this);
-    }
-
-    void OnEnable()
-    {
-        // Enable the Player Input Action Map
-        inputActions.Player.Enable();
-    }
-
-    void OnDisable()
-    {
-        // Disable the Player Input Action Map
-        inputActions.Player.Disable();
+        mouseDelta = context.ReadValue<Vector2>();
     }
 
     void Start()
@@ -47,11 +32,5 @@ public class MouseLook : MonoBehaviour, PlayerInputActions.IPlayerActions
 
         // Rotate the player horizontally (left and right)
         playerBody.Rotate(Vector3.up * mouseDelta.x * mouseSensitivity * Time.deltaTime);
-    }
-
-    // This method is called by the Input System when the Look action is performed
-    public void OnLook(InputAction.CallbackContext context)
-    {
-        mouseDelta = context.ReadValue<Vector2>();
     }
 }
