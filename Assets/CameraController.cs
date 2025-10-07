@@ -1,27 +1,24 @@
-using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class CameraController : MonoBehaviour
 {
-    [Header("Target & Look")]
-    public Transform target;                      // center of the table
+    [Header("Settings")]
     public float lookSpeed = 100f;
+    public float zoomSpeed = 2f;
+    public float minZoom = 2f;
+    public float maxZoom = 20f;
 
-    [Header("Robust alignment")]
-    public int alignFrames = 4;                   // how many consecutive frames we force the alignment
-    public float ignoreInputSecs = 0.25f;         // how long we ignore player input after switching
-    public bool debugLogs = false;
+    [Header("References")]
+    public Transform cameraTransform; // optional (for zoom only)
 
-    // input system
     private PlayerInputActions inputActions;
     private Vector2 lookInput;
+    private float zoomInput;
+
     private float yaw;
     private float pitch;
-
-    // runtime
-    private float ignoreInputUntil = 0f;
-    private Coroutine alignCoroutine;
+    private float currentZoom = 10f;
 
     private void Awake()
     {
@@ -30,121 +27,72 @@ public class CameraController : MonoBehaviour
 
     private void OnEnable()
     {
-        inputActions.Player.look.performed += OnLook;
-        inputActions.Player.look.canceled += OnLook;
         inputActions.Enable();
 
+        // input bindings
+        inputActions.Player.look.performed += ctx => lookInput = ctx.ReadValue<Vector2>();
+        inputActions.Player.look.canceled += ctx => lookInput = Vector2.zero;
+
+        inputActions.Player.zoom.performed += ctx => zoomInput = ctx.ReadValue<float>();
+        inputActions.Player.zoom.canceled += ctx => zoomInput = 0f;
+
+        // record scene rotation exactly as-is (no math conversions)
+        yaw = transform.eulerAngles.y;
+        pitch = transform.eulerAngles.x;
+
+        // hide + lock cursor
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-
-        // Always try to align when enabled (robust multi-frame)
-        StartAligning();
     }
 
     private void OnDisable()
     {
-        inputActions.Player.look.performed -= OnLook;
-        inputActions.Player.look.canceled -= OnLook;
         inputActions.Disable();
-
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-
-        if (alignCoroutine != null)
-        {
-            StopCoroutine(alignCoroutine);
-            alignCoroutine = null;
-        }
     }
 
-    private void OnLook(InputAction.CallbackContext ctx)
+    void Update()
     {
-        // ignore look input while we're ignoring it
-        if (Time.unscaledTime < ignoreInputUntil) return;
-        lookInput = ctx.ReadValue<Vector2>();
-    }
-
-    private void Update()
-    {
-        // ignore rotating while being forced to align
-        if (Time.unscaledTime < ignoreInputUntil) return;
-
-        if (lookInput != Vector2.zero)
-            RotateCamera();
+        RotateCamera();
+        HandleZoom();
     }
 
     private void RotateCamera()
     {
+        if (lookInput.sqrMagnitude < 0.0001f)
+            return;
+
         yaw += lookInput.x * lookSpeed * Time.deltaTime;
         pitch -= lookInput.y * lookSpeed * Time.deltaTime;
-        pitch = Mathf.Clamp(pitch, -89f, 89f);
+        pitch = Mathf.Clamp(pitch, -90f, 90f);
+
         transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
     }
 
-    // Public call used by the switcher
-    public void SwitchDisplay()
+    private void HandleZoom()
     {
-        // clear any leftover raw input
-        lookInput = Vector2.zero;
+        if (Mathf.Abs(zoomInput) < 0.01f)
+            return;
 
-        // ignore input for a short time to avoid immediate override
-        ignoreInputUntil = Time.unscaledTime + ignoreInputSecs;
+        currentZoom -= zoomInput * zoomSpeed * Time.deltaTime;
+        currentZoom = Mathf.Clamp(currentZoom, minZoom, maxZoom);
 
-        // restart align coroutine
-        StartAligning();
-
-        if (debugLogs) Debug.Log($"{name}: SwitchDisplay() called, ignoring input until {ignoreInputUntil:F3}");
+        if (cameraTransform != null)
+            cameraTransform.localPosition = new Vector3(0, 0, -currentZoom);
+        else
+            transform.localPosition = new Vector3(0, 0, -currentZoom);
     }
 
-    private void StartAligning()
+    public void OnSwitchedTo()
     {
-        if (alignCoroutine != null) StopCoroutine(alignCoroutine);
-        alignCoroutine = StartCoroutine(AlignForFramesCoroutine(alignFrames));
-    }
+        // reset internal yaw/pitch to match current exact rotation
+        yaw = transform.eulerAngles.y;
+        pitch = transform.eulerAngles.x;
 
-    // This coroutine forces the camera to look at the target for N frames.
-    // That overrides other scripts/animators that might modify rotation after OnEnable.
-    private IEnumerator AlignForFramesCoroutine(int frames)
-    {
-        if (target == null) yield break;
-
-        // make sure we ignore input while aligning
-        ignoreInputUntil = Mathf.Max(ignoreInputUntil, Time.unscaledTime + ignoreInputSecs);
-
-        int i = 0;
-        while (i < frames)
-        {
-            // Wait until end of frame so LateUpdate modifications are included in next iteration.
-            yield return new WaitForEndOfFrame();
-
-            Vector3 dir = (target.position - transform.position);
-            if (dir.sqrMagnitude < 0.0001f) break;
-
-            // Compute a world-space rotation looking at target with world up
-            Quaternion worldLook = Quaternion.LookRotation(dir.normalized, Vector3.up);
-
-            // Apply world rotation (this sets localRotation appropriately under any parent)
-            transform.rotation = worldLook;
-
-            // Clear any roll that might be left and sync yaw/pitch for later manual look
-            Vector3 euler = transform.rotation.eulerAngles;
-            yaw = euler.y;
-            pitch = euler.x > 180f ? euler.x - 360f : euler.x;
-            pitch = Mathf.Clamp(pitch, -89f, 89f);
-            transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
-
-            if (debugLogs)
-            {
-                Debug.Log($"{name}: Align frame {i+1}/{frames} -> rot={transform.rotation.eulerAngles} yaw={yaw:F2} pitch={pitch:F2}");
-            }
-
-            i++;
-        }
-
-        // small extra frame to ensure we stay stable
-        yield return new WaitForEndOfFrame();
-
-        alignCoroutine = null;
-        if (debugLogs) Debug.Log($"{name}: Finished aligning for {frames} frames.");
+        // ensure cursor stays locked when switching
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 }
+
