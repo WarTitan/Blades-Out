@@ -1,4 +1,4 @@
-// 10/6/2025 AI-Tag
+// 10/7/2025 AI-Tag
 // This was created with the help of Assistant, a Unity Artificial Intelligence product.
 
 using UnityEngine;
@@ -62,6 +62,10 @@ namespace TMPro.Examples
                 dummyTarget = new GameObject("Camera Target").transform;
                 CameraTarget = dummyTarget;
             }
+
+            // Lock the cursor to the center of the screen and hide it
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
         }
 
         void LateUpdate()
