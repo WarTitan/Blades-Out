@@ -1,16 +1,36 @@
-// 10/6/2025 AI-Tag
+// 10/7/2025 AI-Tag
 // This was created with the help of Assistant, a Unity Artificial Intelligence product.
 
 using UnityEngine;
-using UnityEngine.InputSystem; // Required for the new Input System
+using UnityEngine.InputSystem;
 
-public class MouseLook : MonoBehaviour
+public class MouseLook : MonoBehaviour, PlayerInputActions.IPlayerActions
 {
     public float mouseSensitivity = 100f; // Sensitivity of the mouse
     public Transform playerBody;         // Reference to the player's body for rotation
 
     private float xRotation = 0f;        // To keep track of vertical rotation
     private Vector2 mouseDelta;          // Stores mouse movement
+    private PlayerInputActions inputActions;
+
+    void Awake()
+    {
+        // Initialize the Input Actions
+        inputActions = new PlayerInputActions();
+        inputActions.Player.SetCallbacks(this);
+    }
+
+    void OnEnable()
+    {
+        // Enable the Player Input Action Map
+        inputActions.Player.Enable();
+    }
+
+    void OnDisable()
+    {
+        // Disable the Player Input Action Map
+        inputActions.Player.Disable();
+    }
 
     void Start()
     {
@@ -29,7 +49,7 @@ public class MouseLook : MonoBehaviour
         playerBody.Rotate(Vector3.up * mouseDelta.x * mouseSensitivity * Time.deltaTime);
     }
 
-    // This method is called by the Input System when the mouse moves
+    // This method is called by the Input System when the Look action is performed
     public void OnLook(InputAction.CallbackContext context)
     {
         mouseDelta = context.ReadValue<Vector2>();
