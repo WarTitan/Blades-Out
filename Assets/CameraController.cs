@@ -4,47 +4,54 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-Cursor.lockState = CursorLockMode.Locked;
-Cursor.visible = false;
-
 public class CameraController : MonoBehaviour
 {
-    public float mouseSensitivity = 100f; // Sensitivity of the mouse
-    private Vector2 mouseDelta;          // Stores mouse movement
-    private float xRotation = 0f;        // To keep track of vertical rotation
+    public int targetDisplay = 1; // Set this in the Inspector for each camera (1 for Display 1, 2 for Display 2)
+    public float lookSpeed = 100f; // Speed of camera rotation
 
-    private InputAction lookAction;
+    private Vector2 lookInput; // Stores input for looking around
+    private PlayerInputActions inputActions;
 
-    void Awake()
+    private void Awake()
     {
-        // Initialize Input Actions
-        var playerInput = GetComponent<PlayerInput>();
-        lookAction = playerInput.actions["Look"];
+        inputActions = new PlayerInputActions();
     }
 
-    void Start()
+    private void OnEnable()
     {
-        // Lock the cursor to the center of the screen and hide it
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        inputActions.Player.look.performed += OnLook; // Correctly accessing the 'look' action
+        inputActions.Player.look.canceled += OnLook;
+        inputActions.Enable();
+    }
+
+    private void OnDisable()
+    {
+        inputActions.Player.look.performed -= OnLook;
+        inputActions.Player.look.canceled -= OnLook;
+        inputActions.Disable();
+    }
+
+    private void OnLook(InputAction.CallbackContext context)
+    {
+        lookInput = context.ReadValue<Vector2>();
     }
 
     void Update()
     {
-        GetPlayerInput();
-
-        // Rotate the camera vertically (up and down)
-        xRotation -= mouseDelta.y * mouseSensitivity * Time.deltaTime;
-        xRotation = Mathf.Clamp(xRotation, -90f, 90f); // Clamp the rotation to prevent over-rotation
-        transform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
-
-        // Rotate the camera horizontally (left and right)
-        transform.parent.Rotate(Vector3.up * mouseDelta.x * mouseSensitivity * Time.deltaTime);
+        // Check if this camera's display is the active display
+        if (Display.displays.Length >= targetDisplay && Display.displays[targetDisplay - 1].active)
+        {
+            RotateCamera();
+        }
     }
 
-    void GetPlayerInput()
+    private void RotateCamera()
     {
-        // Get mouse delta from the new Input System
-        mouseDelta = lookAction.ReadValue<Vector2>();
+        // Rotate the camera based on mouse input
+        float yaw = lookInput.x * lookSpeed * Time.deltaTime;
+        float pitch = -lookInput.y * lookSpeed * Time.deltaTime;
+
+        transform.Rotate(Vector3.up, yaw, Space.World); // Rotate around the Y-axis (world space)
+        transform.Rotate(Vector3.right, pitch, Space.Self); // Rotate around the X-axis (local space)
     }
 }
