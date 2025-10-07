@@ -4,6 +4,9 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+Cursor.lockState = CursorLockMode.Locked;
+Cursor.visible = false;
+
 public class CameraController : MonoBehaviour
 {
     public float mouseSensitivity = 100f; // Sensitivity of the mouse
