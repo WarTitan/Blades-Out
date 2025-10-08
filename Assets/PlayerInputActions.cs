@@ -109,6 +109,15 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": true
+                },
+                {
+                    ""name"": ""SpawnCardAction"",
+                    ""type"": ""Button"",
+                    ""id"": ""fe289699-b34a-4e28-bb03-4b1ba82f77ac"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -133,6 +142,17 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
                     ""action"": ""zoom"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""dd477031-2bc1-4b0d-8471-010cf3b8e1b6"",
+                    ""path"": ""<Keyboard>/space"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""SpawnCardAction"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -143,6 +163,7 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         m_Player = asset.FindActionMap("Player", throwIfNotFound: true);
         m_Player_look = m_Player.FindAction("look", throwIfNotFound: true);
         m_Player_zoom = m_Player.FindAction("zoom", throwIfNotFound: true);
+        m_Player_SpawnCardAction = m_Player.FindAction("SpawnCardAction", throwIfNotFound: true);
     }
 
     ~@PlayerInputActions()
@@ -225,6 +246,7 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
     private List<IPlayerActions> m_PlayerActionsCallbackInterfaces = new List<IPlayerActions>();
     private readonly InputAction m_Player_look;
     private readonly InputAction m_Player_zoom;
+    private readonly InputAction m_Player_SpawnCardAction;
     /// <summary>
     /// Provides access to input actions defined in input action map "Player".
     /// </summary>
@@ -244,6 +266,10 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Player/zoom".
         /// </summary>
         public InputAction @zoom => m_Wrapper.m_Player_zoom;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/SpawnCardAction".
+        /// </summary>
+        public InputAction @SpawnCardAction => m_Wrapper.m_Player_SpawnCardAction;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -276,6 +302,9 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
             @zoom.started += instance.OnZoom;
             @zoom.performed += instance.OnZoom;
             @zoom.canceled += instance.OnZoom;
+            @SpawnCardAction.started += instance.OnSpawnCardAction;
+            @SpawnCardAction.performed += instance.OnSpawnCardAction;
+            @SpawnCardAction.canceled += instance.OnSpawnCardAction;
         }
 
         /// <summary>
@@ -293,6 +322,9 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
             @zoom.started -= instance.OnZoom;
             @zoom.performed -= instance.OnZoom;
             @zoom.canceled -= instance.OnZoom;
+            @SpawnCardAction.started -= instance.OnSpawnCardAction;
+            @SpawnCardAction.performed -= instance.OnSpawnCardAction;
+            @SpawnCardAction.canceled -= instance.OnSpawnCardAction;
         }
 
         /// <summary>
@@ -347,5 +379,12 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnZoom(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "SpawnCardAction" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnSpawnCardAction(InputAction.CallbackContext context);
     }
 }
