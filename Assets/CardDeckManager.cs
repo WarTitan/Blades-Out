@@ -1,4 +1,7 @@
-// 10/6/2025 AI-Tag
+// 10/9/2025 AI-Tag
+// This was created with the help of Assistant, a Unity Artificial Intelligence product.
+
+// 10/9/2025 AI-Tag
 // This was created with the help of Assistant, a Unity Artificial Intelligence product.
 
 using UnityEngine;
@@ -10,15 +13,17 @@ public class CardDeckManager : MonoBehaviour
     private GameObject currentCardObject; // To track the currently displayed card
 
     public List<Card> deck; // The current deck of cards
-    public Transform cardSpawnPoint; // The position where cards will appear
+    public Transform[] cardSpawnPoints; // Spawn points for each player
     public GameObject cardPrefab; // The card prefab to instantiate
 
     [SerializeField]
     private List<Card> masterCardList; // The full list of all cards for reshuffling
 
     private PlayerInputActions inputActions; // Reference to the generated Input Actions class
-
     private bool hasDrawnCard = false; // Flag to track if the current player has drawn a card
+
+    private List<Player> players = new List<Player>();
+    private int currentPlayerIndex = 0;
 
     private void Awake()
     {
@@ -31,11 +36,15 @@ public class CardDeckManager : MonoBehaviour
         // Enable the Input Actions
         inputActions.Enable();
 
-        // Removed the binding for DrawCard
+        // Subscribe to the SpawnCardAction
+        inputActions.Player.SpawnCardAction.performed += OnSpawnCardActionPerformed;
     }
 
     private void OnDisable()
     {
+        // Unsubscribe from the SpawnCardAction
+        inputActions.Player.SpawnCardAction.performed -= OnSpawnCardActionPerformed;
+
         // Disable the Input Actions
         inputActions.Disable();
     }
@@ -51,65 +60,74 @@ public class CardDeckManager : MonoBehaviour
         }
     }
 
-    public void DrawCard()
+    private void Start()
     {
-        // Check if the current player has already drawn a card
-        if (hasDrawnCard)
+        // Initialize players
+        players.Add(new Player("Player 1"));
+        players.Add(new Player("Player 2"));
+        players.Add(new Player("Player 3"));
+        players.Add(new Player("Player 4"));
+        players.Add(new Player("Player 5"));
+        players.Add(new Player("Player 6"));
+
+        Debug.Log("Game initialized with 6 players.");
+
+        // Distribute 4 cards to each player at the start
+        for (int i = 0; i < players.Count; i++)
         {
-            Debug.Log("You can only draw one card per turn!");
-            return; // Prevent drawing more than one card
+            for (int j = 0; j < 4; j++)
+            {
+                DrawCardForPlayer(i);
+            }
         }
 
-        // Destroy the old card if it exists
-        if (currentCardObject != null)
-        {
-            Destroy(currentCardObject);
-        }
+        Debug.Log("Each player starts with 4 cards.");
+    }
 
-        // Check if the deck is empty
+    private void OnSpawnCardActionPerformed(InputAction.CallbackContext context)
+    {
+        // Triggered when SpawnCardAction is performed
+        Debug.Log("SpawnCardAction triggered!");
+
+        // Give 1 card to the current player
+        DrawCardForPlayer(currentPlayerIndex);
+
+        // Move to the next player
+        currentPlayerIndex = (currentPlayerIndex + 1) % players.Count;
+
+        // Reset the flag for the new player's turn
+        hasDrawnCard = false;
+
+        Debug.Log($"It's now {players[currentPlayerIndex].playerName}'s turn.");
+    }
+
+    public void DrawCardForPlayer(int playerIndex)
+    {
         if (deck == null || deck.Count == 0)
         {
             Debug.LogError("Deck is empty! Cannot draw a card.");
             return;
         }
 
-        // Draw a random card without removing it from the deck
+        // Draw a random card
         int randomIndex = Random.Range(0, deck.Count);
         Card drawnCard = deck[randomIndex];
 
-        // Add the drawn card to the current player's hand
-        Player currentPlayer = players[currentPlayerIndex];
-        currentPlayer.AddCardToHand(drawnCard);
+        // Remove the card from the deck
+        deck.RemoveAt(randomIndex);
 
-        Debug.Log($"{currentPlayer.playerName} drew a card: {drawnCard.cardName}");
+        // Add the card to the player's hand
+        players[playerIndex].AddCardToHand(drawnCard);
 
-        // Instantiate the new card and set it as the current card
-        currentCardObject = Instantiate(cardPrefab, cardSpawnPoint.position, Quaternion.identity, cardSpawnPoint.parent);
-        CardDisplay cardDisplay = currentCardObject.GetComponent<CardDisplay>();
+        // Instantiate the card at the player's spawn point
+        Transform spawnPoint = cardSpawnPoints[playerIndex];
+        GameObject cardObject = Instantiate(cardPrefab, spawnPoint.position, Quaternion.identity);
+        CardDisplay cardDisplay = cardObject.GetComponent<CardDisplay>();
 
-        // Create a copy of the card for display
-        Card cardCopy = ScriptableObject.CreateInstance<Card>();
-        cardCopy.cardName = drawnCard.cardName;
-        cardCopy.cardImage = drawnCard.cardImage;
-        cardCopy.description = drawnCard.description;
+        // Set the card's data for display
+        cardDisplay.SetCard(drawnCard);
 
-        cardDisplay.SetCard(cardCopy);
-
-        // Mark that the player has drawn a card
-        hasDrawnCard = true;
-    }
-
-    private List<Player> players = new List<Player>();
-    private int currentPlayerIndex = 0;
-
-    private void Start()
-    {
-        players.Add(new Player("Player 1"));
-        players.Add(new Player("Player 2"));
-        players.Add(new Player("Player 3"));
-        players.Add(new Player("Player 4"));
-
-        Debug.Log("Game initialized with 4 players.");
+        Debug.Log($"{players[playerIndex].playerName} drew a card: {drawnCard.cardName}");
     }
 
     private void NextTurn()
@@ -123,4 +141,4 @@ public class CardDeckManager : MonoBehaviour
         // Log the current player's turn
         Debug.Log($"It's now {players[currentPlayerIndex].playerName}'s turn.");
     }
-} 
+}
