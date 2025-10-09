@@ -1,3 +1,6 @@
+// 10/9/2025 AI-Tag
+// This was created with the help of Assistant, a Unity Artificial Intelligence product.
+
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -10,7 +13,7 @@ public class CameraController : MonoBehaviour
     public float maxZoom = 20f;
 
     [Header("References")]
-    public Transform cameraTransform; // optional (for zoom only)
+    public Transform cameraTransform; // Optional (for zoom only)
 
     private PlayerInputActions inputActions;
     private Vector2 lookInput;
@@ -29,18 +32,18 @@ public class CameraController : MonoBehaviour
     {
         inputActions.Enable();
 
-        // input bindings
+        // Input bindings
         inputActions.Player.look.performed += ctx => lookInput = ctx.ReadValue<Vector2>();
         inputActions.Player.look.canceled += ctx => lookInput = Vector2.zero;
 
         inputActions.Player.zoom.performed += ctx => zoomInput = ctx.ReadValue<float>();
         inputActions.Player.zoom.canceled += ctx => zoomInput = 0f;
 
-        // record scene rotation exactly as-is (no math conversions)
+        // Record scene rotation exactly as-is (no math conversions)
         yaw = transform.eulerAngles.y;
         pitch = transform.eulerAngles.x;
 
-        // hide + lock cursor
+        // Hide and lock cursor
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
@@ -52,7 +55,7 @@ public class CameraController : MonoBehaviour
         Cursor.visible = true;
     }
 
-    void Update()
+    private void Update()
     {
         RotateCamera();
         HandleZoom();
@@ -86,13 +89,31 @@ public class CameraController : MonoBehaviour
 
     public void OnSwitchedTo()
     {
-        // reset internal yaw/pitch to match current exact rotation
+        // Reset internal yaw/pitch to match current exact rotation
         yaw = transform.eulerAngles.y;
         pitch = transform.eulerAngles.x;
 
-        // ensure cursor stays locked when switching
+        // Ensure cursor stays locked when switching
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
-}
 
+    /// <summary>
+    /// Resets the camera's position and zoom to default values.
+    /// </summary>
+    public void ResetCamera()
+    {
+        yaw = 0f;
+        pitch = 0f;
+        currentZoom = (minZoom + maxZoom) / 2f;
+
+        transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
+
+        if (cameraTransform != null)
+            cameraTransform.localPosition = new Vector3(0, 0, -currentZoom);
+        else
+            transform.localPosition = new Vector3(0, 0, -currentZoom);
+
+        Debug.Log("Camera reset to default position and zoom.");
+    }
+}

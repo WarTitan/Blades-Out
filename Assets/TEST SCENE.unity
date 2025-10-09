@@ -235,7 +235,7 @@ MonoBehaviour:
   zoomSpeed: 2
   minZoom: 2
   maxZoom: 20
-  cameraTransform: {fileID: 0}
+  cameraTransform: {fileID: 115160671}
 --- !u!114 &115160673
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -248,7 +248,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62899f850307741f2a39c98a8b639597, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.InputSystem::UnityEngine.InputSystem.PlayerInput
-  m_Actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  m_Actions: {fileID: -944628639613478452, guid: b691b6e6027c39c4f9660de30ddccc24, type: 3}
   m_NotificationBehavior: 3
   m_UIInputModule: {fileID: 0}
   m_DeviceLostEvent:
@@ -262,7 +262,7 @@ MonoBehaviour:
       m_Calls: []
   m_ActionEvents: []
   m_NeverAutoSwitchControlSchemes: 0
-  m_DefaultControlScheme: 
+  m_DefaultControlScheme: Keyboard&Mouse
   m_DefaultActionMap: Player
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 115160675}
@@ -1582,7 +1582,7 @@ MonoBehaviour:
   zoomSpeed: 2
   minZoom: 2
   maxZoom: 20
-  cameraTransform: {fileID: 0}
+  cameraTransform: {fileID: 1168152970}
 --- !u!114 &1168152972
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1595,7 +1595,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62899f850307741f2a39c98a8b639597, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.InputSystem::UnityEngine.InputSystem.PlayerInput
-  m_Actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  m_Actions: {fileID: -944628639613478452, guid: b691b6e6027c39c4f9660de30ddccc24, type: 3}
   m_NotificationBehavior: 3
   m_UIInputModule: {fileID: 0}
   m_DeviceLostEvent:
@@ -1609,8 +1609,8 @@ MonoBehaviour:
       m_Calls: []
   m_ActionEvents: []
   m_NeverAutoSwitchControlSchemes: 0
-  m_DefaultControlScheme: 
-  m_DefaultActionMap: 
+  m_DefaultControlScheme: Keyboard&Mouse
+  m_DefaultActionMap: Player
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 1168152974}
 --- !u!81 &1168152973
@@ -1824,7 +1824,7 @@ MonoBehaviour:
   zoomSpeed: 2
   minZoom: 2
   maxZoom: 20
-  cameraTransform: {fileID: 0}
+  cameraTransform: {fileID: 1178872682}
 --- !u!114 &1178872684
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1851,7 +1851,7 @@ MonoBehaviour:
       m_Calls: []
   m_ActionEvents: []
   m_NeverAutoSwitchControlSchemes: 0
-  m_DefaultControlScheme: 
+  m_DefaultControlScheme: Keyboard&Mouse
   m_DefaultActionMap: Player
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 1178872686}
@@ -2849,7 +2849,7 @@ MonoBehaviour:
   zoomSpeed: 2
   minZoom: 2
   maxZoom: 20
-  cameraTransform: {fileID: 0}
+  cameraTransform: {fileID: 1836476264}
 --- !u!114 &1836476266
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2862,7 +2862,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62899f850307741f2a39c98a8b639597, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.InputSystem::UnityEngine.InputSystem.PlayerInput
-  m_Actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  m_Actions: {fileID: -944628639613478452, guid: b691b6e6027c39c4f9660de30ddccc24, type: 3}
   m_NotificationBehavior: 3
   m_UIInputModule: {fileID: 0}
   m_DeviceLostEvent:
@@ -2876,8 +2876,8 @@ MonoBehaviour:
       m_Calls: []
   m_ActionEvents: []
   m_NeverAutoSwitchControlSchemes: 0
-  m_DefaultControlScheme: 
-  m_DefaultActionMap: 
+  m_DefaultControlScheme: Keyboard&Mouse
+  m_DefaultActionMap: Player
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 1836476268}
 --- !u!81 &1836476267
@@ -2986,7 +2986,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62899f850307741f2a39c98a8b639597, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.InputSystem::UnityEngine.InputSystem.PlayerInput
-  m_Actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  m_Actions: {fileID: -944628639613478452, guid: b691b6e6027c39c4f9660de30ddccc24, type: 3}
   m_NotificationBehavior: 3
   m_UIInputModule: {fileID: 0}
   m_DeviceLostEvent:
@@ -3000,7 +3000,7 @@ MonoBehaviour:
       m_Calls: []
   m_ActionEvents: []
   m_NeverAutoSwitchControlSchemes: 1
-  m_DefaultControlScheme: 
+  m_DefaultControlScheme: Keyboard&Mouse
   m_DefaultActionMap: Player
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 1896913911}
@@ -3020,7 +3020,7 @@ MonoBehaviour:
   zoomSpeed: 2
   minZoom: 2
   maxZoom: 20
-  cameraTransform: {fileID: 0}
+  cameraTransform: {fileID: 1896913907}
 --- !u!81 &1896913910
 AudioListener:
   m_ObjectHideFlags: 0
@@ -3162,7 +3162,7 @@ MonoBehaviour:
   zoomSpeed: 2
   minZoom: 2
   maxZoom: 20
-  cameraTransform: {fileID: 0}
+  cameraTransform: {fileID: 1915930341}
 --- !u!114 &1915930343
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3175,7 +3175,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62899f850307741f2a39c98a8b639597, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.InputSystem::UnityEngine.InputSystem.PlayerInput
-  m_Actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  m_Actions: {fileID: -944628639613478452, guid: b691b6e6027c39c4f9660de30ddccc24, type: 3}
   m_NotificationBehavior: 3
   m_UIInputModule: {fileID: 0}
   m_DeviceLostEvent:
