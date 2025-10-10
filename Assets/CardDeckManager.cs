@@ -1,144 +1,118 @@
 // 10/9/2025 AI-Tag
-// This was created with the help of Assistant, a Unity Artificial Intelligence product.
-
-// 10/9/2025 AI-Tag
-// This was created with the help of Assistant, a Unity Artificial Intelligence product.
+// Updated for 3D card system using Card3D and ScriptableObject cards.
 
 using UnityEngine;
-using System.Collections.Generic; // For List<>
-using UnityEngine.InputSystem; // For the New Input System
+using System.Collections.Generic;
+using UnityEngine.InputSystem;
 
 public class CardDeckManager : MonoBehaviour
 {
-    private GameObject currentCardObject; // To track the currently displayed card
+    [Header("Card Setup")]
+    public GameObject cardPrefab;             // 3D Card prefab to instantiate
+    public List<Card> masterCardList;         // The master list of all possible cards
+    public Transform[] cardSpawnPoints;       // 6 spawn points (1 per player)
 
-    public List<Card> deck; // The current deck of cards
-    public Transform[] cardSpawnPoints; // Spawn points for each player
-    public GameObject cardPrefab; // The card prefab to instantiate
-
-    [SerializeField]
-    private List<Card> masterCardList; // The full list of all cards for reshuffling
-
-    private PlayerInputActions inputActions; // Reference to the generated Input Actions class
-    private bool hasDrawnCard = false; // Flag to track if the current player has drawn a card
+    [Header("Game Settings")]
+    public int startingCardsPerPlayer = 4;    // How many cards each player starts with
 
     private List<Player> players = new List<Player>();
+    private PlayerInputActions inputActions;
     private int currentPlayerIndex = 0;
 
     private void Awake()
     {
-        // Initialize the Input Actions
         inputActions = new PlayerInputActions();
     }
 
     private void OnEnable()
     {
-        // Enable the Input Actions
         inputActions.Enable();
-
-        // Subscribe to the SpawnCardAction
-        inputActions.Player.SpawnCardAction.performed += OnSpawnCardActionPerformed;
+        inputActions.Player.SpawnCardAction.performed += OnSpawnCardPressed;
     }
 
     private void OnDisable()
     {
-        // Unsubscribe from the SpawnCardAction
-        inputActions.Player.SpawnCardAction.performed -= OnSpawnCardActionPerformed;
-
-        // Disable the Input Actions
+        inputActions.Player.SpawnCardAction.performed -= OnSpawnCardPressed;
         inputActions.Disable();
-    }
-
-    public void ShuffleDeck()
-    {
-        for (int i = 0; i < deck.Count; i++)
-        {
-            Card temp = deck[i];
-            int randomIndex = Random.Range(0, deck.Count);
-            deck[i] = deck[randomIndex];
-            deck[randomIndex] = temp;
-        }
     }
 
     private void Start()
     {
-        // Initialize players
-        players.Add(new Player("Player 1"));
-        players.Add(new Player("Player 2"));
-        players.Add(new Player("Player 3"));
-        players.Add(new Player("Player 4"));
-        players.Add(new Player("Player 5"));
-        players.Add(new Player("Player 6"));
+        // Initialize 6 players
+        for (int i = 0; i < 6; i++)
+        {
+            players.Add(new Player($"Player {i + 1}"));
+        }
 
-        Debug.Log("Game initialized with 6 players.");
+        Debug.Log("Initialized 6 players.");
 
-        // Distribute 4 cards to each player at the start
+        // Shuffle just for variety (optional)
+        ShuffleMasterDeck();
+
+        // Deal starting cards
         for (int i = 0; i < players.Count; i++)
         {
-            for (int j = 0; j < 4; j++)
+            for (int j = 0; j < startingCardsPerPlayer; j++)
             {
                 DrawCardForPlayer(i);
             }
         }
 
-        Debug.Log("Each player starts with 4 cards.");
+        Debug.Log("Each player received 4 starting cards.");
     }
 
-    private void OnSpawnCardActionPerformed(InputAction.CallbackContext context)
+    private void OnSpawnCardPressed(InputAction.CallbackContext context)
     {
-        // Triggered when SpawnCardAction is performed
-        Debug.Log("SpawnCardAction triggered!");
-
-        // Give 1 card to the current player
+        // When Space is pressed, give 1 card to the current player
         DrawCardForPlayer(currentPlayerIndex);
 
         // Move to the next player
         currentPlayerIndex = (currentPlayerIndex + 1) % players.Count;
 
-        // Reset the flag for the new player's turn
-        hasDrawnCard = false;
-
-        Debug.Log($"It's now {players[currentPlayerIndex].playerName}'s turn.");
+        Debug.Log($"Next turn: {players[currentPlayerIndex].playerName}");
     }
 
-    public void DrawCardForPlayer(int playerIndex)
+    private void DrawCardForPlayer(int playerIndex)
     {
-        if (deck == null || deck.Count == 0)
+        if (masterCardList == null || masterCardList.Count == 0)
         {
-            Debug.LogError("Deck is empty! Cannot draw a card.");
+            Debug.LogError("Master card list is empty! Cannot draw cards.");
             return;
         }
 
-        // Draw a random card
-        int randomIndex = Random.Range(0, deck.Count);
-        Card drawnCard = deck[randomIndex];
-
-        // Remove the card from the deck
-        deck.RemoveAt(randomIndex);
+        // Pick a random card from the master list (infinite deck)
+        Card randomCard = masterCardList[Random.Range(0, masterCardList.Count)];
 
         // Add the card to the player's hand
-        players[playerIndex].AddCardToHand(drawnCard);
+        players[playerIndex].AddCardToHand(randomCard);
 
-        // Instantiate the card at the player's spawn point
+        // Spawn the card visually at the player's spawn point
         Transform spawnPoint = cardSpawnPoints[playerIndex];
-        GameObject cardObject = Instantiate(cardPrefab, spawnPoint.position, Quaternion.identity);
-        CardDisplay cardDisplay = cardObject.GetComponent<CardDisplay>();
+        GameObject cardObject = Instantiate(cardPrefab, spawnPoint.position, spawnPoint.rotation);
 
-        // Set the card's data for display
-        cardDisplay.SetCard(drawnCard);
+        // Apply data to the 3D card
+        Card3D card3D = cardObject.GetComponent<Card3D>();
+        if (card3D != null)
+        {
+            card3D.cardData = randomCard;
+            card3D.ApplyCardData();
+        }
+        else
+        {
+            Debug.LogWarning("Spawned card prefab does not have a Card3D component!");
+        }
 
-        Debug.Log($"{players[playerIndex].playerName} drew a card: {drawnCard.cardName}");
+        Debug.Log($"{players[playerIndex].playerName} drew {randomCard.cardName}");
     }
 
-    private void NextTurn()
+    private void ShuffleMasterDeck()
     {
-        // Increment the current player index
-        currentPlayerIndex = (currentPlayerIndex + 1) % players.Count;
+        for (int i = 0; i < masterCardList.Count; i++)
+        {
+            int randomIndex = Random.Range(i, masterCardList.Count);
+            (masterCardList[i], masterCardList[randomIndex]) = (masterCardList[randomIndex], masterCardList[i]);
+        }
 
-        // Reset the flag for the new player's turn
-        hasDrawnCard = false;
-
-        // Log the current player's turn
-        Debug.Log($"It's now {players[currentPlayerIndex].playerName}'s turn.");
+        Debug.Log("Master deck shuffled.");
     }
 }
