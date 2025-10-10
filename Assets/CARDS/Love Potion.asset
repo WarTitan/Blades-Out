@@ -12,11 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e186e30e6a505564196657bf08177727, type: 3}
   m_Name: Love Potion
   m_EditorClassIdentifier: Assembly-CSharp::Card
-  cardName: 'Love Potion '
-  description: Heal 1 life (max 6).
-  cardImage: {fileID: 0}
-  effects:
-  - effectType: 1
-    effectValue: 1
-    delayTurns: 0
-    durationTurns: 1
+  cardName: 'Shield '
+  description: "0\u2192 Block 1 source of DMG\n3\u2192 Block 2 source of DMG\n6\u2192
+    Block 3 source of DMG"
+  artwork: {fileID: 0}

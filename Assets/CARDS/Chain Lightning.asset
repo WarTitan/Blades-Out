@@ -13,10 +13,6 @@ MonoBehaviour:
   m_Name: Chain Lightning
   m_EditorClassIdentifier: Assembly-CSharp::Card
   cardName: Chain Lightning
-  description: 1 damage to target, then arcs to their left neighbor.
-  cardImage: {fileID: 794977401, guid: 64074e669d274ee49a26cc39d89ea23d, type: 3}
-  effects:
-  - effectType: 0
-    effectValue: 1
-    delayTurns: 0
-    durationTurns: 1
+  description: "0\u2192 Deal 1 DMG\n6\u2192 Deal 1 dmg, arcs next\n12\u2192 Deal
+    2 dmg, arcs next"
+  artwork: {fileID: 0}

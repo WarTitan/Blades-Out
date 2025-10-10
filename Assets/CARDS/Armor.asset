@@ -13,10 +13,6 @@ MonoBehaviour:
   m_Name: Armor
   m_EditorClassIdentifier: Assembly-CSharp::Card
   cardName: 'Armor '
-  description: Absorbs 2 damage, breaks after round.
-  cardImage: {fileID: 0}
-  effects:
-  - effectType: 3
-    effectValue: 2
-    delayTurns: 0
-    durationTurns: 1
+  description: "0\u2192 Block 2, breaks in 1 turn\n4\u2192 Block 4, breaks in 2 turn\n8\u2192
+    Block 6, breaks in 3 turn"
+  artwork: {fileID: 0}

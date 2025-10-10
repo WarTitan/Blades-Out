@@ -10,13 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e186e30e6a505564196657bf08177727, type: 3}
-  m_Name: First attacker takes 1 damage instead.
+  m_Name: Cactus
   m_EditorClassIdentifier: Assembly-CSharp::Card
-  cardName: Trap Card
-  description: First attacker takes 1 damage instead.
-  cardImage: {fileID: 0}
-  effects:
-  - effectType: 0
-    effectValue: 1
-    delayTurns: 0
-    durationTurns: 1
+  cardName: 'Cactus '
+  description: "0\u2192 Reflect 1 DMG, lasts 2 turns\n5\u2192 Reflect 2 DMG, lasts
+    3 turns\n10 \u2192 Reflect 3 DMG, lasts 4 turns"
+  artwork: {fileID: 0}

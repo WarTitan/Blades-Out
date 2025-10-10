@@ -1,34 +1,55 @@
-// 9/12/2025 AI-Tag
-// This was created with the help of Assistant, a Unity Artificial Intelligence product.
-
+using UnityEngine;
 using System.Collections.Generic;
 
 public class Player
 {
-    public string playerName; // The name of the player
-    public List<Card> hand; // The player's hand of cards
+    // === Basic Player Data ===
+    public string playerName;
+    public int playerIndex;
 
+    // === Health System ===
+    public int maxHearts = 10;
+    public int currentHearts = 10;
+    public HeartBar heartBar;
+
+    // === Card System ===
+    public List<Card> hand = new List<Card>();
+
+    // === Camera Reference (for heart bar follow) ===
+    public Camera playerCamera;
+
+    // --- Constructors ---
     public Player(string name)
     {
         playerName = name;
-        hand = new List<Card>(); // Initialize the hand as an empty list
     }
 
-    // Add a card to the player's hand
+    // --- Card Management ---
     public void AddCardToHand(Card card)
     {
         hand.Add(card);
     }
 
-    // Remove a card from the player's hand
-    public void RemoveCardFromHand(Card card)
+    // --- Health Management ---
+    public void TakeDamage(int amount)
     {
-        hand.Remove(card);
+        currentHearts -= amount;
+        currentHearts = Mathf.Clamp(currentHearts, 0, maxHearts);
+
+        if (heartBar != null)
+        {
+            heartBar.SetHearts(currentHearts, maxHearts);
+        }
     }
 
-    // Get the number of cards in the player's hand
-    public int GetHandSize()
+    public void Heal(int amount)
     {
-        return hand.Count;
+        currentHearts += amount;
+        currentHearts = Mathf.Clamp(currentHearts, 0, maxHearts);
+
+        if (heartBar != null)
+        {
+            heartBar.SetHearts(currentHearts, maxHearts);
+        }
     }
 }

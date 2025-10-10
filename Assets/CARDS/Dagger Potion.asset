@@ -10,13 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e186e30e6a505564196657bf08177727, type: 3}
-  m_Name: "Assassin\u2019s Blade"
+  m_Name: Dagger Potion
   m_EditorClassIdentifier: Assembly-CSharp::Card
-  cardName: "Assassin\u2019s Blade"
-  description: "If target has \u22642 lives, deal 2 damage."
-  cardImage: {fileID: 794977401, guid: 64074e669d274ee49a26cc39d89ea23d, type: 3}
-  effects:
-  - effectType: 0
-    effectValue: 2
-    delayTurns: 0
-    durationTurns: 1
+  cardName: 'Dagger Potion '
+  description: "0\u2192 Deal 1 DMG, heal 1 life\n8\u2192 Deal 2 DMG, heal 2 life
+    \n16\u2192 Deal 3 DMG, heal 3 life"
+  artwork: {fileID: 0}

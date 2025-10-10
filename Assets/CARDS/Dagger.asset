@@ -12,11 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e186e30e6a505564196657bf08177727, type: 3}
   m_Name: Dagger
   m_EditorClassIdentifier: Assembly-CSharp::Card
-  cardName: 'Dagger '
-  description: Deal 1 damage.
-  cardImage: {fileID: 794977401, guid: 64074e669d274ee49a26cc39d89ea23d, type: 3}
-  effects:
-  - effectType: 0
-    effectValue: 1
-    delayTurns: 0
-    durationTurns: 1
+  cardName: Dagger
+  description: "0\u2192 Deal 1 DMG\n5\u2192 Deal 2 DMG\n10\u2192 Deal 3 DMG"
+  artwork: {fileID: 0}
