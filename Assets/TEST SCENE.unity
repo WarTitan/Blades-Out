@@ -232,11 +232,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
   lookSpeed: 10
-  zoomSpeed: 2
-  minZoom: 2
-  maxZoom: 20
-  zoomSmoothness: 10
-  cameraTransform: {fileID: 115160671}
 --- !u!114 &115160673
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -282,7 +277,7 @@ Camera:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 115160670}
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 2
   m_ClearFlags: 1
   m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
@@ -317,7 +312,7 @@ Camera:
     m_Bits: 4294967295
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
-  m_TargetDisplay: 3
+  m_TargetDisplay: 0
   m_TargetEye: 3
   m_HDR: 1
   m_AllowMSAA: 1
@@ -1580,11 +1575,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
   lookSpeed: 10
-  zoomSpeed: 2
-  minZoom: 2
-  maxZoom: 20
-  zoomSmoothness: 10
-  cameraTransform: {fileID: 1168152970}
 --- !u!114 &1168152972
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1630,7 +1620,7 @@ Camera:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1168152969}
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 2
   m_ClearFlags: 1
   m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
@@ -1665,7 +1655,7 @@ Camera:
     m_Bits: 4294967295
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
-  m_TargetDisplay: 4
+  m_TargetDisplay: 0
   m_TargetEye: 3
   m_HDR: 1
   m_AllowMSAA: 1
@@ -1685,6 +1675,7 @@ GameObject:
   - component: {fileID: 1172769266}
   - component: {fileID: 1172769265}
   - component: {fileID: 1172769267}
+  - component: {fileID: 1172769268}
   m_Layer: 0
   m_Name: CardDeckManager
   m_TagString: Untagged
@@ -1775,6 +1766,18 @@ MonoBehaviour:
   m_DefaultActionMap: 
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
+--- !u!114 &1172769268
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1172769264}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a927bbd223384f41b3c8960847e3f20, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MultiDisplayInitializer
 --- !u!1 &1178872681
 GameObject:
   m_ObjectHideFlags: 0
@@ -1823,11 +1826,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TMPro.Examples.CameraController
   lookSpeed: 10
-  zoomSpeed: 2
-  minZoom: 2
-  maxZoom: 20
-  zoomSmoothness: 10
-  cameraTransform: {fileID: 1178872682}
 --- !u!114 &1178872684
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2407,7 +2405,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1355582551}
   - component: {fileID: 1355582550}
-  - component: {fileID: 1355582549}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -2415,18 +2412,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1355582549
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1355582548}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
 --- !u!108 &1355582550
 Light:
   m_ObjectHideFlags: 0
@@ -2849,11 +2834,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
   lookSpeed: 10
-  zoomSpeed: 2
-  minZoom: 2
-  maxZoom: 20
-  zoomSmoothness: 10
-  cameraTransform: {fileID: 1836476264}
 --- !u!114 &1836476266
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2899,7 +2879,7 @@ Camera:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1836476263}
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 2
   m_ClearFlags: 1
   m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
@@ -2934,7 +2914,7 @@ Camera:
     m_Bits: 4294967295
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
-  m_TargetDisplay: 5
+  m_TargetDisplay: 0
   m_TargetEye: 3
   m_HDR: 1
   m_AllowMSAA: 1
@@ -3021,11 +3001,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
   lookSpeed: 10
-  zoomSpeed: 2
-  minZoom: 2
-  maxZoom: 20
-  zoomSmoothness: 10
-  cameraTransform: {fileID: 1896913907}
 --- !u!81 &1896913910
 AudioListener:
   m_ObjectHideFlags: 0
@@ -3041,7 +3016,7 @@ Camera:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1896913906}
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 2
   m_ClearFlags: 1
   m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
@@ -3076,7 +3051,7 @@ Camera:
     m_Bits: 4294967295
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
-  m_TargetDisplay: 1
+  m_TargetDisplay: 0
   m_TargetEye: 3
   m_HDR: 1
   m_AllowMSAA: 1
@@ -3164,11 +3139,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
   lookSpeed: 10
-  zoomSpeed: 2
-  minZoom: 2
-  maxZoom: 20
-  zoomSmoothness: 10
-  cameraTransform: {fileID: 1915930341}
 --- !u!114 &1915930343
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3214,7 +3184,7 @@ Camera:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1915930340}
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 2
   m_ClearFlags: 1
   m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
@@ -3249,7 +3219,7 @@ Camera:
     m_Bits: 4294967295
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
-  m_TargetDisplay: 2
+  m_TargetDisplay: 0
   m_TargetEye: 3
   m_HDR: 1
   m_AllowMSAA: 1
