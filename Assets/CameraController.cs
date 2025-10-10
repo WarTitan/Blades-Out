@@ -1,7 +1,4 @@
-// Multi-display camera controller: whichever camera is clicked or activated becomes active.
-// Works with the new Input System and shared mouse input across displays.
-
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class CameraController : MonoBehaviour
@@ -11,21 +8,18 @@ public class CameraController : MonoBehaviour
 
     private PlayerInputActions inputActions;
     private Vector2 lookInput;
+
     private float yaw;
     private float pitch;
 
     public static CameraController ActiveCamera { get; private set; }
-    private Camera thisCamera;
+
+    private Camera cam;
 
     private void Awake()
     {
         inputActions = new PlayerInputActions();
-        thisCamera = GetComponent<Camera>();
-        if (thisCamera == null)
-        {
-            Debug.LogError($"{name} requires a Camera component!");
-            enabled = false;
-        }
+        cam = GetComponent<Camera>();
     }
 
     private void OnEnable()
@@ -40,8 +34,9 @@ public class CameraController : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
-        if (ActiveCamera == null && thisCamera.targetDisplay == 0)
-            OnSwitchedTo(); // Default to Display 1 camera
+        // Default to Camera1 at start
+        if (ActiveCamera == null && name == "Camera1")
+            OnSwitchedTo();
     }
 
     private void OnDisable()
@@ -49,33 +44,44 @@ public class CameraController : MonoBehaviour
         inputActions.Disable();
         if (ActiveCamera == this)
             ActiveCamera = null;
-
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
     }
 
     private void Update()
     {
-        // Handle mouse click switching
-        if (Mouse.current.leftButton.wasPressedThisFrame)
-        {
-            Ray ray = thisCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
-            if (Physics.Raycast(ray, out RaycastHit hit))
-            {
-                // Optional: check tag/layer for click switching
-            }
-
-            // Switch active camera if user clicks in this display's viewport
-            Vector2 mousePos = Mouse.current.position.ReadValue();
-            Rect pixelRect = thisCamera.pixelRect;
-            if (pixelRect.Contains(mousePos))
-                OnSwitchedTo();
-        }
+        HandleCameraSwitching();
 
         if (ActiveCamera != this)
             return;
 
         RotateCamera();
+    }
+
+    private void HandleCameraSwitching()
+    {
+        if (Keyboard.current.digit1Key.wasPressedThisFrame) ActivateCameraByName("Camera1", 0);
+        if (Keyboard.current.digit2Key.wasPressedThisFrame) ActivateCameraByName("Camera2", 1);
+        if (Keyboard.current.digit3Key.wasPressedThisFrame) ActivateCameraByName("Camera3", 2);
+        if (Keyboard.current.digit4Key.wasPressedThisFrame) ActivateCameraByName("Camera4", 3);
+        if (Keyboard.current.digit5Key.wasPressedThisFrame) ActivateCameraByName("Camera5", 4);
+        if (Keyboard.current.digit6Key.wasPressedThisFrame) ActivateCameraByName("Camera6", 5);
+    }
+
+    private void ActivateCameraByName(string cameraName, int displayIndex)
+    {
+        CameraController target = FindCameraByName(cameraName);
+        if (target != null)
+            target.OnSwitchedTo(displayIndex);
+    }
+
+    private CameraController FindCameraByName(string name)
+    {
+        var cameras = FindObjectsByType<CameraController>(FindObjectsSortMode.None);
+        foreach (var cam in cameras)
+        {
+            if (cam.name == name)
+                return cam;
+        }
+        return null;
     }
 
     private void RotateCamera()
@@ -86,30 +92,37 @@ public class CameraController : MonoBehaviour
         yaw += lookInput.x * lookSpeed * Time.deltaTime;
         pitch -= lookInput.y * lookSpeed * Time.deltaTime;
         pitch = Mathf.Clamp(pitch, -90f, 90f);
+
         transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
     }
 
-    public void OnSwitchedTo()
+    public void OnSwitchedTo(int displayIndex = 0)
     {
         ActiveCamera = this;
         yaw = transform.eulerAngles.y;
         pitch = transform.eulerAngles.x;
 
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        // Disable all other cameras
+        var allCams = FindObjectsByType<Camera>(FindObjectsSortMode.None);
+        foreach (var c in allCams)
+            c.enabled = false;
 
-        // Optionally: ensure only one AudioListener active
-        foreach (var cam in FindObjectsOfType<Camera>())
+        // Enable this one
+        cam.enabled = true;
+
+        // Assign to correct display
+        if (Display.displays.Length > displayIndex)
         {
-            var listener = cam.GetComponent<AudioListener>();
-            if (listener != null) listener.enabled = (cam == thisCamera);
+            cam.targetDisplay = displayIndex;
+            Display.displays[displayIndex].Activate();
+            Debug.Log($"{name} activated on Display {displayIndex + 1}");
+        }
+        else
+        {
+            Debug.LogWarning($"Display {displayIndex + 1} not available!");
         }
 
-        Debug.Log($"{name} (Display {thisCamera.targetDisplay}) is now active.");
-    }
-
-    private void OnMouseDown()
-    {
-        OnSwitchedTo();
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 }
