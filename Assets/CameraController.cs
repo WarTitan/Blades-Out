@@ -1,5 +1,7 @@
-// 10/9/2025 AI-Tag
-// This was created with the help of Assistant, a Unity Artificial Intelligence product.
+﻿// 10/9/2025 AI-Tag
+// Each camera (Camera1–Camera6) can be selected with keys 1–6.
+// Only the active camera responds to mouse input.
+// Fixed zoom: reads scroll.y from Vector2 instead of float.
 
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -8,9 +10,10 @@ public class CameraController : MonoBehaviour
 {
     [Header("Settings")]
     public float lookSpeed = 100f;
-    public float zoomSpeed = 2f;
+    public float zoomSpeed = 5f;
     public float minZoom = 2f;
     public float maxZoom = 20f;
+    public float zoomSmoothness = 10f;
 
     [Header("References")]
     public Transform cameraTransform; // Optional (for zoom only)
@@ -22,6 +25,9 @@ public class CameraController : MonoBehaviour
     private float yaw;
     private float pitch;
     private float currentZoom = 10f;
+    private float targetZoom = 10f;
+
+    public static CameraController ActiveCamera { get; private set; }
 
     private void Awake()
     {
@@ -32,33 +38,74 @@ public class CameraController : MonoBehaviour
     {
         inputActions.Enable();
 
-        // Input bindings
         inputActions.Player.look.performed += ctx => lookInput = ctx.ReadValue<Vector2>();
         inputActions.Player.look.canceled += ctx => lookInput = Vector2.zero;
 
-        inputActions.Player.zoom.performed += ctx => zoomInput = ctx.ReadValue<float>();
+        // ✅ Fixed scroll: read Vector2 and use its Y component
+        inputActions.Player.zoom.performed += ctx =>
+        {
+            Vector2 scroll = ctx.ReadValue<Vector2>();
+            zoomInput = scroll.y;
+        };
         inputActions.Player.zoom.canceled += ctx => zoomInput = 0f;
 
-        // Record scene rotation exactly as-is (no math conversions)
         yaw = transform.eulerAngles.y;
         pitch = transform.eulerAngles.x;
 
-        // Hide and lock cursor
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+
+        // Make Camera1 active by default
+        if (ActiveCamera == null && name == "Camera1")
+            OnSwitchedTo();
     }
 
     private void OnDisable()
     {
         inputActions.Disable();
+        if (ActiveCamera == this)
+            ActiveCamera = null;
+
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
     }
 
     private void Update()
     {
+        HandleCameraSwitching();
+
+        if (ActiveCamera != this)
+            return;
+
         RotateCamera();
         HandleZoom();
+    }
+
+    private void HandleCameraSwitching()
+    {
+        if (Keyboard.current.digit1Key.wasPressedThisFrame) ActivateCameraByName("Camera1");
+        if (Keyboard.current.digit2Key.wasPressedThisFrame) ActivateCameraByName("Camera2");
+        if (Keyboard.current.digit3Key.wasPressedThisFrame) ActivateCameraByName("Camera3");
+        if (Keyboard.current.digit4Key.wasPressedThisFrame) ActivateCameraByName("Camera4");
+        if (Keyboard.current.digit5Key.wasPressedThisFrame) ActivateCameraByName("Camera5");
+        if (Keyboard.current.digit6Key.wasPressedThisFrame) ActivateCameraByName("Camera6");
+    }
+
+    private void ActivateCameraByName(string cameraName)
+    {
+        CameraController target = FindCameraByName(cameraName);
+        if (target != null)
+            target.OnSwitchedTo();
+    }
+
+    private CameraController FindCameraByName(string name)
+    {
+        foreach (var cam in FindObjectsOfType<CameraController>())
+        {
+            if (cam.name == name)
+                return cam;
+        }
+        return null;
     }
 
     private void RotateCamera()
@@ -75,11 +122,13 @@ public class CameraController : MonoBehaviour
 
     private void HandleZoom()
     {
-        if (Mathf.Abs(zoomInput) < 0.01f)
-            return;
+        if (Mathf.Abs(zoomInput) > 0.01f)
+        {
+            targetZoom -= zoomInput * zoomSpeed * Time.deltaTime;
+            targetZoom = Mathf.Clamp(targetZoom, minZoom, maxZoom);
+        }
 
-        currentZoom -= zoomInput * zoomSpeed * Time.deltaTime;
-        currentZoom = Mathf.Clamp(currentZoom, minZoom, maxZoom);
+        currentZoom = Mathf.Lerp(currentZoom, targetZoom, Time.deltaTime * zoomSmoothness);
 
         if (cameraTransform != null)
             cameraTransform.localPosition = new Vector3(0, 0, -currentZoom);
@@ -89,23 +138,27 @@ public class CameraController : MonoBehaviour
 
     public void OnSwitchedTo()
     {
-        // Reset internal yaw/pitch to match current exact rotation
+        ActiveCamera = this;
         yaw = transform.eulerAngles.y;
         pitch = transform.eulerAngles.x;
 
-        // Ensure cursor stays locked when switching
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+
+        Debug.Log($"{name} is now the active camera.");
     }
 
-    /// <summary>
-    /// Resets the camera's position and zoom to default values.
-    /// </summary>
+    private void OnMouseDown()
+    {
+        OnSwitchedTo();
+    }
+
     public void ResetCamera()
     {
         yaw = 0f;
         pitch = 0f;
         currentZoom = (minZoom + maxZoom) / 2f;
+        targetZoom = currentZoom;
 
         transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
 
@@ -114,6 +167,6 @@ public class CameraController : MonoBehaviour
         else
             transform.localPosition = new Vector3(0, 0, -currentZoom);
 
-        Debug.Log("Camera reset to default position and zoom.");
+        Debug.Log($"{name} camera reset to default position and zoom.");
     }
 }
