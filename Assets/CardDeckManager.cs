@@ -72,11 +72,26 @@ public class CardDeckManager : MonoBehaviour
         Debug.Log($"Next turn: {players[currentPlayerIndex].playerName}");
     }
 
+    // 10/10/2025 AI-Tag
+    // This was created with the help of Assistant, a Unity Artificial Intelligence product.
+
     private void DrawCardForPlayer(int playerIndex)
     {
+        if (playerIndex < 0 || playerIndex >= players.Count)
+        {
+            Debug.LogError($"Invalid player index: {playerIndex}. Cannot draw card.");
+            return;
+        }
+
         if (masterCardList == null || masterCardList.Count == 0)
         {
             Debug.LogError("Master card list is empty! Cannot draw cards.");
+            return;
+        }
+
+        if (playerIndex >= cardSpawnPoints.Length)
+        {
+            Debug.LogError($"Invalid spawn point index: {playerIndex}. Ensure cardSpawnPoints array has enough elements.");
             return;
         }
 
@@ -89,6 +104,12 @@ public class CardDeckManager : MonoBehaviour
         // Spawn the card visually at the player's spawn point
         Transform spawnPoint = cardSpawnPoints[playerIndex];
         GameObject cardObject = Instantiate(cardPrefab, spawnPoint.position, spawnPoint.rotation);
+
+        // Adjust the size (scale) of the card
+        cardObject.transform.localScale = new Vector3(0.22f, 0.3f, 0.01f); // Adjust these values as needed
+
+        // Adjust the rotation of the card
+        cardObject.transform.rotation = Quaternion.Euler(-270, 0, 0); // Example: Rotate 180 degrees on the Y-axis
 
         // Apply data to the 3D card
         Card3D card3D = cardObject.GetComponent<Card3D>();
