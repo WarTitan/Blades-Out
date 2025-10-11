@@ -1,8 +1,10 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine.InputSystem;
+using Steamworks;
 
-public class CardDeckManager : MonoBehaviour
+public class CardDeckManager : NetworkBehaviour
 {
     [Header("Card Setup")]
     public Card3D card3D;                           // Prefab for 3D card
@@ -21,11 +23,15 @@ public class CardDeckManager : MonoBehaviour
 
     [Header("❤️ Health Bar Setup")]
     [SerializeField] private HeartBar heartBarPrefab;   // Prefab for Minecraft-style heart bar
+    [SerializeField] private NetworkPlayer networkPlayerPrefab; // Networked player prefab
 
     private List<Player> players = new List<Player>();
     private PlayerInputActions inputActions;
     private int currentPlayerIndex = 0;
     private Dictionary<int, int> playerCardCounts = new Dictionary<int, int>();
+
+    // For networked player management
+    private readonly Dictionary<ulong, NetworkPlayer> connectedPlayers = new Dictionary<ulong, NetworkPlayer>();
 
     private void Awake()
     {
@@ -42,11 +48,31 @@ public class CardDeckManager : MonoBehaviour
     {
         inputActions.Player.SpawnCardAction.performed -= OnSpawnCardPressed;
         inputActions.Disable();
+
+        if (NetworkManager.Singleton != null)
+        {
+            NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
+            NetworkManager.Singleton.OnClientDisconnectCallback -= OnClientDisconnected;
+        }
     }
 
-    private void Start()
+    public override void OnNetworkSpawn()
     {
-        // --- Create players ---
+        if (IsServer)
+        {
+            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+            NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
+            ShuffleMasterDeck();
+        }
+
+        // Local fallback (single-player mode)
+        if (!NetworkManager.Singleton.IsListening)
+            LocalSinglePlayerSetup();
+    }
+
+    private void LocalSinglePlayerSetup()
+    {
+        // --- Create local players ---
         for (int i = 0; i < cardSpawnPoints.Length; i++)
         {
             Player player = new Player($"Player {i + 1}");
@@ -54,7 +80,6 @@ public class CardDeckManager : MonoBehaviour
             playerCardCounts[i] = 0;
         }
 
-        // Shuffle the deck
         ShuffleMasterDeck();
 
         // --- Deal starting cards ---
@@ -64,11 +89,10 @@ public class CardDeckManager : MonoBehaviour
                 DrawCardForPlayer(i);
         }
 
-        // --- Spawn Minecraft-style Heart Bars ---
+        // --- Spawn Heart Bars ---
         for (int i = 0; i < players.Count; i++)
         {
             Player player = players[i];
-
             if (heartBarPrefab != null && i < playerCameras.Length && i < cardSpawnPoints.Length)
             {
                 HeartBar hb = Instantiate(heartBarPrefab);
@@ -76,17 +100,97 @@ public class CardDeckManager : MonoBehaviour
                 hb.SetHearts(player.currentHearts, player.maxHearts);
                 player.heartBar = hb;
             }
-            else
-            {
-                Debug.LogWarning($"Missing HeartBar prefab or camera/spawnpoint for player {i + 1}");
-            }
+        }
+    }
+
+    private void OnClientConnected(ulong clientId)
+    {
+        int spawnIndex = connectedPlayers.Count % cardSpawnPoints.Length;
+        Transform spawn = cardSpawnPoints[spawnIndex];
+
+        NetworkPlayer player = Instantiate(networkPlayerPrefab, spawn.position, spawn.rotation);
+        player.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId, true);
+        connectedPlayers[clientId] = player;
+
+        Debug.Log($"Spawned player {clientId} at spawn point {spawnIndex}");
+
+        // Spawn health bar for this player
+        HeartBar hb = Instantiate(heartBarPrefab);
+        hb.Initialize(spawn, player.playerCamera, spawn);
+        hb.SetHearts(player.currentHearts.Value, player.maxHearts.Value);
+        player.heartBar = hb;
+
+        // Deal starting cards for that player
+        for (int j = 0; j < startingCardsPerPlayer; j++)
+            DealCardToClient(clientId, spawnIndex);
+    }
+
+    private void OnClientDisconnected(ulong clientId)
+    {
+        if (connectedPlayers.TryGetValue(clientId, out NetworkPlayer player))
+        {
+            if (player != null && player.gameObject != null)
+                Destroy(player.gameObject);
+
+            connectedPlayers.Remove(clientId);
         }
     }
 
     private void OnSpawnCardPressed(InputAction.CallbackContext context)
     {
-        DrawCardForPlayer(currentPlayerIndex);
-        currentPlayerIndex = (currentPlayerIndex + 1) % players.Count;
+        // Local spawn fallback for testing
+        if (!NetworkManager.Singleton.IsListening)
+        {
+            DrawCardForPlayer(currentPlayerIndex);
+            currentPlayerIndex = (currentPlayerIndex + 1) % players.Count;
+        }
+        else if (IsServer)
+        {
+            foreach (var kv in connectedPlayers)
+            {
+                DealCardToClient(kv.Key, (int)(kv.Key % (ulong)cardSpawnPoints.Length));
+            }
+        }
+        else if (IsClient)
+        {
+            RequestDrawCardServerRpc();
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestDrawCardServerRpc(ServerRpcParams rpcParams = default)
+    {
+        ulong senderId = rpcParams.Receive.SenderClientId;
+        int spawnIndex = (int)(senderId % (ulong)cardSpawnPoints.Length);
+        DealCardToClient(senderId, spawnIndex);
+    }
+
+    private void DealCardToClient(ulong clientId, int playerIndex)
+    {
+        if (masterCardList == null || masterCardList.Count == 0) return;
+        Card randomCard = masterCardList[Random.Range(0, masterCardList.Count)];
+        masterCardList.Remove(randomCard);
+
+        SendCardToClientClientRpc(randomCard.id, playerIndex, new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams { TargetClientIds = new[] { clientId } }
+        });
+    }
+
+    [ClientRpc]
+    private void SendCardToClientClientRpc(int cardId, int playerIndex, ClientRpcParams rpcParams = default)
+    {
+        if (playerIndex < 0 || playerIndex >= cardSpawnPoints.Length) return;
+
+        Transform spawnPoint = cardSpawnPoints[playerIndex];
+        Camera cam = (playerIndex < playerCameras.Length) ? playerCameras[playerIndex] : null;
+        if (cam == null) return;
+
+        Card cardData = masterCardList.Find(c => c.id == cardId);
+        if (cardData == null) return;
+
+        // Spawn visually
+        SpawnCardVisual(cardData, playerIndex);
     }
 
     private void DrawCardForPlayer(int playerIndex)
@@ -94,28 +198,22 @@ public class CardDeckManager : MonoBehaviour
         if (playerIndex < 0 || playerIndex >= players.Count) return;
         if (masterCardList == null || masterCardList.Count == 0) return;
 
-        Transform spawnPoint = cardSpawnPoints[playerIndex];
-        if (spawnPoint == null) return;
-
-        // Pick a random card
         Card randomCard = masterCardList[Random.Range(0, masterCardList.Count)];
         players[playerIndex].AddCardToHand(randomCard);
+        SpawnCardVisual(randomCard, playerIndex);
+    }
 
-        // Get camera (center of the circle)
-        Camera cam = (playerIndex < playerCameras.Length) ? playerCameras[playerIndex] : null;
-        if (cam == null)
-        {
-            Debug.LogWarning($"No camera assigned for player {playerIndex + 1}");
-            return;
-        }
+    private void SpawnCardVisual(Card randomCard, int playerIndex)
+    {
+        Transform spawnPoint = cardSpawnPoints[playerIndex];
+        Camera cam = playerCameras[playerIndex];
 
-        // --- Circle geometry ---
+        // Geometry (same as before)
         Vector3 center = cam.transform.position;
         float radius = Vector3.Distance(spawnPoint.position, center);
         Vector3 centerToSpawn = (spawnPoint.position - center).normalized;
 
-        // --- Alternating arc pattern ---
-        int n = playerCardCounts[playerIndex]; // index of the card
+        int n = playerCardCounts.ContainsKey(playerIndex) ? playerCardCounts[playerIndex] : 0;
         int k = (n + 1) / 2;
         float sign = (n % 2 == 1) ? +1f : -1f;
         if (n == 0) sign = 0f;
@@ -123,46 +221,24 @@ public class CardDeckManager : MonoBehaviour
         float fanStepAngle = 12.5f;
         float angleOffset = sign * k * fanStepAngle;
 
-        // --- Position on circle rim ---
         Quaternion rotation = Quaternion.AngleAxis(angleOffset, Vector3.up);
         Vector3 dirOnRim = rotation * centerToSpawn;
         Vector3 spawnPos = center + dirOnRim * radius;
 
-        // --- Instantiate card ---
         Card3D cardInstance = Instantiate(card3D, spawnPos, Quaternion.identity);
-
-        // --- Make card face toward the camera ---
         Vector3 toCamera = (cam.transform.position - spawnPos).normalized;
         cardInstance.transform.rotation = Quaternion.LookRotation(toCamera, Vector3.up);
 
-        // Flip 180° so the FRONT faces the camera
+        // Face front to camera
         cardInstance.transform.Rotate(180f, 180f, 0f, Space.Self);
-        // Add tilt
         cardInstance.transform.Rotate(cardTiltAngle, 0f, 0f, Space.Self);
-
-        // Slight curve rotation for realism
         cardInstance.transform.Rotate(Vector3.up, angleOffset * 0.5f, Space.World);
-
-        // Scale down
         cardInstance.transform.localScale = cardScale;
 
-        // Apply card data
         cardInstance.cardData = randomCard;
         cardInstance.ApplyCardData();
 
-        playerCardCounts[playerIndex]++;
-    }
-
-    private Vector3 GetForwardBetweenPlayerAndSpawn(int playerIndex)
-    {
-        Camera cam = (playerIndex < playerCameras.Length) ? playerCameras[playerIndex] : null;
-        Transform spawn = cardSpawnPoints[playerIndex];
-
-        if (cam == null || spawn == null)
-            return spawn.forward; // fallback
-
-        Vector3 toCam = (cam.transform.position - spawn.position).normalized;
-        return toCam;
+        playerCardCounts[playerIndex] = n + 1;
     }
 
     private void ShuffleMasterDeck()
