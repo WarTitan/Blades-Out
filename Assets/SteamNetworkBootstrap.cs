@@ -4,47 +4,37 @@ using Steamworks;
 
 public class SteamNetworkBootstrap : MonoBehaviour
 {
-    [SerializeField] private CardDeckManager cardDeckManager;
+    private NetworkManager networkManager;
 
     private void Start()
     {
-        // 1️⃣ Check Steam
-        if (!SteamManager.Initialized)
+        networkManager = FindFirstObjectByType<NetworkManager>();
+
+        if (networkManager == null)
         {
-            Debug.LogError("❌ Steam not initialized. Please start the game through Steam.");
+            Debug.LogError("❌ No NetworkManager found in scene!");
             return;
         }
 
-        string steamName = SteamFriends.GetPersonaName();
-        Debug.Log($"✅ Steam initialized as {steamName}");
-
-        // 2️⃣ Start network host or client
-        // For now, start as host automatically (for testing)
-        // Later we’ll add UI buttons
-        if (SystemInfo.deviceName.Contains("HOST") || Application.isEditor)
+        if (!SteamManager.Initialized)
         {
-            Debug.Log("🟢 Starting as Host...");
-            NetworkManager.Singleton.StartHost();
-        }
-        else
-        {
-            Debug.Log("🔵 Starting as Client...");
-            NetworkManager.Singleton.StartClient();
+            Debug.LogError("❌ Steam not initialized!");
+            return;
         }
 
-        // 3️⃣ Link CardDeckManager
-        if (cardDeckManager == null)
-        {
-            cardDeckManager = FindObjectOfType<CardDeckManager>();
-        }
-
-        if (cardDeckManager == null)
-        {
-            Debug.LogWarning("⚠️ No CardDeckManager found in scene!");
-        }
+        Debug.Log($"✅ Steam initialized as {SteamFriends.GetPersonaName()}");
     }
 
-    // Optional UI buttons (can be connected later)
-    public void StartHost() => NetworkManager.Singleton.StartHost();
-    public void StartClient() => NetworkManager.Singleton.StartClient();
+    public void HostGame()
+    {
+        Debug.Log("🟢 Host Game button pressed — starting as Host.");
+        NetworkManager.Singleton.StartHost();
+    }
+
+    public void JoinGame()
+    {
+        Debug.Log("🔵 Join Game button pressed — starting as Client.");
+        NetworkManager.Singleton.StartClient();
+    }
+
 }

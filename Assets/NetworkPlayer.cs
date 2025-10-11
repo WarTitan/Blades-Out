@@ -5,82 +5,61 @@ public class NetworkPlayer : NetworkBehaviour
 {
     [Header("References")]
     [SerializeField] private Camera playerCamera;
-    [SerializeField] private HeartBar heartBar;
+    [SerializeField] private AudioListener playerAudioListener;
     [SerializeField] private Transform cardSpawnPoint;
-    [SerializeField] private HeartBar heartBarPrefab; // assign in prefab
+    [SerializeField] private HeartBar heartBarPrefab;
 
-    [Header("Player Data")]
-    public NetworkVariable<int> currentHearts = new NetworkVariable<int>(10);
-    public NetworkVariable<int> maxHearts = new NetworkVariable<int>(10);
+    private HeartBar heartBarInstance;
 
-    // Public getters for external scripts
+    // Simple health system for each player
+    public int MaxHearts { get; private set; } = 10;
+    public int CurrentHearts { get; private set; } = 10;
+
+    // Public accessors used by CardDeckManager
     public Camera PlayerCamera => playerCamera;
-    public HeartBar HeartBar
-    {
-        get => heartBar;
-        set => heartBar = value;
-    }
     public Transform CardSpawnPoint => cardSpawnPoint;
+    public HeartBar HeartBar { get; private set; }
 
     public override void OnNetworkSpawn()
     {
-        // Auto-assign the camera if missing
-        if (playerCamera == null)
-            playerCamera = GetComponentInChildren<Camera>(true);
-
-        // Auto-find CardSpawnPoint if missing
-        if (cardSpawnPoint == null)
+        if (IsServer)
         {
-            Transform found = transform.Find("CardSpawnPoint");
-            if (found != null)
-                cardSpawnPoint = found;
+            Debug.Log($"Server spawned player {OwnerClientId}");
         }
 
-        // Enable camera only for the local player
-        if (IsOwner)
+        // Disable remote players' cameras and audio
+        if (!IsOwner)
         {
-            if (playerCamera != null)
-            {
-                playerCamera.enabled = true;
-                Cursor.lockState = CursorLockMode.Locked;
-                Cursor.visible = false;
-            }
-            else
-            {
-                Debug.LogWarning($"[{name}] Missing playerCamera.");
-            }
+            if (playerCamera != null) playerCamera.enabled = false;
+            if (playerAudioListener != null) playerAudioListener.enabled = false;
+            return;
+        }
+
+        // Enable local player's camera and audio
+        if (playerCamera != null) playerCamera.enabled = true;
+        if (playerAudioListener != null) playerAudioListener.enabled = true;
+
+        // Spawn and initialize the HeartBar
+        if (heartBarPrefab != null)
+        {
+            heartBarInstance = Instantiate(heartBarPrefab);
+            heartBarInstance.Initialize(transform, playerCamera, cardSpawnPoint);
+            HeartBar = heartBarInstance;
         }
         else
         {
-            if (playerCamera != null)
-                playerCamera.enabled = false;
+            Debug.LogWarning("No HeartBar prefab assigned on " + gameObject.name);
         }
 
-        // Spawn the HeartBar automatically for the owner
-        if (IsOwner && heartBar == null && heartBarPrefab != null && playerCamera != null)
+        // Server-only spawn positioning
+        if (IsServer && CardDeckManager.Instance != null)
         {
-            Transform lookAtPoint = cardSpawnPoint != null ? cardSpawnPoint : transform;
-            HeartBar hb = Instantiate(heartBarPrefab);
-            hb.Initialize(playerCamera.transform, playerCamera, lookAtPoint);
-            hb.SetHearts(currentHearts.Value, maxHearts.Value);
-            heartBar = hb;
-        }
-
-        if (heartBar == null)
-        {
-            Debug.LogWarning($"[{name}] No HeartBar found or assigned for {playerCamera?.name ?? "Unknown Camera"}");
+            transform.position = CardDeckManager.Instance.GetSpawnPositionForPlayer(OwnerClientId);
+            transform.LookAt(Vector3.zero);
         }
     }
 
-    [ServerRpc]
-    public void TakeDamageServerRpc(int amount)
-    {
-        currentHearts.Value = Mathf.Clamp(currentHearts.Value - amount, 0, maxHearts.Value);
-    }
-
-    [ServerRpc]
-    public void HealServerRpc(int amount)
-    {
-        currentHearts.Value = Mathf.Clamp(currentHearts.Value + amount, 0, maxHearts.Value);
-    }
+    // Helper accessors
+    public Transform GetCardSpawnPoint() => cardSpawnPoint;
+    public HeartBar GetHeartBar() => heartBarInstance;
 }

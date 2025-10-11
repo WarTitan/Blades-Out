@@ -1,46 +1,30 @@
 ﻿using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class CameraController : MonoBehaviour
 {
-    public float lookSpeed = 100f;
+    [Header("Rotation Settings")]
+    [SerializeField] private float mouseSensitivity = 2f;
+    [SerializeField] private Transform playerBody;
 
-    private PlayerInputActions inputActions;
-    private Vector2 lookInput;
-    private float yaw;
-    private float pitch;
+    private float xRotation = 0f;
 
-    private void Awake()
+    private void Start()
     {
-        inputActions = new PlayerInputActions();
-    }
-
-    private void OnEnable()
-    {
-        inputActions.Enable();
-        inputActions.Player.look.performed += ctx => lookInput = ctx.ReadValue<Vector2>();
-        inputActions.Player.look.canceled += ctx => lookInput = Vector2.zero;
-    }
-
-    private void OnDisable()
-    {
-        inputActions.Disable();
+        Cursor.lockState = CursorLockMode.Locked;
     }
 
     private void Update()
     {
-        RotateCamera();
-    }
+        // Only rotate the local player's camera
+        if (!playerBody) return;
 
-    private void RotateCamera()
-    {
-        if (lookInput.sqrMagnitude < 0.0001f)
-            return;
+        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
+        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
-        yaw += lookInput.x * lookSpeed * Time.deltaTime;
-        pitch -= lookInput.y * lookSpeed * Time.deltaTime;
-        pitch = Mathf.Clamp(pitch, -90f, 90f);
+        xRotation -= mouseY;
+        xRotation = Mathf.Clamp(xRotation, -90f, 90f);
 
-        transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
+        transform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+        playerBody.Rotate(Vector3.up * mouseX);
     }
 }

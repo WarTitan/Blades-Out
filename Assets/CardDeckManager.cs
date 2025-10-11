@@ -1,194 +1,120 @@
-﻿using UnityEngine;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using Unity.Netcode;
-using UnityEngine.InputSystem;
 
 public class CardDeckManager : NetworkBehaviour
 {
-    [Header("Card Setup")]
-    public Card3D card3D;
-    public List<Card> masterCardList;
+    public static CardDeckManager Instance { get; private set; }
 
-    [Header("Card Layout")]
-    public float cardSpacing = 0.20f;
-    public Vector3 cardScale = new Vector3(0.085f, 0.12f, 0.01f);
-    public float cardTiltAngle = 45f;
-
-    [Header("Game Settings")]
-    public int startingCardsPerPlayer = 4;
-
-    [Header("❤️ Health Bar Setup")]
+    [Header("References")]
+    [SerializeField] private GameObject card3DPrefab;
     [SerializeField] private HeartBar heartBarPrefab;
-    [SerializeField] private NetworkPlayer networkPlayerPrefab;
+    [SerializeField] private List<Transform> playerSpawnPoints = new List<Transform>();
 
-    [Header("Multiplayer Settings")]
+    [Header("Settings")]
     [SerializeField] private int maxPlayers = 6;
-    [SerializeField] private Transform[] spawnPoints; // Seats around the table
 
-    private PlayerInputActions inputActions;
-    private readonly Dictionary<ulong, NetworkPlayer> connectedPlayers = new Dictionary<ulong, NetworkPlayer>();
-    private readonly Dictionary<ulong, int> playerCardCounts = new Dictionary<ulong, int>();
+    private List<NetworkPlayer> networkPlayers = new List<NetworkPlayer>();
 
     private void Awake()
     {
-        inputActions = new PlayerInputActions();
-    }
-
-    private void OnEnable()
-    {
-        inputActions.Enable();
-        inputActions.Player.SpawnCardAction.performed += OnSpawnCardPressed;
-    }
-
-    private void OnDisable()
-    {
-        inputActions.Player.SpawnCardAction.performed -= OnSpawnCardPressed;
-        inputActions.Disable();
-
-        if (NetworkManager.Singleton != null)
+        // Singleton setup
+        if (Instance != null && Instance != this)
         {
-            NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
-            NetworkManager.Singleton.OnClientDisconnectCallback -= OnClientDisconnected;
+            Destroy(gameObject);
+            return;
         }
+        Instance = this;
     }
 
-    public override void OnNetworkSpawn()
+    private void Start()
     {
         if (IsServer)
         {
             NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
-            NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
-            ShuffleMasterDeck();
+            Debug.Log("Server is waiting for clients...");
         }
+    }
+
+    public override void OnDestroy()
+    {
+        base.OnDestroy();
     }
 
     private void OnClientConnected(ulong clientId)
     {
-        // Cap player count
-        if (connectedPlayers.Count >= maxPlayers)
+        if (!IsServer) return;
+
+        if (networkPlayers.Count >= maxPlayers)
         {
-            Debug.LogWarning($"Player {clientId} tried to join, but lobby is full ({maxPlayers}).");
-            NetworkManager.Singleton.DisconnectClient(clientId);
+            Debug.LogWarning("Lobby full. Connection rejected.");
             return;
         }
 
-        // Pick seat (spawn point)
-        int seatIndex = connectedPlayers.Count % spawnPoints.Length;
-        Transform seat = spawnPoints[seatIndex];
+        NetworkPlayer[] foundPlayers = FindObjectsByType<NetworkPlayer>(FindObjectsSortMode.None);
+        networkPlayers = new List<NetworkPlayer>(foundPlayers);
 
-        // Spawn player prefab at seat
-        NetworkPlayer player = Instantiate(networkPlayerPrefab, seat.position, seat.rotation);
-        player.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId, true);
-        connectedPlayers[clientId] = player;
-
-        Debug.Log($"Spawned player {clientId} at seat {seatIndex}");
-
-        // Spawn health bar
-        if (heartBarPrefab != null)
+        int index = networkPlayers.Count - 1;
+        if (index < playerSpawnPoints.Count)
         {
-            HeartBar hb = Instantiate(heartBarPrefab);
-            hb.Initialize(player.CardSpawnPoint, player.PlayerCamera, player.CardSpawnPoint);
-            hb.SetHearts(player.currentHearts.Value, player.maxHearts.Value);
-            player.HeartBar = hb;
+            NetworkPlayer player = networkPlayers[index];
+            Transform spawn = playerSpawnPoints[index];
+
+            player.transform.position = spawn.position;
+            player.transform.rotation = spawn.rotation;
+
+            if (heartBarPrefab != null)
+            {
+                HeartBar hb = Instantiate(heartBarPrefab);
+                hb.Initialize(player.transform, player.PlayerCamera, player.CardSpawnPoint);
+                hb.SetHearts(player.CurrentHearts, player.MaxHearts);
+            }
+
+            Debug.Log($"Spawned Player {index + 1} at spawn point {index + 1}");
         }
-
-        // Deal starting cards
-        for (int j = 0; j < startingCardsPerPlayer; j++)
-            DealCardToClient(clientId);
-    }
-
-    private void OnClientDisconnected(ulong clientId)
-    {
-        if (connectedPlayers.TryGetValue(clientId, out NetworkPlayer player))
+        else
         {
-            if (player != null)
-                Destroy(player.gameObject);
-            connectedPlayers.Remove(clientId);
+            Debug.LogWarning("Not enough spawn points for player " + clientId);
         }
     }
 
-    private void OnSpawnCardPressed(InputAction.CallbackContext context)
+    public Vector3 GetSpawnPositionForPlayer(ulong clientId)
     {
-        if (IsServer)
+        int index = (int)(clientId % (ulong)playerSpawnPoints.Count);
+        if (index >= 0 && index < playerSpawnPoints.Count)
+            return playerSpawnPoints[index].position;
+        return Vector3.zero;
+    }
+
+    private void Update()
+    {
+        // Only the host can spawn cards
+        if (!IsServer) return;
+
+        // Press SPACE to deal cards to all players
+        if (Input.GetKeyDown(KeyCode.Space))
         {
-            foreach (var kv in connectedPlayers)
-                DealCardToClient(kv.Key);
+            foreach (var player in networkPlayers)
+            {
+                SpawnCardForPlayer(player);
+            }
         }
-        else if (IsClient)
-        {
-            RequestDrawCardServerRpc();
-        }
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    private void RequestDrawCardServerRpc(ServerRpcParams rpcParams = default)
+    private void SpawnCardForPlayer(NetworkPlayer player)
     {
-        ulong senderId = rpcParams.Receive.SenderClientId;
-        DealCardToClient(senderId);
-    }
+        if (card3DPrefab == null || player == null) return;
 
-    private void DealCardToClient(ulong clientId)
-    {
-        if (masterCardList == null || masterCardList.Count == 0) return;
-
-        Card randomCard = masterCardList[Random.Range(0, masterCardList.Count)];
-        masterCardList.Remove(randomCard);
-
-        SendCardToClientClientRpc(randomCard.id, clientId, new ClientRpcParams
-        {
-            Send = new ClientRpcSendParams { TargetClientIds = new[] { clientId } }
-        });
-    }
-
-    [ClientRpc]
-    private void SendCardToClientClientRpc(int cardId, ulong clientId, ClientRpcParams rpcParams = default)
-    {
-        if (!connectedPlayers.ContainsKey(clientId)) return;
-
-        NetworkPlayer player = connectedPlayers[clientId];
-        if (player == null || player.CardSpawnPoint == null) return;
-
-        Card cardData = masterCardList.Find(c => c.id == cardId);
-        if (cardData == null) return;
-
-        SpawnCardVisual(cardData, player);
-    }
-
-    private void SpawnCardVisual(Card randomCard, NetworkPlayer player)
-    {
         Transform spawnPoint = player.CardSpawnPoint;
-        Camera cam = player.PlayerCamera;
-        if (spawnPoint == null || cam == null) return;
+        GameObject cardInstance = Instantiate(card3DPrefab, spawnPoint.position, spawnPoint.rotation);
 
-        Vector3 basePos = spawnPoint.position;
-        int n = playerCardCounts.ContainsKey(player.OwnerClientId) ? playerCardCounts[player.OwnerClientId] : 0;
-        int k = (n + 1) / 2;
-        float sign = (n % 2 == 1) ? +1f : -1f;
-        if (n == 0) sign = 0f;
-
-        float offset = sign * k * cardSpacing;
-        Vector3 spawnPos = basePos + spawnPoint.right * offset;
-
-        Card3D cardInstance = Instantiate(card3D, spawnPos, Quaternion.identity);
-        Vector3 toCamera = (cam.transform.position - spawnPos).normalized;
-        cardInstance.transform.rotation = Quaternion.LookRotation(toCamera, Vector3.up);
-
+        // Flip 180° so the FRONT faces the player
         cardInstance.transform.Rotate(180f, 180f, 0f, Space.Self);
-        cardInstance.transform.Rotate(cardTiltAngle, 0f, 0f, Space.Self);
-        cardInstance.transform.localScale = cardScale;
 
-        cardInstance.cardData = randomCard;
-        cardInstance.ApplyCardData();
-
-        playerCardCounts[player.OwnerClientId] = n + 1;
-    }
-
-    private void ShuffleMasterDeck()
-    {
-        for (int i = 0; i < masterCardList.Count; i++)
+        NetworkObject netObj = cardInstance.GetComponent<NetworkObject>();
+        if (netObj != null)
         {
-            int r = Random.Range(i, masterCardList.Count);
-            (masterCardList[i], masterCardList[r]) = (masterCardList[r], masterCardList[i]);
+            netObj.Spawn(true);
         }
     }
 }
