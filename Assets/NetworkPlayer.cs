@@ -4,35 +4,71 @@ using Unity.Netcode;
 public class NetworkPlayer : NetworkBehaviour
 {
     [Header("References")]
-    public Camera playerCamera;
-    public HeartBar heartBar;
-    public Transform cardSpawnPoint;
+    [SerializeField] private Camera playerCamera;
+    [SerializeField] private HeartBar heartBar;
+    [SerializeField] private Transform cardSpawnPoint;
+    [SerializeField] private HeartBar heartBarPrefab; // assign in prefab
 
     [Header("Player Data")]
     public NetworkVariable<int> currentHearts = new NetworkVariable<int>(10);
     public NetworkVariable<int> maxHearts = new NetworkVariable<int>(10);
 
+    // Public getters for external scripts
+    public Camera PlayerCamera => playerCamera;
+    public HeartBar HeartBar
+    {
+        get => heartBar;
+        set => heartBar = value;
+    }
+    public Transform CardSpawnPoint => cardSpawnPoint;
+
     public override void OnNetworkSpawn()
     {
+        // Auto-assign the camera if missing
+        if (playerCamera == null)
+            playerCamera = GetComponentInChildren<Camera>(true);
+
+        // Auto-find CardSpawnPoint if missing
+        if (cardSpawnPoint == null)
+        {
+            Transform found = transform.Find("CardSpawnPoint");
+            if (found != null)
+                cardSpawnPoint = found;
+        }
+
+        // Enable camera only for the local player
         if (IsOwner)
         {
-            // Enable only the local player's camera
-            playerCamera.enabled = true;
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            if (playerCamera != null)
+            {
+                playerCamera.enabled = true;
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
+            }
+            else
+            {
+                Debug.LogWarning($"[{name}] Missing playerCamera.");
+            }
         }
         else
         {
-            // Disable remote player cameras
             if (playerCamera != null)
                 playerCamera.enabled = false;
         }
 
-        // Setup heart bar visuals
-        if (heartBar != null)
+        // Spawn the HeartBar automatically for the owner
+        if (IsOwner && heartBar == null && heartBarPrefab != null && playerCamera != null)
         {
-            heartBar.Initialize(cardSpawnPoint, playerCamera, cardSpawnPoint);
-            heartBar.SetHearts(currentHearts.Value, maxHearts.Value);
+            Transform lookAtPoint = cardSpawnPoint != null ? cardSpawnPoint : transform;
+            HeartBar hb = Instantiate(heartBarPrefab);
+            hb.Initialize(playerCamera.transform, playerCamera, lookAtPoint);
+            hb.SetHearts(currentHearts.Value, maxHearts.Value);
+            heartBar = hb;
+        }
+
+        if (heartBar == null)
+        {
+            Debug.LogWarning($"[{name}] No HeartBar found or assigned for {playerCamera?.name ?? "Unknown Camera"}");
         }
     }
 

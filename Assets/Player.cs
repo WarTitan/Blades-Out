@@ -1,55 +1,37 @@
+using Unity.Netcode;
 using UnityEngine;
-using System.Collections.Generic;
 
-public class Player
+public class Player : NetworkBehaviour
 {
-    // === Basic Player Data ===
-    public string playerName;
-    public int playerIndex;
-
-    // === Health System ===
-    public int maxHearts = 10;
-    public int currentHearts = 10;
+    public Transform cardSpawnPoint;
+    public Camera playerCamera;
     public HeartBar heartBar;
 
-    // === Card System ===
-    public List<Card> hand = new List<Card>();
+    public int maxHearts = 10;
+    public int currentHearts = 10;
 
-    // === Camera Reference (for heart bar follow) ===
-    public Camera playerCamera;
-
-    // --- Constructors ---
-    public Player(string name)
+    public override void OnNetworkSpawn()
     {
-        playerName = name;
+        base.OnNetworkSpawn();
+
+        if (IsOwner)
+        {
+            // Enable the player’s camera only for the local player
+            if (playerCamera != null)
+                playerCamera.gameObject.SetActive(true);
+        }
+        else
+        {
+            // Disable other players’ cameras
+            if (playerCamera != null)
+                playerCamera.gameObject.SetActive(false);
+        }
     }
 
-    // --- Card Management ---
-    public void AddCardToHand(Card card)
-    {
-        hand.Add(card);
-    }
-
-    // --- Health Management ---
     public void TakeDamage(int amount)
     {
         currentHearts -= amount;
         currentHearts = Mathf.Clamp(currentHearts, 0, maxHearts);
-
-        if (heartBar != null)
-        {
-            heartBar.SetHearts(currentHearts, maxHearts);
-        }
-    }
-
-    public void Heal(int amount)
-    {
-        currentHearts += amount;
-        currentHearts = Mathf.Clamp(currentHearts, 0, maxHearts);
-
-        if (heartBar != null)
-        {
-            heartBar.SetHearts(currentHearts, maxHearts);
-        }
+        heartBar?.SetHearts(currentHearts, maxHearts);
     }
 }
