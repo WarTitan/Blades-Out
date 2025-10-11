@@ -1850,7 +1850,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 943be14b1154b014b844cfd17558db06, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CardDeckManager
-  cardPrefab: {fileID: 7461052816248502625, guid: bbc48dcd4ddd7eb4f99a1a6ea4e3a6a6, type: 3}
+  card3D: {fileID: 3922602120030627333, guid: bbc48dcd4ddd7eb4f99a1a6ea4e3a6a6, type: 3}
   masterCardList:
   - {fileID: 11400000, guid: 16fb136e62aa65b459bbb4f920f3ae0e, type: 2}
   - {fileID: 11400000, guid: d3e3ed540c59b6d4f9916dbc8ecf8d25, type: 2}
@@ -1874,7 +1874,19 @@ MonoBehaviour:
   - {fileID: 364997199}
   - {fileID: 415023523}
   - {fileID: 1718488771}
+  playerCameras:
+  - {fileID: 1178872686}
+  - {fileID: 1896913911}
+  - {fileID: 1915930345}
+  - {fileID: 115160675}
+  - {fileID: 1168152974}
+  - {fileID: 1836476268}
+  cardSpacing: 0.2
+  cardScale: {x: 0.085, y: 0.12, z: 0.01}
+  cardTiltAngle: 45
+  forwardOffset: 0.15
   startingCardsPerPlayer: 4
+  heartBarPrefab: {fileID: -136696278322388836, guid: ab7d02af088b79e44936c694358322b1, type: 3}
 --- !u!4 &1172769266
 Transform:
   m_ObjectHideFlags: 0
