@@ -675,9 +675,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NetworkPlayer
   ShowTopMostFoldoutHeaderGroup: 1
   playerCamera: {fileID: 5127393552435462056}
-  playerAudioListener: {fileID: 0}
   cardSpawnPoint: {fileID: 8964184218437082186}
-  heartBarPrefab: {fileID: -136696278322388836, guid: ab7d02af088b79e44936c694358322b1, type: 3}
+  heartBarPrefab: {fileID: 4431907845122986457, guid: ab7d02af088b79e44936c694358322b1, type: 3}
 --- !u!114 &-1469299680671201489
 MonoBehaviour:
   m_ObjectHideFlags: 0

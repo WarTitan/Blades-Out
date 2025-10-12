@@ -4,11 +4,12 @@ using Steamworks;
 public class SteamManager : MonoBehaviour
 {
     private static SteamManager _instance;
-    public static bool Initialized { get; private set; }
+    private bool initialized = false;
+
+    public static bool Initialized => _instance != null && _instance.initialized;
 
     private void Awake()
     {
-        // Singleton pattern (only one SteamManager)
         if (_instance != null)
         {
             Destroy(gameObject);
@@ -20,40 +21,29 @@ public class SteamManager : MonoBehaviour
         try
         {
             if (!Packsize.Test())
-            {
                 Debug.LogError("[Steamworks.NET] Packsize Test failed!");
-            }
-
             if (!DllCheck.Test())
-            {
                 Debug.LogError("[Steamworks.NET] DllCheck Test failed!");
-            }
 
             SteamAPI.Init();
-            Initialized = true;
             Debug.Log($"[Steamworks.NET] Steam initialized as {SteamFriends.GetPersonaName()}");
+            initialized = true;
         }
         catch (System.Exception e)
         {
-            Debug.LogError($"[Steamworks.NET] Steam initialization failed: {e}");
-            Initialized = false;
+            Debug.LogError("[Steamworks.NET] Steam initialization failed: " + e.Message);
         }
     }
 
-    private void Update()
-    {
-        if (Initialized)
-        {
-            SteamAPI.RunCallbacks();
-        }
-    }
+    public static void RunCallbacks() => SteamAPI.RunCallbacks();
+
+    private void OnEnable() => SteamAPI.RunCallbacks();
 
     private void OnDestroy()
     {
-        if (_instance == this)
+        if (_instance == this && initialized)
         {
             SteamAPI.Shutdown();
-            Initialized = false;
             _instance = null;
         }
     }

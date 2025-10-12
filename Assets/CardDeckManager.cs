@@ -1,24 +1,24 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using Unity.Netcode;
+using System.Collections.Generic;
 
 public class CardDeckManager : NetworkBehaviour
 {
     public static CardDeckManager Instance { get; private set; }
 
-    [Header("References")]
-    [SerializeField] private GameObject card3DPrefab;
-    [SerializeField] private HeartBar heartBarPrefab;
-    [SerializeField] private List<Transform> playerSpawnPoints = new List<Transform>();
+    [Header("Multiplayer Settings")]
+    public int maxPlayers = 6;
+    public Transform[] spawnPoints; // 👈 Assign these in Inspector
+    public float tableRadius = 5f;
 
-    [Header("Settings")]
-    [SerializeField] private int maxPlayers = 6;
+    [Header("Prefabs")]
+    public GameObject cardPrefab;
+    public GameObject heartBarPrefab;
 
-    private List<NetworkPlayer> networkPlayers = new List<NetworkPlayer>();
+    private readonly List<NetworkPlayer> connectedPlayers = new();
 
     private void Awake()
     {
-        // Singleton setup
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -27,94 +27,88 @@ public class CardDeckManager : NetworkBehaviour
         Instance = this;
     }
 
-    private void Start()
+    public override void OnNetworkSpawn()
     {
         if (IsServer)
         {
             NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
-            Debug.Log("Server is waiting for clients...");
+            NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
         }
-    }
-
-    public override void OnDestroy()
-    {
-        base.OnDestroy();
     }
 
     private void OnClientConnected(ulong clientId)
     {
-        if (!IsServer) return;
+        var players = FindObjectsByType<NetworkPlayer>(FindObjectsSortMode.None);
+        connectedPlayers.Clear();
+        connectedPlayers.AddRange(players);
 
-        if (networkPlayers.Count >= maxPlayers)
-        {
-            Debug.LogWarning("Lobby full. Connection rejected.");
-            return;
-        }
+        Debug.Log($"✅ Player {clientId} joined. Total players: {connectedPlayers.Count}");
+    }
 
-        NetworkPlayer[] foundPlayers = FindObjectsByType<NetworkPlayer>(FindObjectsSortMode.None);
-        networkPlayers = new List<NetworkPlayer>(foundPlayers);
-
-        int index = networkPlayers.Count - 1;
-        if (index < playerSpawnPoints.Count)
-        {
-            NetworkPlayer player = networkPlayers[index];
-            Transform spawn = playerSpawnPoints[index];
-
-            player.transform.position = spawn.position;
-            player.transform.rotation = spawn.rotation;
-
-            if (heartBarPrefab != null)
-            {
-                HeartBar hb = Instantiate(heartBarPrefab);
-                hb.Initialize(player.transform, player.PlayerCamera, player.CardSpawnPoint);
-                hb.SetHearts(player.CurrentHearts, player.MaxHearts);
-            }
-
-            Debug.Log($"Spawned Player {index + 1} at spawn point {index + 1}");
-        }
-        else
-        {
-            Debug.LogWarning("Not enough spawn points for player " + clientId);
-        }
+    private void OnClientDisconnected(ulong clientId)
+    {
+        Debug.Log($"❌ Player {clientId} disconnected.");
     }
 
     public Vector3 GetSpawnPositionForPlayer(ulong clientId)
     {
-        int index = (int)(clientId % (ulong)playerSpawnPoints.Count);
-        if (index >= 0 && index < playerSpawnPoints.Count)
-            return playerSpawnPoints[index].position;
-        return Vector3.zero;
+        var index = GetPlayerIndex(clientId);
+        if (spawnPoints != null && spawnPoints.Length > 0)
+        {
+            // Clamp index to available spawn points
+            index = Mathf.Clamp(index, 0, spawnPoints.Length - 1);
+            return spawnPoints[index].position;
+        }
+
+        // 🔄 Fallback to circle layout
+        if (maxPlayers <= 0) maxPlayers = 1;
+        float angle = 360f / maxPlayers * index;
+        float rad = angle * Mathf.Deg2Rad;
+        Vector3 center = Vector3.zero;
+        Vector3 pos = center + new Vector3(Mathf.Cos(rad), 0, Mathf.Sin(rad)) * tableRadius;
+        return pos;
+    }
+
+    public Quaternion GetSpawnRotationForPlayer(ulong clientId)
+    {
+        var index = GetPlayerIndex(clientId);
+        if (spawnPoints != null && spawnPoints.Length > 0)
+        {
+            index = Mathf.Clamp(index, 0, spawnPoints.Length - 1);
+            return spawnPoints[index].rotation;
+        }
+
+        float angle = 360f / maxPlayers * index + 180f;
+        return Quaternion.Euler(0, angle, 0);
+    }
+
+    private int GetPlayerIndex(ulong clientId)
+    {
+        for (int i = 0; i < connectedPlayers.Count; i++)
+        {
+            if (connectedPlayers[i].OwnerClientId == clientId)
+                return i;
+        }
+        return connectedPlayers.Count;
     }
 
     private void Update()
     {
-        // Only the host can spawn cards
-        if (!IsServer) return;
-
-        // Press SPACE to deal cards to all players
-        if (Input.GetKeyDown(KeyCode.Space))
+        // Host manually spawns a card
+        if (IsServer && Input.GetKeyDown(KeyCode.Space))
         {
-            foreach (var player in networkPlayers)
-            {
-                SpawnCardForPlayer(player);
-            }
+            SpawnCard();
         }
     }
 
-    private void SpawnCardForPlayer(NetworkPlayer player)
+    private void SpawnCard()
     {
-        if (card3DPrefab == null || player == null) return;
+        if (cardPrefab == null) return;
 
-        Transform spawnPoint = player.CardSpawnPoint;
-        GameObject cardInstance = Instantiate(card3DPrefab, spawnPoint.position, spawnPoint.rotation);
+        GameObject card = Instantiate(cardPrefab, Vector3.zero + Vector3.up * 2f, Quaternion.identity);
+        var netObj = card.GetComponent<NetworkObject>();
+        netObj.Spawn();
 
-        // Flip 180° so the FRONT faces the player
-        cardInstance.transform.Rotate(180f, 180f, 0f, Space.Self);
-
-        NetworkObject netObj = cardInstance.GetComponent<NetworkObject>();
-        if (netObj != null)
-        {
-            netObj.Spawn(true);
-        }
+        Debug.Log("🃏 Host spawned a card.");
     }
 }

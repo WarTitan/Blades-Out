@@ -3,63 +3,85 @@ using Unity.Netcode;
 
 public class NetworkPlayer : NetworkBehaviour
 {
-    [Header("References")]
+    [Header("Player Components")]
     [SerializeField] private Camera playerCamera;
-    [SerializeField] private AudioListener playerAudioListener;
+    [SerializeField] private AudioListener playerListener;
     [SerializeField] private Transform cardSpawnPoint;
-    [SerializeField] private HeartBar heartBarPrefab;
+    [SerializeField] private GameObject heartBarPrefab;
 
-    private HeartBar heartBarInstance;
+    private GameObject heartBarInstance;
 
-    // Simple health system for each player
-    public int MaxHearts { get; private set; } = 10;
-    public int CurrentHearts { get; private set; } = 10;
+    public int CurrentHearts { get; private set; } = 3;
+    public int MaxHearts { get; private set; } = 3;
 
-    // Public accessors used by CardDeckManager
-    public Camera PlayerCamera => playerCamera;
-    public Transform CardSpawnPoint => cardSpawnPoint;
-    public HeartBar HeartBar { get; private set; }
+    private void Awake()
+    {
+        // Auto-find camera and listener if not assigned
+        if (playerCamera == null)
+            playerCamera = GetComponentInChildren<Camera>(true);
+        if (playerListener == null)
+            playerListener = GetComponentInChildren<AudioListener>(true);
+    }
 
     public override void OnNetworkSpawn()
     {
-        if (IsServer)
-        {
-            Debug.Log($"Server spawned player {OwnerClientId}");
-        }
+        // Disable all cameras by default
+        if (playerCamera != null)
+            playerCamera.enabled = false;
+        if (playerListener != null)
+            playerListener.enabled = false;
 
-        // Disable remote players' cameras and audio
         if (!IsOwner)
-        {
-            if (playerCamera != null) playerCamera.enabled = false;
-            if (playerAudioListener != null) playerAudioListener.enabled = false;
             return;
-        }
 
-        // Enable local player's camera and audio
-        if (playerCamera != null) playerCamera.enabled = true;
-        if (playerAudioListener != null) playerAudioListener.enabled = true;
+        Debug.Log("Local player spawned: " + OwnerClientId);
 
-        // Spawn and initialize the HeartBar
-        if (heartBarPrefab != null)
-        {
-            heartBarInstance = Instantiate(heartBarPrefab);
-            heartBarInstance.Initialize(transform, playerCamera, cardSpawnPoint);
-            HeartBar = heartBarInstance;
-        }
-        else
-        {
-            Debug.LogWarning("No HeartBar prefab assigned on " + gameObject.name);
-        }
+        // Enable camera + listener for local player
+        if (playerCamera != null)
+            playerCamera.enabled = true;
+        if (playerListener != null)
+            playerListener.enabled = true;
 
-        // Server-only spawn positioning
-        if (IsServer && CardDeckManager.Instance != null)
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+
+        // Move to proper spawn and face table center
+        if (CardDeckManager.Instance != null)
         {
             transform.position = CardDeckManager.Instance.GetSpawnPositionForPlayer(OwnerClientId);
-            transform.LookAt(Vector3.zero);
+            transform.rotation = CardDeckManager.Instance.GetSpawnRotationForPlayer(OwnerClientId);
         }
     }
 
-    // Helper accessors
-    public Transform GetCardSpawnPoint() => cardSpawnPoint;
-    public HeartBar GetHeartBar() => heartBarInstance;
+    [ServerRpc]
+    private void RequestSpawnServerRpc(ulong clientId)
+    {
+        Vector3 spawnPos = CardDeckManager.Instance.GetSpawnPositionForPlayer(clientId);
+        Quaternion spawnRot = CardDeckManager.Instance.GetSpawnRotationForPlayer(clientId);
+
+        transform.SetPositionAndRotation(spawnPos, spawnRot);
+        ApplySpawnClientRpc(spawnPos, spawnRot);
+    }
+
+    [ClientRpc]
+    private void ApplySpawnClientRpc(Vector3 pos, Quaternion rot)
+    {
+        transform.SetPositionAndRotation(pos, rot);
+    }
+
+    public void SpawnHeartBar()
+    {
+        if (heartBarPrefab != null && heartBarInstance == null)
+        {
+            heartBarInstance = Instantiate(
+                heartBarPrefab,
+                transform.position + Vector3.up * 2f,
+                Quaternion.identity);
+            heartBarInstance.transform.SetParent(transform);
+        }
+    }
+
+    public Camera PlayerCamera => playerCamera;
+    public Transform CardSpawnPoint => cardSpawnPoint;
+    public GameObject HeartBar => heartBarInstance;
 }
