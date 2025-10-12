@@ -758,8 +758,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 651592304}
-  - component: {fileID: 651592305}
-  - component: {fileID: 651592306}
+  - component: {fileID: 651592307}
   m_Layer: 0
   m_Name: NetworkManager
   m_TagString: Untagged
@@ -782,7 +781,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &651592305
+--- !u!114 &651592307
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -797,7 +796,7 @@ MonoBehaviour:
   NetworkManagerExpanded: 0
   NetworkConfig:
     ProtocolVersion: 0
-    NetworkTransport: {fileID: 651592306}
+    NetworkTransport: {fileID: 0}
     PlayerPrefab: {fileID: 3784944211829141594, guid: ea41e926605160147b7f3a480f1de9cf, type: 3}
     Prefabs:
       NetworkPrefabsLists:
@@ -824,20 +823,6 @@ MonoBehaviour:
     OldPrefabList: []
   RunInBackground: 1
   LogLevel: 1
---- !u!114 &651592306
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 651592301}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fc4ccaff1920208429cca7c350560301, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: SteamNetworkingSockets Transport for Netcode for GameObjects::Netcode.Transports.SteamNetworkingSocketsTransport
-  ConnectToSteamID: 0
-  options: []
 --- !u!4 &660180339 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3062454152917160206, guid: 17fae5543d520c145b8068b42d8e5814, type: 3}
@@ -2976,7 +2961,7 @@ SceneRoots:
   - {fileID: 700320444}
   - {fileID: 43646214}
   - {fileID: 607389162}
-  - {fileID: 1337413525}
   - {fileID: 651592304}
+  - {fileID: 1337413525}
   - {fileID: 808286668}
   - {fileID: 1172769266}
