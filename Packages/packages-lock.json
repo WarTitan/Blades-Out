@@ -1,11 +1,10 @@
 {
   "dependencies": {
     "com.community.netcode.transport.steamnetworkingsockets": {
-      "version": "https://github.com/Unity-Technologies/multiplayer-community-contributions.git?path=/Transports/com.community.netcode.transport.steamnetworkingsockets",
+      "version": "file:com.community.netcode.transport.steamnetworkingsockets",
       "depth": 0,
-      "source": "git",
-      "dependencies": {},
-      "hash": "5cea8f048cc16f3575fabcf03af3ebafbc390499"
+      "source": "embedded",
+      "dependencies": {}
     },
     "com.rlabrecque.steamworks.net": {
       "version": "https://github.com/rlabrecque/Steamworks.NET.git?path=/com.rlabrecque.steamworks.net",
@@ -207,7 +206,7 @@
     },
     "com.unity.nuget.newtonsoft-json": {
       "version": "3.2.1",
-      "depth": 1,
+      "depth": 0,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"

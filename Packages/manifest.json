@@ -1,6 +1,5 @@
 {
   "dependencies": {
-    "com.community.netcode.transport.steamnetworkingsockets": "https://github.com/Unity-Technologies/multiplayer-community-contributions.git?path=/Transports/com.community.netcode.transport.steamnetworkingsockets",
     "com.rlabrecque.steamworks.net": "https://github.com/rlabrecque/Steamworks.NET.git?path=/com.rlabrecque.steamworks.net",
     "com.unity.2d.enhancers": "1.0.0",
     "com.unity.2d.sprite": "1.0.0",
@@ -14,6 +13,7 @@
     "com.unity.inputsystem": "1.14.2",
     "com.unity.multiplayer.center": "1.0.0",
     "com.unity.netcode.gameobjects": "2.5.1",
+    "com.unity.nuget.newtonsoft-json": "3.2.1",
     "com.unity.test-framework": "1.6.0",
     "com.unity.timeline": "1.8.9",
     "com.unity.ugui": "2.0.0",
