@@ -14,12 +14,11 @@ public class LocalCameraController : NetworkBehaviour
         Cursor.lockState = CursorLockMode.Locked;
 
         if (playerBody == null)
-            playerBody = transform.root; // fallback to player root if not assigned
+            playerBody = transform.root; // fallback to player root
     }
 
     void Update()
     {
-        // Only the local player's camera moves
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
 

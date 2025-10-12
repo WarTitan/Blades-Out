@@ -8,7 +8,6 @@ public class LocalCameraActivator : NetworkBehaviour
 
     void Awake()
     {
-        // Auto-find if you forget to assign in Inspector
         if (playerCamera == null)
             playerCamera = GetComponentInChildren<Camera>(true);
         if (playerAudioListener == null && playerCamera != null)

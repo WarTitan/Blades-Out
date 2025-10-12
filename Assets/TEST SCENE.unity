@@ -628,6 +628,8 @@ GameObject:
   - component: {fileID: 651592308}
   - component: {fileID: 651592310}
   - component: {fileID: 651592309}
+  - component: {fileID: 651592311}
+  - component: {fileID: 651592312}
   m_Layer: 0
   m_Name: NetworkManager
   m_TagString: Untagged
@@ -657,7 +659,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 651592301}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e6e55fca1f4e4844593a3dd65a3ecb39, type: 3}
   m_Name: 
@@ -700,7 +702,7 @@ MonoBehaviour:
   offlineScene: 
   onlineScene: 
   offlineSceneLoadDelay: 0
-  transport: {fileID: 651592308}
+  transport: {fileID: 651592311}
   networkAddress: localhost
   maxConnections: 6
   disconnectInactiveConnections: 0
@@ -732,6 +734,44 @@ MonoBehaviour:
   - {fileID: 1368818572}
   - {fileID: 464824151}
   - {fileID: 1112783308}
+--- !u!114 &651592311
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 651592301}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7424c1070fad4ba2a7a96b02fbeb4bb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror.Transports::Mirror.TelepathyTransport
+  port: 7777
+  NoDelay: 1
+  SendTimeout: 5000
+  ReceiveTimeout: 30000
+  serverMaxMessageSize: 16384
+  serverMaxReceivesPerTick: 10000
+  serverSendQueueLimitPerConnection: 10000
+  serverReceiveQueueLimitPerConnection: 10000
+  clientMaxMessageSize: 16384
+  clientMaxReceivesPerTick: 1000
+  clientSendQueueLimit: 10000
+  clientReceiveQueueLimit: 10000
+--- !u!114 &651592312
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 651592301}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81e7110950e697c4782cef58b6f9b793, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MirrorBootstrap
+  useSteamInEditor: 0
+  telepathyPort: 7777
 --- !u!4 &660180339 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3062454152917160206, guid: 17fae5543d520c145b8068b42d8e5814, type: 3}
@@ -917,7 +957,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 81e7110950e697c4782cef58b6f9b793, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MirrorBootstrap
-  autoStartInEditor: 1
+  useSteamInEditor: 0
+  telepathyPort: 7777
 --- !u!1 &820280584
 GameObject:
   m_ObjectHideFlags: 0

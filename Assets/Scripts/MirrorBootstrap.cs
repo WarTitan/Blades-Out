@@ -1,86 +1,221 @@
 ﻿using UnityEngine;
 using Mirror;
 using Steamworks;
+using System.Collections;
+
 #if UNITY_EDITOR
 using ParrelSync;
 #endif
 
 public class MirrorBootstrap : MonoBehaviour
 {
-    [SerializeField] bool autoStartInEditor = true;
+    // Editor:
+    // false = use Telepathy (localhost) so host+clone can connect with one Steam account.
+    // true  = use Steam (Fizzy) - requires two different Steam accounts.
+    [SerializeField] private bool useSteamInEditor = false;
+
+    [SerializeField] private ushort telepathyPort = 7777;
 
     void Start()
     {
-        if (!BladesOut.SteamInitializer.Initialized)
-        {
-            Debug.LogError("[MirrorBootstrap] Steam not initialized. Put SteamInitializer in the first scene.");
-            return;
-        }
-
 #if UNITY_EDITOR
-        if (!autoStartInEditor) return;
-
-        if (ClonesManager.IsClone())
+        if (useSteamInEditor)
         {
-            Debug.Log("[MirrorBootstrap] Clone detected - joining host...");
-            JoinAsClient();
+            if (!BladesOut.SteamInitializer.Initialized)
+            {
+                Debug.LogError("[MirrorBootstrap] Steam not initialized but useSteamInEditor = true.");
+                return;
+            }
+
+            if (ClonesManager.IsClone())
+            {
+                Debug.Log("[MirrorBootstrap] Editor+Steam: clone will join via Steam.");
+                StartCoroutine(JoinAfterDelaySteam(0.3f));
+            }
+            else
+            {
+                Debug.Log("[MirrorBootstrap] Editor+Steam: host starting via Steam.");
+                StartHostSteam();
+            }
         }
         else
         {
-            Debug.Log("[MirrorBootstrap] Original detected - starting as host...");
-            StartAsHost();
+            // Editor localhost path (no Steam). We make sure Fizzy cannot hijack.
+            if (ClonesManager.IsClone())
+            {
+                Debug.Log("[MirrorBootstrap] Editor+Telepathy: clone connecting to 127.0.0.1:" + telepathyPort);
+                StartClientTelepathy("127.0.0.1", telepathyPort);
+            }
+            else
+            {
+                Debug.Log("[MirrorBootstrap] Editor+Telepathy: host listening on 0.0.0.0:" + telepathyPort);
+                StartHostTelepathy(telepathyPort);
+            }
         }
 #else
-        StartAsHost();
+        // In builds: always use Steam/Fizzy
+        if (!BladesOut.SteamInitializer.Initialized)
+        {
+            Debug.LogError("[MirrorBootstrap] Steam not initialized in build.");
+            return;
+        }
+        StartHostSteam();
 #endif
     }
 
-    void StartAsHost()
+    // ---------- Steam (Fizzy) ----------
+    void StartHostSteam()
     {
-        var transport = NetworkManager.singleton.transport as Mirror.FizzySteam.FizzySteamworks;
-        if (transport == null)
+        var fizzy = GetOnManager<Mirror.FizzySteam.FizzySteamworks>();
+        var telepathy = GetOnManager<TelepathyTransport>();
+        if (fizzy == null)
         {
-            Debug.LogError("[MirrorBootstrap] FizzySteamworks transport not found on NetworkManager.");
+            LogMissingTransport("FizzySteamworks");
             return;
         }
+
+        ActivateTransport(fizzy, telepathy);
 
         NetworkManager.singleton.StartHost();
-        Debug.Log("[MirrorBootstrap] Host started. My SteamID: " + SteamUser.GetSteamID().m_SteamID);
+        var myId = SteamUser.GetSteamID().m_SteamID;
+        Debug.Log("[MirrorBootstrap] Host started via Steam. My SteamID: " + myId);
     }
 
-    void JoinAsClient()
+#if UNITY_EDITOR
+    IEnumerator JoinAfterDelaySteam(float seconds)
     {
-        var transport = NetworkManager.singleton.transport as Mirror.FizzySteam.FizzySteamworks;
-        if (transport == null)
+        yield return new WaitForSecondsRealtime(seconds);
+
+        var fizzy = GetOnManager<Mirror.FizzySteam.FizzySteamworks>();
+        var telepathy = GetOnManager<TelepathyTransport>();
+        if (fizzy == null)
         {
-            Debug.LogError("[MirrorBootstrap] FizzySteamworks transport not found on NetworkManager.");
+            LogMissingTransport("FizzySteamworks");
+            yield break;
+        }
+
+        ActivateTransport(fizzy, telepathy);
+
+        string hostId = ClonesManager.GetArgument();
+        if (string.IsNullOrWhiteSpace(hostId))
+        {
+            // same-account will time out; fallback only
+            hostId = SteamUser.GetSteamID().m_SteamID.ToString();
+            Debug.LogWarning("[MirrorBootstrap] No host SteamID in ParrelSync Argument; fallback to self: " + hostId);
+        }
+
+        NetworkManager.singleton.networkAddress = hostId;
+        Debug.Log("[MirrorBootstrap] Editor+Steam: connecting to host SteamID: " + hostId);
+        NetworkManager.singleton.StartClient();
+    }
+#endif
+
+    // ---------- Telepathy (localhost) ----------
+    void StartHostTelepathy(ushort port)
+    {
+        var telepathy = GetOnManager<TelepathyTransport>();
+        var fizzy = GetOnManager<Mirror.FizzySteam.FizzySteamworks>();
+        if (telepathy == null)
+        {
+            LogMissingTransport("TelepathyTransport");
             return;
         }
 
-        string hostSteamId = null;
+        // make sure Fizzy cannot be selected by Mirror internally
+        HardDisableFizzy(fizzy);
 
-#if UNITY_EDITOR
-        string arg = ClonesManager.GetArgument(); // set this to host's SteamID in ParrelSync
-        if (!string.IsNullOrWhiteSpace(arg))
-            hostSteamId = arg.Trim();
-#endif
+        ActivateTransport(telepathy); // no "toDisable" needed; Fizzy is hard-disabled
+        telepathy.port = port;
 
-        if (!IsAllDigits(hostSteamId))
-        {
-            Debug.LogWarning("[MirrorBootstrap] No valid host SteamID via ParrelSync Argument. Falling back to self.");
-            hostSteamId = SteamUser.GetSteamID().m_SteamID.ToString();
-        }
-
-        NetworkManager.singleton.networkAddress = hostSteamId;
-        Debug.Log("[MirrorBootstrap] Connecting to host SteamID: " + hostSteamId);
-        NetworkManager.singleton.StartClient();
+        NetworkManager.singleton.networkAddress = "0.0.0.0";
+        NetworkManager.singleton.StartHost();
+        Debug.Log("[MirrorBootstrap] Host started via Telepathy on port " + port);
     }
 
-    static bool IsAllDigits(string s)
+    void StartClientTelepathy(string address, ushort port)
     {
-        if (string.IsNullOrEmpty(s)) return false;
-        for (int i = 0; i < s.Length; i++)
-            if (s[i] < '0' || s[i] > '9') return false;
-        return true;
+        var telepathy = GetOnManager<TelepathyTransport>();
+        var fizzy = GetOnManager<Mirror.FizzySteam.FizzySteamworks>();
+        if (telepathy == null)
+        {
+            LogMissingTransport("TelepathyTransport");
+            return;
+        }
+
+        // make sure Fizzy cannot be selected by Mirror internally
+        HardDisableFizzy(fizzy);
+
+        ActivateTransport(telepathy); // no "toDisable" needed; Fizzy is hard-disabled
+        telepathy.port = port;
+
+        NetworkManager.singleton.networkAddress = address;
+        NetworkManager.singleton.StartClient();
+        Debug.Log("[MirrorBootstrap] Client connecting via Telepathy to " + address + ":" + port);
+    }
+
+    // ---------- helpers ----------
+    // Enable the chosen transport and (optionally) disable others so Mirror uses the correct one.
+    void ActivateTransport(Transport toEnable, params Transport[] toDisable)
+    {
+        if (toDisable != null)
+        {
+            foreach (var t in toDisable)
+                if (t != null && t.enabled) t.enabled = false;
+        }
+
+        if (toEnable != null && !toEnable.enabled) toEnable.enabled = true;
+
+        // reflect on NetworkManager so inspector matches runtime
+        NetworkManager.singleton.transport = toEnable;
+
+        Debug.Log("[MirrorBootstrap] Transport set to: " +
+            (toEnable != null ? toEnable.GetType().Name : "null"));
+    }
+
+    // In the Editor localhost path, make sure Fizzy cannot hijack active transport.
+    void HardDisableFizzy(Mirror.FizzySteam.FizzySteamworks fizzy)
+    {
+        if (fizzy == null) return;
+
+        // disable the component
+        if (fizzy.enabled) fizzy.enabled = false;
+
+#if UNITY_EDITOR
+        // destroy the component so it can't be re-enabled during this session
+        DestroyImmediate(fizzy, true);
+        Debug.Log("[MirrorBootstrap] FizzySteamworks component removed for Editor localhost test.");
+#endif
+    }
+
+    T GetOnManager<T>() where T : Component
+    {
+        if (NetworkManager.singleton != null)
+        {
+            var onManager = NetworkManager.singleton.GetComponent<T>();
+            if (onManager != null) return onManager;
+        }
+        return FindObjectOfType<T>(true);
+    }
+
+    void LogMissingTransport(string transportName)
+    {
+        string where = (NetworkManager.singleton != null)
+            ? " on object: " + NetworkManager.singleton.name
+            : " (NetworkManager.singleton is null)";
+        Debug.LogError("[MirrorBootstrap] " + transportName + " missing. Add it to the same GameObject as PlayerSpawnManager" + where + ".");
+        if (NetworkManager.singleton != null)
+        {
+            var ts = NetworkManager.singleton.GetComponents<Transport>();
+            if (ts != null && ts.Length > 0)
+            {
+                string list = "";
+                foreach (var t in ts) list += t.GetType().Name + ", ";
+                Debug.Log("[MirrorBootstrap] Found transports on manager: " + list);
+            }
+            else
+            {
+                Debug.Log("[MirrorBootstrap] No transports found on manager.");
+            }
+        }
     }
 }
