@@ -35,18 +35,19 @@ public class PlayerSpawnManager : NetworkManager
 
     public override void OnServerAddPlayer(NetworkConnectionToClient conn)
     {
-        // Enforce match size
         if (numPlayers >= maxPlayers)
         {
-            Debug.LogWarning("[PlayerSpawnManager] Match is full. Rejecting connection " + conn.connectionId);
             conn.Disconnect();
             return;
         }
 
         Transform startPos = null;
+        int usedIndex = 0;
+
         if (spawnPoints != null && spawnPoints.Count > 0)
         {
-            startPos = spawnPoints[nextSpawnIndex % spawnPoints.Count];
+            usedIndex = nextSpawnIndex % spawnPoints.Count;
+            startPos = spawnPoints[usedIndex];
             nextSpawnIndex++;
         }
 
@@ -54,7 +55,11 @@ public class PlayerSpawnManager : NetworkManager
             ? Instantiate(playerPrefab, startPos.position, startPos.rotation)
             : Instantiate(playerPrefab);
 
+        // NEW: set seat index before adding to connection
+        var ps = player.GetComponent<PlayerState>();
+        if (ps != null) ps.seatIndex = usedIndex;
+
         NetworkServer.AddPlayerForConnection(conn, player);
-        Debug.Log("[SpawnManager] Player " + conn.connectionId + " spawned at " + (startPos != null ? startPos.name : "default"));
     }
+
 }
