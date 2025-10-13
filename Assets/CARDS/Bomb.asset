@@ -9,10 +9,19 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e186e30e6a505564196657bf08177727, type: 3}
+  m_Script: {fileID: 11500000, guid: 4acf1391760cecd4dad51fe600af9a76, type: 3}
   m_Name: Bomb
-  m_EditorClassIdentifier: Assembly-CSharp::Card
-  cardName: 'Bomb '
-  description: "0\u2192 Every player takes 1 DMG\n 7\u2192 Every player takes 2 DMG\n
-    14\u2192 Every player takes 3 DMG"
-  artwork: {fileID: 0}
+  m_EditorClassIdentifier: Assembly-CSharp::CardDefinition
+  id: 0
+  cardName: Bomb
+  description: Evrey player takes 1 DMG
+  image: {fileID: 2076744250, guid: 03f555c09f4b78247a6536a015c8f7ad, type: 3}
+  tiers:
+  - attack: 1
+    defense: 0
+    costGold: 0
+    effectText: Evrey player takes 1 DMG
+  - attack: 2
+    defense: 0
+    costGold: 10
+    effectText: Evrey player takes 2 DMG

@@ -446,6 +446,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6893885539870928875}
   - component: {fileID: 3922602120030627333}
+  - component: {fileID: 7621319129293376360}
   m_Layer: 0
   m_Name: Card3d
   m_TagString: Untagged
@@ -487,7 +488,30 @@ MonoBehaviour:
   backRenderer: {fileID: 5210817919997208705}
   cardNameText: {fileID: 746325366637051897}
   cardDescriptionText: {fileID: 8154054251925027153}
-  cardData: {fileID: 0}
+  cardData:
+    id: 0
+    cardName: 
+    description: 
+    artwork: {fileID: 0}
+    cardImage: {fileID: 0}
+    attack: 0
+    defense: 0
+    cost: 0
+--- !u!114 &7621319129293376360
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7461052816248502625}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 09e79f725a6b3cc49a5e492ae1e642bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Card3DAdapter
+  frontRenderer: {fileID: 173350355265688726}
+  cardNameText: {fileID: 746325366637051897}
+  cardDescriptionText: {fileID: 8154054251925027153}
 --- !u!1 &7665499993427364831
 GameObject:
   m_ObjectHideFlags: 0

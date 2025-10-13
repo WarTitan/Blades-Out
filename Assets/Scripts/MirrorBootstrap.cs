@@ -189,13 +189,33 @@ public class MirrorBootstrap : MonoBehaviour
 
     T GetOnManager<T>() where T : Component
     {
+        // Prefer the NetworkManager's own GameObject first
         if (NetworkManager.singleton != null)
         {
             var onManager = NetworkManager.singleton.GetComponent<T>();
-            if (onManager != null) return onManager;
+            if (onManager != null)
+                return onManager;
         }
-        return FindObjectOfType<T>(true);
+
+        // Unity 2023.1+ uses the new API
+#if UNITY_2023_1_OR_NEWER
+    var first = Object.FindFirstObjectByType<T>(FindObjectsInactive.Include);
+    if (first != null)
+        return first;
+
+    var any = Object.FindAnyObjectByType<T>(FindObjectsInactive.Include);
+    if (any != null)
+        return any;
+#else
+        // Older Unity: mimic "include inactive" search
+        var all = Resources.FindObjectsOfTypeAll<T>();
+        if (all != null && all.Length > 0)
+            return all[0];
+#endif
+
+        return null;
     }
+
 
     void LogMissingTransport(string transportName)
     {
