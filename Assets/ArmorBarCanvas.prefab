@@ -208,7 +208,9 @@ MonoBehaviour:
   lookAtCamera: {fileID: 0}
   upReference: {fileID: 0}
   yOffset: 0
-  extraTiltX: -15
+  extraTiltX: 0
+  followRotation: 0
+  yawNudge: 0
 --- !u!1 &5559979596877194742
 GameObject:
   m_ObjectHideFlags: 0

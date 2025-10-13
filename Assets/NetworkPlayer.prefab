@@ -1,5 +1,67 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &451358653790965898
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 386916555218989896}
+  m_Layer: 0
+  m_Name: BarAnchorArmor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &386916555218989896
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 451358653790965898}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.47, z: 0.047}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2452773262679359239}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1058879035919698524
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1432692098415525714}
+  m_Layer: 0
+  m_Name: BarAnchorHelt
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1432692098415525714
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1058879035919698524}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.369, z: 0.047}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2452773262679359239}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3490693020670742134
 GameObject:
   m_ObjectHideFlags: 0
@@ -31,7 +93,9 @@ Transform:
   m_LocalPosition: {x: 0, y: 1.643, z: -0.0457}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1432692098415525714}
+  - {fileID: 386916555218989896}
   m_Father: {fileID: 4597333103463066336}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!20 &5127393552435462056
@@ -661,8 +725,12 @@ MonoBehaviour:
   syncInterval: 0
   healthBarPrefab: {fileID: 4431907845122986457, guid: ab7d02af088b79e44936c694358322b1, type: 3}
   armorBarPrefab: {fileID: 4813065229561022508, guid: e648fb336221dc84ca1e9d165714aa89, type: 3}
-  healthYOffset: 1.1
-  armorYOffset: 1.35
+  barFollowTargetHealth: {fileID: 1432692098415525714}
+  barFollowTargetArmor: {fileID: 386916555218989896}
+  healthAnchorName: BarAnchorHelt
+  armorAnchorName: BarAnchorArmor
+  healthBar: {fileID: 0}
+  armorBar: {fileID: 0}
 --- !u!4 &4597333103463066336 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
