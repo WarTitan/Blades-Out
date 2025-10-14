@@ -15,7 +15,7 @@ MonoBehaviour:
   id: 1
   cardName: Knife
   description: Deal 1 DMG
-  image: {fileID: -415970322, guid: 64074e669d274ee49a26cc39d89ea23d, type: 3}
+  image: {fileID: 1992122384, guid: 40d069d0c6aaf1f409ecca5eff0a3154, type: 3}
   tiers:
   - attack: 1
     defense: 0

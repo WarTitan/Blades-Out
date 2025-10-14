@@ -673,7 +673,7 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  maxHP: 5
+  maxHP: 3
   maxArmor: 5
   startingGold: 5
   startingHandSize: 4
