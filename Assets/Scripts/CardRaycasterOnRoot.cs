@@ -1,73 +1,144 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Mirror;
+using System.Linq;
 
 [AddComponentMenu("Cards/Card Raycaster (Root)")]
 public class CardRaycasterOnRoot : NetworkBehaviour
 {
     [Header("Refs (auto)")]
-    public Camera cam;   // auto-find child camera
+    public Camera cam;   // auto-found at OnStartLocalPlayer
 
     [Header("Raycast")]
-    public LayerMask cardMask;     // set to Card layer
-    public LayerMask playerMask;   // set to Player layer
+    public LayerMask cardMask;     // auto-set to "Card" if empty
+    public LayerMask playerMask;   // auto-set to "Player" if empty
     public float maxDistance = 100f;
     public bool hitTriggers = false;
-    [Range(0f, 0.2f)] public float sphereCastRadius = 0.03f;
+    [Range(0f, 0.2f)] public float sphereCastRadius = 0.05f;
 
-    [Header("Rules")]
-    public bool requireTurnToCast = true;
-    public bool handOnlyForUse = true;
+    [Header("Selection rules")]
+    public bool onlySelectOwnCards = true;     // block selecting opponent cards
+    public bool requireInHandToSelect = true;  // block selecting set-row cards
+
+    [Header("Gameplay rules")]
+    public bool requireTurnToCast = true;      // must be your turn to cast
+    public bool blockSelfTarget = true;      // cannot cast on yourself
+    public bool onlyCastFromHand = true;      // block casting set-row cards
 
     [Header("Keys")]
-    public KeyCode setKey = KeyCode.V;
-    public KeyCode deselectKey = KeyCode.Mouse1;
-    public KeyCode debugCastNext = KeyCode.F;
-    public KeyCode debugRayAllKey = KeyCode.BackQuote; // ~
+    public KeyCode setKey = KeyCode.V;          // move selected hand card to Set row
+    public KeyCode deselectKey = KeyCode.Mouse1;     // right click
+    public KeyCode debugCastNext = KeyCode.F;          // quick-cast to any other player
+    public KeyCode debugRayAllKey = KeyCode.BackQuote;  // ~  dump ray hits
+    public KeyCode debugDiagKey = KeyCode.L;          // print diagnostics
+    public KeyCode dropTestCube = KeyCode.T;          // spawn a cube 2m ahead (aim sanity)
 
     private CardView selectedCard;
+    private bool didPrintSetup;
 
     public override void OnStartLocalPlayer()
     {
+        // Auto-find local camera (even if disabled in Awake)
         if (!cam)
         {
-            var cams = GetComponentsInChildren<Camera>(true); // finds disabled too
+            var cams = GetComponentsInChildren<Camera>(true);
             if (cams.Length > 0) cam = cams[0];
         }
-        if (!cam) Debug.LogWarning("[Raycaster] No Camera found under local player.");
-        else Debug.Log($"[Raycaster] Using camera: {cam.name} @ {cam.transform.position}");
+
+        // Auto-fill masks if empty
+        if (cardMask.value == 0)
+        {
+            int idx = LayerMask.NameToLayer("Card");
+            if (idx >= 0) cardMask = 1 << idx;
+            else Debug.LogWarning("[Raycaster] Layer 'Card' does not exist. Add it in Project Settings > Tags & Layers.");
+        }
+        if (playerMask.value == 0)
+        {
+            int idx = LayerMask.NameToLayer("Player");
+            if (idx >= 0) playerMask = 1 << idx;
+            else Debug.LogWarning("[Raycaster] Layer 'Player' does not exist. Add it in Project Settings > Tags & Layers.");
+        }
+
+        PrintDiagnostics();
     }
 
     void Update()
     {
         if (!isLocalPlayer) return;
-        if (!cam) return;
 
-        // Hover/select
+        // Camera may be enabled later; keep trying
+        if (!cam)
+        {
+            var cams = GetComponentsInChildren<Camera>(true);
+            if (cams.Length > 0) cam = cams[0];
+            if (!cam) { if (!didPrintSetup) { Debug.LogWarning("[Raycaster] No Camera found under local player."); didPrintSetup = true; } return; }
+        }
+
+        // Debug helpers
+        if (Input.GetKeyDown(debugDiagKey)) PrintDiagnostics();
+        if (Input.GetKeyDown(dropTestCube)) DropCubeForAimTest();
+
+        // LEFT CLICK
         if (Input.GetMouseButtonDown(0))
         {
-            // If we already selected a card, try to cast at a player
+            var me = GetComponent<PlayerState>();
+
+            // If a card is already selected, try to cast on a player
             if (selectedCard != null)
             {
                 var target = RaycastPlayer();
-                if (target != null && target != GetComponent<PlayerState>())
+                if (target != null)
                 {
-                    TryCastSelectedOn(target);
-                    return;
+                    if (blockSelfTarget && target == me)
+                    {
+                        Debug.Log("[Raycaster] Ignored: cannot target yourself.");
+                    }
+                    else
+                    {
+                        TryCastSelectedOn(target);
+                        return;
+                    }
                 }
             }
 
-            // Otherwise try to select a card under the crosshair
+            // Otherwise: try selecting a card under the crosshair
             var cv = RaycastCard();
-            if (cv != null) SelectCard(cv);
-            else Debug.Log("[Raycaster] No card under crosshair.");
+            if (cv != null)
+            {
+                // Selection filters
+                if (onlySelectOwnCards && cv.owner != me)
+                {
+                    Debug.Log("[Raycaster] Ignored: not your card.");
+                }
+                else if (requireInHandToSelect && !cv.isInHand)
+                {
+                    Debug.Log("[Raycaster] Ignored: card is not in hand.");
+                }
+                else
+                {
+                    SelectCard(cv);
+                }
+            }
+            else
+            {
+                Debug.Log("[Raycaster] No card under crosshair.");
+            }
         }
 
-        if (Input.GetKeyDown(deselectKey)) Deselect();
+        // RIGHT CLICK → deselect
+        if (Input.GetKeyDown(deselectKey))
+            Deselect();
 
+        // V → Set selected hand card
         if (Input.GetKeyDown(setKey))
         {
-            if (selectedCard == null) { Debug.Log("[Raycaster] No selected card to Set."); }
-            else if (!selectedCard.isInHand) { Debug.LogWarning("[Raycaster] Selected card is not in hand; cannot Set."); }
+            if (selectedCard == null)
+            {
+                Debug.Log("[Raycaster] No selected card to Set.");
+            }
+            else if (!selectedCard.isInHand)
+            {
+                Debug.LogWarning("[Raycaster] Selected card is not in hand; cannot Set.");
+            }
             else
             {
                 var me = GetComponent<PlayerState>();
@@ -77,6 +148,7 @@ public class CardRaycasterOnRoot : NetworkBehaviour
             }
         }
 
+        // F → debug cast to any other player (handy for testing)
         if (Input.GetKeyDown(debugCastNext))
         {
             if (selectedCard == null) { Debug.Log("[Raycaster] Select a hand card first, then press F."); return; }
@@ -86,15 +158,20 @@ public class CardRaycasterOnRoot : NetworkBehaviour
             else Debug.LogWarning("[Raycaster] No other player found.");
         }
 
-        if (Input.GetKeyDown(debugRayAllKey)) DebugRayEverything();
+        // ~ → dump all ray hits along forward
+        if (Input.GetKeyDown(debugRayAllKey))
+            DebugRayEverything();
+
+        Debug.DrawRay(cam.transform.position, cam.transform.forward * 1.0f, Color.cyan, 0f, false);
     }
 
-    // ---- selection/casting ----
+    // ---------- selection / casting ----------
     void SelectCard(CardView cv)
     {
         if (selectedCard == cv) return;
         if (selectedCard != null) selectedCard.SetSelected(false);
-        selectedCard = cv; selectedCard.SetSelected(true);
+        selectedCard = cv;
+        selectedCard.SetSelected(true);
         Debug.Log($"[Raycaster] Selected card id={cv.cardId}, handIndex={cv.handIndex}, inHand={cv.isInHand}");
     }
 
@@ -109,27 +186,36 @@ public class CardRaycasterOnRoot : NetworkBehaviour
     {
         var me = GetComponent<PlayerState>();
         if (selectedCard == null) { Debug.LogWarning("[Raycaster] No selected card to cast."); return; }
-        if (handOnlyForUse && !selectedCard.isInHand) { Debug.LogWarning("[Raycaster] Selected card is not in hand; cannot cast."); return; }
-        if (requireTurnToCast && !(TurnManager.Instance && TurnManager.Instance.IsPlayersTurn(me))) { Debug.LogWarning("[Raycaster] Not your turn."); return; }
-        if (selectedCard.handIndex < 0 || selectedCard.handIndex >= me.handIds.Count) { Debug.LogWarning("[Raycaster] Hand index invalid."); Deselect(); return; }
+        if (onlyCastFromHand && !selectedCard.isInHand) { Debug.LogWarning("[Raycaster] Selected card is not in hand; cannot cast."); return; }
+        if (requireTurnToCast && !(TurnManager.Instance && TurnManager.Instance.IsPlayersTurn(me)))
+        {
+            Debug.LogWarning("[Raycaster] Not your turn.");
+            return;
+        }
+        if (selectedCard.handIndex < 0 || selectedCard.handIndex >= me.handIds.Count)
+        {
+            Debug.LogWarning("[Raycaster] Hand index invalid (hand changed?).");
+            Deselect();
+            return;
+        }
 
         Debug.Log($"[Raycaster] CmdPlayInstant(handIndex={selectedCard.handIndex}, target={target.netId})");
         me.CmdPlayInstant(selectedCard.handIndex, target.netId);
         Deselect();
     }
 
-    // ---- raycasts ----
+    // ---------- raycasts ----------
     CardView RaycastCard()
     {
-        Ray ray = new Ray(cam.transform.position, cam.transform.forward);
         var q = hitTriggers ? QueryTriggerInteraction.Collide : QueryTriggerInteraction.Ignore;
+        Ray ray = new Ray(cam.transform.position, cam.transform.forward);
 
-        if (Physics.Raycast(ray, out var hit, maxDistance, cardMask, q))
+        if (cardMask.value != 0 && Physics.Raycast(ray, out var hit, maxDistance, cardMask, q))
         {
             var cv = hit.collider.GetComponentInParent<CardView>();
             if (cv != null) return cv;
         }
-        if (sphereCastRadius > 0f &&
+        if (cardMask.value != 0 && sphereCastRadius > 0f &&
             Physics.SphereCast(ray, sphereCastRadius, out var sh, maxDistance, cardMask, q))
         {
             var cv = sh.collider.GetComponentInParent<CardView>();
@@ -140,15 +226,15 @@ public class CardRaycasterOnRoot : NetworkBehaviour
 
     PlayerState RaycastPlayer()
     {
-        Ray ray = new Ray(cam.transform.position, cam.transform.forward);
         var q = hitTriggers ? QueryTriggerInteraction.Collide : QueryTriggerInteraction.Ignore;
+        Ray ray = new Ray(cam.transform.position, cam.transform.forward);
 
-        if (Physics.Raycast(ray, out var hit, maxDistance, playerMask, q))
+        if (playerMask.value != 0 && Physics.Raycast(ray, out var hit, maxDistance, playerMask, q))
         {
             var ps = hit.collider.GetComponentInParent<PlayerState>();
             if (ps != null) return ps;
         }
-        if (sphereCastRadius > 0f &&
+        if (playerMask.value != 0 && sphereCastRadius > 0f &&
             Physics.SphereCast(ray, sphereCastRadius, out var sh, maxDistance, playerMask, q))
         {
             var ps = sh.collider.GetComponentInParent<PlayerState>();
@@ -157,18 +243,47 @@ public class CardRaycasterOnRoot : NetworkBehaviour
         return null;
     }
 
+    // ---------- debug ----------
     void DebugRayEverything()
     {
-        Ray ray = new Ray(cam.transform.position, cam.transform.forward);
-        var hits = Physics.RaycastAll(ray, maxDistance, ~0, hitTriggers ? QueryTriggerInteraction.Collide : QueryTriggerInteraction.Ignore);
+        if (!cam) { Debug.Log("[Raycaster] DebugRayAll: no cam."); return; }
+        var ray = new Ray(cam.transform.position, cam.transform.forward);
+        var hits = Physics.RaycastAll(ray, maxDistance, ~0,
+                    hitTriggers ? QueryTriggerInteraction.Collide : QueryTriggerInteraction.Ignore);
         System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
         if (hits.Length == 0) { Debug.Log("[Raycaster] DebugRayAll: hit nothing."); return; }
         Debug.Log($"[Raycaster] DebugRayAll: {hits.Length} hit(s):");
         foreach (var h in hits)
-            Debug.Log($"  - {h.collider.name} (layer {LayerMask.LayerToName(h.collider.gameObject.layer)}) dist {h.distance:F2}");
+            Debug.Log($"  - {h.collider.name} (layer {LayerMask.LayerToName(h.collider.gameObject.layer)}) dist {h.distance:F2} parent {h.collider.transform.root.name}");
     }
 
-    // ---- helpers ----
+    void PrintDiagnostics()
+    {
+        var me = GetComponent<PlayerState>();
+        var camName = cam ? cam.name : "<none>";
+        var camPos = cam ? cam.transform.position.ToString("F2") : "<none>";
+        int cardLayer = LayerMask.NameToLayer("Card");
+        int playerLayer = LayerMask.NameToLayer("Player");
+
+        var allCols = FindObjectsOfType<Collider>(true);
+        int cardCols = allCols.Count(c => c.gameObject.layer == cardLayer && c.enabled && c.gameObject.activeInHierarchy);
+        int plyrCols = allCols.Count(c => c.gameObject.layer == playerLayer && c.enabled && c.gameObject.activeInHierarchy);
+
+        Debug.Log($"[Raycaster] DIAG: cam={camName} @ {camPos}, seat={(me ? me.seatIndex : -1)}");
+        Debug.Log($"[Raycaster] DIAG: cardMask={(int)cardMask.value} (Card layer={cardLayer}), playerMask={(int)playerMask.value} (Player layer={playerLayer})");
+        Debug.Log($"[Raycaster] DIAG: active colliders -> Card:{cardCols}, Player:{plyrCols} (scene total:{allCols.Length})");
+        didPrintSetup = true;
+    }
+
+    void DropCubeForAimTest()
+    {
+        var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        cube.transform.position = cam.transform.position + cam.transform.forward * 2f;
+        cube.transform.localScale = Vector3.one * 0.1f;
+        Destroy(cube, 2f);
+    }
+
+    // ---------- helpers ----------
     PlayerState FindAnyOtherPlayer(PlayerState me)
     {
         foreach (var kv in NetworkServer.spawned)

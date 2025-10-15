@@ -104,7 +104,7 @@ CapsuleCollider:
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 128
   m_ExcludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -218,7 +218,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3490693020670742134}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 058f6f7cda70e214b9691ead11acdc4c, type: 3}
   m_Name: 
@@ -1050,7 +1050,7 @@ MonoBehaviour:
   hp: 0
   armor: 0
   gold: 0
-  maxHP: 3
+  maxHP: 5
   maxArmor: 5
   seatIndex: 0
   turnManager: {fileID: 0}

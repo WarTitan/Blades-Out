@@ -12,11 +12,11 @@ public class PlayerState : NetworkBehaviour
     [SyncVar] public int armor = 5;
     [SyncVar] public int gold = 0;
 
-    // NEW: max stats (so StatusBarsForPlayer can read them)
+    // Max stats (so StatusBarsForPlayer can read them)
     [SyncVar] public int maxHP = 5;
     [SyncVar] public int maxArmor = 5;
 
-    // Properties used by StatusBarsForPlayer (exact names)
+    // Properties used by StatusBarsForPlayer (exact names expected)
     public int MaxHP => maxHP;
     public int MaxArmor => maxArmor;
 
@@ -25,6 +25,7 @@ public class PlayerState : NetworkBehaviour
     [HideInInspector] public TurnManager turnManager;
 
     // === CARDS ===
+    // Hand row
     public readonly SyncList<int> handIds = new SyncList<int>();
     public readonly SyncList<byte> handLvls = new SyncList<byte>();
 
@@ -32,9 +33,8 @@ public class PlayerState : NetworkBehaviour
     public readonly SyncList<int> setIds = new SyncList<int>();
     public readonly SyncList<byte> setLvls = new SyncList<byte>();
 
-    // Simple server-side status list (poison etc.). You can sync it later if needed.
+    // Simple server-side status list (poison etc.)
     private readonly List<StatusData> statuses = new List<StatusData>();
-
     private struct StatusData { public StatusType type; public int magnitude; public int turns; }
     private enum StatusType { Poison }
 
@@ -52,14 +52,14 @@ public class PlayerState : NetworkBehaviour
         database = db;
         gold = startGold;
 
-        // Ensure current stats start at max
+        // current stats = max at start
         hp = maxHP;
         armor = maxArmor;
 
-        // Simple: draw random IDs into hand
         handIds.Clear(); handLvls.Clear();
         setIds.Clear(); setLvls.Clear();
 
+        // very simple start draw
         for (int i = 0; i < startHand; i++)
         {
             int id = database != null ? database.GetRandomId() : -1;
@@ -95,7 +95,7 @@ public class PlayerState : NetworkBehaviour
         TurnManager.Instance?.Server_UpgradeCard(this, handIndex);
     }
 
-    // NEW: Start game request used by StartGameUI & KeyboardHotkeys
+    // Start game request used by StartGameUI & KeyboardHotkeys
     [Command]
     public void CmdRequestStartGame()
     {
@@ -120,27 +120,54 @@ public class PlayerState : NetworkBehaviour
         CardEffectResolver.PlayInstant(def, lvl, this, target);
     }
 
-    // Move a REACTION/DELAYED card from hand -> set row (face-up for testing)
-    [Command]
+    // ======= SET CARD: hand -> set (robust; allows test without authority issues) =======
+    [Command(requiresAuthority = false)]
     public void CmdSetCard(int handIndex)
     {
-        if (!IsYourTurn()) return;
-        if (!ValidHandIndex(handIndex)) return;
+        // Identify who sent this command
+        var senderIdentity = connectionToClient?.identity;
+        var senderPS = senderIdentity ? senderIdentity.GetComponent<PlayerState>() : null;
 
-        var def = database?.Get(handIds[handIndex]);
-        if (def == null) return;
+        if (senderPS == null)
+        {
+            Debug.LogWarning("[PlayerState] CmdSetCard: sender has no PlayerState");
+            return;
+        }
 
-        // Only allow set types
-        if (def.playStyle == CardDefinition.PlayStyle.Instant) return;
+        // Security: only allow a player to set THEIR OWN card
+        if (senderPS != this)
+        {
+            Debug.LogWarning($"[PlayerState] CmdSetCard: mismatched target. Sender netId={senderPS.netId}, target netId={netId}");
+            return;
+        }
+
+        // For testing we allow setting ANY card at ANY time (no turn gate / style gate)
+        Server_SetCard_ByIndex(handIndex);
+    }
+
+    [Server]
+    private void Server_SetCard_ByIndex(int handIndex)
+    {
+        // Validate index
+        if (handIndex < 0 || handIndex >= handIds.Count || handIndex >= handLvls.Count)
+        {
+            Debug.LogWarning($"[PlayerState] Server_SetCard_ByIndex: invalid handIndex {handIndex} (hand count={handIds.Count})");
+            return;
+        }
 
         int id = handIds[handIndex];
-        byte lv = handLvls[handIndex];
+        byte lvl = handLvls[handIndex];
 
-        RemoveHandAt(handIndex);
+        // Remove from hand
+        handIds.RemoveAt(handIndex);
+        handLvls.RemoveAt(handIndex);
+
+        // Add to set
         setIds.Add(id);
-        setLvls.Add(lv);
+        setLvls.Add(lvl);
 
-        // For delayed cards (bombs), add countdown later
+        Debug.Log($"[PlayerState] Server_SetCard_ByIndex: moved id={id} lvl={lvl} handIndex={handIndex} -> SET (player netId={netId}).");
+        // SyncLists will notify clients; visualizers will rebuild automatically
     }
 
     #endregion
@@ -160,7 +187,6 @@ public class PlayerState : NetworkBehaviour
         return i >= 0 && i < handIds.Count && i < handLvls.Count;
     }
 
-    // FIX: use NetworkServer.spawned (Mirror)
     [Server]
     private PlayerState FindPlayerByNetId(uint netId)
     {
@@ -189,13 +215,13 @@ public class PlayerState : NetworkBehaviour
 
     #region Combat / Status
 
-    // Central damage entry: attacker's effects are already chosen; this applies armor, traps, hp
+    // Central damage entry: applies armor, then HP; lets set-row react first
     [Server]
     public void Server_ApplyDamage(PlayerState attacker, int dmg)
     {
         if (dmg <= 0) return;
 
-        // Let defender’s set row react (reflect/mitigate); may consume a set card
+        // Defender’s set row can react/mitigate/reflect (and may consume a set card)
         CardEffectResolver.TryReactOnIncomingHit(this, attacker, ref dmg);
         if (dmg <= 0) return;
 
@@ -212,7 +238,7 @@ public class PlayerState : NetworkBehaviour
             RpcHitFlash(dmg);
             if (hp == 0)
             {
-                // TODO: death/knockout handling; "revive" cards can hook here
+                // TODO: KO / death handling, revive hooks, etc.
             }
         }
     }

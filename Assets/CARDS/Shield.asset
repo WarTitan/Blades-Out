@@ -19,6 +19,12 @@ MonoBehaviour:
   showcasePrefab: {fileID: 919132149155446097, guid: 516a3e2d2f803fd44a55c89301f45fc0, type: 3}
   showcaseLocalOffset: {x: 0, y: 0, z: -1}
   showcaseLocalScale: 1
+  playStyle: 1
+  effect: 0
+  amount: 1
+  durationTurns: 0
+  arcs: 0
+  targetAll: 0
   tiers:
   - attack: 0
     defense: 1
