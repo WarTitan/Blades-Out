@@ -6,7 +6,7 @@ public class SetRowVisualizer : MonoBehaviour
 {
     [Header("References")]
     public PlayerState playerState;     // usually on same GameObject
-    public Transform cardSpawnPoint;    // auto-resolved from TableSeatAnchors (SetAnchor_SeatX)
+    public Transform cardSpawnPoint;    // auto: TableSeatAnchors.GetSetAnchor(seatIndex)
     public GameObject cardPrefab3D;
     public CardDatabase database;
 
@@ -38,34 +38,23 @@ public class SetRowVisualizer : MonoBehaviour
         if (!playerState) playerState = GetComponent<PlayerState>();
     }
 
-    void OnEnable()
-    {
-        SubscribeToLists();
-    }
+    void OnEnable() { SubscribeToLists(); }
+    void OnDisable() { UnsubscribeFromLists(); }
 
     void Start()
     {
-        // try immediately
-        TryResolveSpawnPoint(forceLog: true);
+        TryResolveSpawnPoint(true);
         ScheduleRebuild("[Start]");
-    }
-
-    void OnDisable()
-    {
-        UnsubscribeFromLists();
     }
 
     void Update()
     {
-        // Keep trying to resolve until we have an anchor
-        if (cardSpawnPoint == null)
-            TryResolveSpawnPoint(forceLog: false);
+        if (cardSpawnPoint == null) TryResolveSpawnPoint(false);
 
         if (rebuildPending && Time.time >= rebuildAtTime)
         {
             if (playerState == null || cardSpawnPoint == null || cardPrefab3D == null || database == null)
             {
-                // If we still don't have the anchor, try again next frame
                 rebuildAtTime = Time.time + debounceSeconds;
                 return;
             }
@@ -80,7 +69,6 @@ public class SetRowVisualizer : MonoBehaviour
             }
             else
             {
-                // wait a tick until both SyncLists are aligned
                 rebuildAtTime = Time.time + debounceSeconds;
             }
         }
@@ -125,7 +113,6 @@ public class SetRowVisualizer : MonoBehaviour
     {
         if (cardSpawnPoint != null) return;
 
-        // recover playerState lazily
         if (playerState == null)
         {
 #if UNITY_2023_1_OR_NEWER
@@ -151,13 +138,13 @@ public class SetRowVisualizer : MonoBehaviour
 
         if (TableSeatAnchors.Instance == null)
         {
-            if (forceLog || verboseLogs) Debug.LogWarning("[SetRowVisualizer] TableSeatAnchors.Instance is null (is it in the active scene and enabled?).");
+            if (forceLog || verboseLogs) Debug.LogWarning("[SetRowVisualizer] TableSeatAnchors.Instance is null.");
             return;
         }
 
         if (playerState.seatIndex < 0)
         {
-            if (forceLog || verboseLogs) Debug.LogWarning("[SetRowVisualizer] seatIndex is -1; set it on PlayerState or assign Card Spawn Point manually.");
+            if (forceLog || verboseLogs) Debug.LogWarning("[SetRowVisualizer] seatIndex is -1; set it or assign Card Spawn Point manually.");
             return;
         }
 
@@ -166,7 +153,7 @@ public class SetRowVisualizer : MonoBehaviour
         {
             cardSpawnPoint = anchor;
             if (forceLog || verboseLogs)
-                Debug.Log($"[SetRowVisualizer] Seat {playerState.seatIndex} -> Using SetAnchor '{anchor.name}'");
+                Debug.Log($"[SetRowVisualizer] Seat {playerState.seatIndex} -> Using SetAnchor '{anchor.name}' @ {anchor.position}");
         }
         else
         {
@@ -193,7 +180,6 @@ public class SetRowVisualizer : MonoBehaviour
 
     private void RebuildRow()
     {
-        // Bail hard if anchor missing (prevents 0,0,0 spawns)
         if (cardSpawnPoint == null)
         {
             Debug.LogError("[SetRowVisualizer] No Card Spawn Point. Fill in Inspector or ensure TableSeatAnchors + seatIndex are set.");
@@ -211,6 +197,7 @@ public class SetRowVisualizer : MonoBehaviour
         float pitch = layFlatOnTable ? 90f : tiltXDegrees;
         if (faceDown) pitch += 180f;
         Quaternion worldRot = Quaternion.Euler(pitch, anchorYaw, 0f);
+        Quaternion localRot = Quaternion.Inverse(cardSpawnPoint.rotation) * worldRot;
 
         for (int i = 0; i < count; i++)
         {
@@ -221,8 +208,12 @@ public class SetRowVisualizer : MonoBehaviour
 
             var go = Instantiate(cardPrefab3D, cardSpawnPoint, false);
             go.transform.localPosition = localPos;
-            go.transform.rotation = worldRot;
+            go.transform.localRotation = localRot;
             go.transform.localScale = cardLocalScale;
+
+            if (verboseLogs)
+                Debug.Log($"[SetRowVisualizer] Spawn seat {playerState.seatIndex} -> anchor '{cardSpawnPoint.name}' at {cardSpawnPoint.position}, " +
+                          $"card local {localPos}, world {go.transform.position}");
 
             var adapter = go.GetComponent<Card3DAdapter>();
             if (adapter != null) adapter.Bind(id, lvl, database);
@@ -230,6 +221,13 @@ public class SetRowVisualizer : MonoBehaviour
             var view = go.GetComponent<CardView>();
             if (view == null) view = go.AddComponent<CardView>();
             view.Init(playerState, i, id, lvl, false);  // false = in set row
+
+            var pin = go.GetComponent<PinToAnchor>();
+            if (!pin) pin = go.AddComponent<PinToAnchor>();
+            pin.anchor = cardSpawnPoint;
+            pin.localPosition = localPos;
+            pin.localRotation = localRot;
+            pin.localScale = cardLocalScale;
         }
     }
 }

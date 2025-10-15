@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 599263463715615818}
   - component: {fileID: 2411681436580499997}
   - component: {fileID: 3030389557987896272}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: QuadBack
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -125,7 +125,7 @@ GameObject:
   - component: {fileID: 3183422767777508647}
   - component: {fileID: 3768867638171856423}
   - component: {fileID: 5191658335523149900}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: QuadFront
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -249,7 +249,7 @@ GameObject:
   - component: {fileID: 4735414549400025753}
   - component: {fileID: 1704120158991236685}
   - component: {fileID: 439117791968779686}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Odspredaj
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -358,7 +358,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4704232145339512907}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: ITEM
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -391,7 +391,7 @@ GameObject:
   - component: {fileID: 923155317152808916}
   - component: {fileID: 5769731877926459380}
   - component: {fileID: 2888462466388079302}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Name
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -530,7 +530,7 @@ GameObject:
   - component: {fileID: 8230142130225136068}
   - component: {fileID: 5704144146042139241}
   - component: {fileID: 5529767578675528674}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Canvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -732,7 +732,7 @@ GameObject:
   - component: {fileID: 2663164652267581392}
   - component: {fileID: 4752889399462385525}
   - component: {fileID: 1794622820693433489}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Description
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -868,7 +868,7 @@ GameObject:
   - component: {fileID: 6876338939643108212}
   - component: {fileID: 235673181975007358}
   - component: {fileID: 1487848672976111911}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: GOLD
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1004,8 +1004,8 @@ GameObject:
   - component: {fileID: 6893885539870928875}
   - component: {fileID: 7621319129293376360}
   - component: {fileID: 8193640734028192397}
-  - component: {fileID: 6532405592931339962}
-  m_Layer: 0
+  - component: {fileID: 7871780557274156469}
+  m_Layer: 6
   m_Name: Card3d
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1088,7 +1088,7 @@ MonoBehaviour:
   hoverHeight: 0.06
   moveLerp: 12
   hoverAxis: 0
---- !u!65 &6532405592931339962
+--- !u!65 &7871780557274156469
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1098,7 +1098,7 @@ BoxCollider:
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -1107,8 +1107,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 2.1, y: 3, z: 0.1}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Size: {x: 2.2, y: 3, z: 0.2}
+  m_Center: {x: 0, y: 0, z: 0.08}
 --- !u!1001 &6810899261510048775
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1118,12 +1118,20 @@ PrefabInstance:
     m_TransformParent: {fileID: 6893885539870928875}
     m_Modifications:
     - target: {fileID: 4180595888276406129, guid: 858a711731ca50a498352bbeddecf322, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4180595888276406129, guid: 858a711731ca50a498352bbeddecf322, type: 3}
       propertyPath: m_IncludeLayers.m_Bits
       value: 64
       objectReference: {fileID: 0}
     - target: {fileID: 7260843162703642579, guid: 858a711731ca50a498352bbeddecf322, type: 3}
       propertyPath: m_Name
       value: SM_Item_Playing_Card_01
+      objectReference: {fileID: 0}
+    - target: {fileID: 7260843162703642579, guid: 858a711731ca50a498352bbeddecf322, type: 3}
+      propertyPath: m_Layer
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 8036782178664080745, guid: 858a711731ca50a498352bbeddecf322, type: 3}
       propertyPath: m_LocalScale.x
