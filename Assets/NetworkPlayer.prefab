@@ -74,6 +74,7 @@ GameObject:
   - component: {fileID: 5127393552435462056}
   - component: {fileID: 294449105464193021}
   - component: {fileID: 7060263134974425683}
+  - component: {fileID: 7534591615195073895}
   m_Layer: 0
   m_Name: PlayerCamera
   m_TagString: Untagged
@@ -174,6 +175,22 @@ MonoBehaviour:
   syncInterval: 0
   mouseSensitivity: 2
   playerBody: {fileID: 4597333103463066336}
+--- !u!114 &7534591615195073895
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3490693020670742134}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 86f7d19ab6ec1584ca6f1ff9daf57e83, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CrosshairDot
+  sizePx: 6
+  alpha: 0.9
+  color: {r: 1, g: 1, b: 1, a: 1}
+  hideCursor: 1
 --- !u!1001 &1742179290809297810
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -566,6 +583,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
       insertIndex: -1
       addedObject: {fileID: -3118809153901716693}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -8839851854633135613}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8856168838843400594}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8173326918690645208}
   m_SourcePrefab: {fileID: 100100000, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
 --- !u!1 &3784944211829141594 stripped
 GameObject:
@@ -673,14 +699,13 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  maxHP: 3
-  maxArmor: 5
-  startingGold: 5
-  startingHandSize: 4
+  database: {fileID: 0}
   hp: 0
   armor: 0
   gold: 0
-  seatIndex: -1
+  maxHP: 3
+  maxArmor: 5
+  seatIndex: 0
   turnManager: {fileID: 0}
 --- !u!114 &-5306346198277782966
 MonoBehaviour:
@@ -731,6 +756,76 @@ MonoBehaviour:
   armorAnchorName: BarAnchorArmor
   healthBar: {fileID: 0}
   armorBar: {fileID: 0}
+--- !u!114 &-8839851854633135613
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3784944211829141594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b326afe865fb1ca408dc32f2f622e36a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SetRowVisualizer
+  playerState: {fileID: -6304133020608627664}
+  cardSpawnPoint: {fileID: 0}
+  cardPrefab3D: {fileID: 7461052816248502625, guid: bbc48dcd4ddd7eb4f99a1a6ea4e3a6a6, type: 3}
+  database: {fileID: 11400000, guid: 7044ab7ef32f0534999f3b709a1bebaf, type: 2}
+  gapX: 0.18
+  raiseY: 0
+  layFlatOnTable: 1
+  tiltXDegrees: 90
+  frontFacingYawOffset: 0
+  rowYawNudge: 0
+  faceDown: 0
+  cardLocalScale: {x: 1, y: 1, z: 1}
+  verboseLogs: 1
+--- !u!114 &8856168838843400594
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3784944211829141594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d89d4c669f0910a46ab3aaa50f12bc31, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CardRaycaster
+  cam: {fileID: 5127393552435462056}
+  cardMask:
+    serializedVersion: 2
+    m_Bits: 64
+  playerMask:
+    serializedVersion: 2
+    m_Bits: 128
+  maxDistance: 12
+  setKey: 118
+  deselectRightClick: 324
+--- !u!136 &8173326918690645208
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3784944211829141594}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 128
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.5
+  m_Height: 2
+  m_Direction: 1
+  m_Center: {x: 0, y: 0.9, z: 0}
 --- !u!4 &4597333103463066336 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}

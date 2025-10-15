@@ -16,18 +16,15 @@ public class TurnManager : NetworkBehaviour
     [SerializeField] private CardDatabase database;
 
     [Header("Start Control")]
-    [SerializeField] private int minPlayersToStart = 2;      // you can change in Inspector
-    [SerializeField] private bool autoStartOnFull = false;   // set true if you want old behavior
+    [SerializeField] private int minPlayersToStart = 2;
+    [SerializeField] private bool autoStartOnFull = false;
 
     [SyncVar] private int currentTurnIndex = -1;
     [SyncVar] private bool gameStarted = false;
 
     private readonly List<PlayerState> turnOrder = new List<PlayerState>();
 
-    public override void OnStartServer()
-    {
-        Instance = this;
-    }
+    public override void OnStartServer() { Instance = this; }
 
     [Server]
     public void RegisterPlayer(PlayerState ps)
@@ -35,11 +32,6 @@ public class TurnManager : NetworkBehaviour
         if (turnOrder.Contains(ps)) return;
         turnOrder.Add(ps);
         ps.turnManager = this;
-
-        if (autoStartOnFull && turnOrder.Count == maxPlayers && !gameStarted)
-        {
-            Server_AttemptStartGame();
-        }
     }
 
     [Server]
@@ -48,12 +40,8 @@ public class TurnManager : NetworkBehaviour
         if (gameStarted) return;
         if (turnOrder.Count < minPlayersToStart) return;
 
-        // init all players
         for (int i = 0; i < turnOrder.Count; i++)
-        {
-            var p = turnOrder[i];
-            p.Server_Init(database, defaultDeckSize, startingGold, startingHandSize);
-        }
+            turnOrder[i].Server_Init(database, defaultDeckSize, startingGold, startingHandSize);
 
         currentTurnIndex = 0;
         gameStarted = true;
@@ -65,6 +53,10 @@ public class TurnManager : NetworkBehaviour
     {
         if (!gameStarted) return;
 
+        // Start-of-turn status processing (poison, countdowns later)
+        ps.Server_OnTurnStart_ProcessStatuses();
+
+        // Draw and gold
         ps.Server_Draw(cardsPerTurn);
         ps.gold += goldPerTurn;
 
@@ -72,23 +64,13 @@ public class TurnManager : NetworkBehaviour
         TargetYourTurn(ps.connectionToClient);
     }
 
-    [ClientRpc]
-    private void RpcTurnChanged(int index)
-    {
-        // TODO: global UI hook
-    }
-
-    [TargetRpc]
-    private void TargetYourTurn(NetworkConnection target)
-    {
-        // TODO: local UI hook
-    }
+    [ClientRpc] private void RpcTurnChanged(int index) { /* global UI hook */ }
+    [TargetRpc] private void TargetYourTurn(NetworkConnection target) { /* local UI hook */ }
 
     [Server]
     public void Server_EndTurn(PlayerState requester)
     {
-        if (!gameStarted) return;
-        if (turnOrder.Count == 0) return;
+        if (!gameStarted || turnOrder.Count == 0) return;
         if (turnOrder[currentTurnIndex] != requester) return;
 
         currentTurnIndex = (currentTurnIndex + 1) % turnOrder.Count;
@@ -98,20 +80,42 @@ public class TurnManager : NetworkBehaviour
     [Server]
     public void Server_UpgradeCard(PlayerState ps, int handIndex)
     {
-        if (!gameStarted) return;
-        if (ps == null) return;
+        if (!gameStarted || ps == null) return;
         if (handIndex < 0 || handIndex >= ps.handIds.Count) return;
 
-        int id = ps.handIds[handIndex];
-        int lvl = ps.handLvls[handIndex];
-        var def = (database != null) ? database.Get(id) : null;
+        var def = database?.Get(ps.handIds[handIndex]);
         if (def == null) return;
+        int lvl = ps.handLvls[handIndex];
         if (lvl >= def.MaxLevel) return;
 
-        var nextTier = def.GetTier(lvl + 1);
-        if (ps.gold < nextTier.costGold) return;
+        var next = def.GetTier(lvl + 1);
+        if (ps.gold < next.costGold) return;
 
-        ps.gold -= nextTier.costGold;
+        ps.gold -= next.costGold;
         ps.handLvls[handIndex] = (byte)(lvl + 1);
+    }
+
+    // === Helpers used by CardEffectResolver ===
+    [Server] public bool IsPlayersTurn(PlayerState ps) => gameStarted && turnOrder.Count > 0 && turnOrder[currentTurnIndex] == ps;
+
+    [Server]
+    public void Server_HealAll(int amount)
+    {
+        foreach (var p in turnOrder) if (p != null) p.Server_Heal(amount);
+    }
+
+    [Server]
+    public void Server_ChainArc(PlayerState caster, PlayerState startTarget, int amount, int arcs)
+    {
+        if (turnOrder.Count == 0 || startTarget == null) return;
+        int idx = turnOrder.IndexOf(startTarget);
+        if (idx < 0) return;
+
+        int hits = Mathf.Max(1, arcs + 1); // first + bounces
+        for (int i = 0; i < hits; i++)
+        {
+            var t = turnOrder[(idx + i) % turnOrder.Count];
+            if (t != null) t.Server_ApplyDamage(caster, amount);
+        }
     }
 }
