@@ -2,6 +2,12 @@ using UnityEngine;
 using Mirror;
 using System.Collections.Generic;
 
+// PlayerState for Blades Out
+// - Only SetReaction cards can be moved to the Set row
+// - Only one action at a time (server action lock to prevent multi-plays/sets)
+// - Integrates with TurnManager, CardDatabase, CardEffectResolver
+// - ASCII only
+
 public class PlayerState : NetworkBehaviour
 {
     [Header("Refs")]
@@ -12,54 +18,60 @@ public class PlayerState : NetworkBehaviour
     [SyncVar] public int armor = 5;
     [SyncVar] public int gold = 0;
 
-    // Max stats (so StatusBarsForPlayer can read them)
+    // Exposed max values (UI may read these)
     [SyncVar] public int maxHP = 5;
     [SyncVar] public int maxArmor = 5;
 
-    // Properties used by StatusBarsForPlayer (exact names expected)
     public int MaxHP => maxHP;
     public int MaxArmor => maxArmor;
 
-    [Header("Seat/Turn")]
+    [Header("Seat / Turn")]
     [SyncVar] public int seatIndex = -1;
     [HideInInspector] public TurnManager turnManager;
 
-    // === CARDS ===
+    // --- CARDS ---
     // Hand row
     public readonly SyncList<int> handIds = new SyncList<int>();
     public readonly SyncList<byte> handLvls = new SyncList<byte>();
 
-    // Set row (face-up for testing)
+    // Set row
     public readonly SyncList<int> setIds = new SyncList<int>();
     public readonly SyncList<byte> setLvls = new SyncList<byte>();
 
-    // Simple server-side status list (poison etc.)
+    // Prevent overlapping actions in the same moment (server-side)
+    private bool actionLock = false;
+
+    // Minimal status system (example: Poison)
     private readonly List<StatusData> statuses = new List<StatusData>();
     private struct StatusData { public StatusType type; public int magnitude; public int turns; }
     private enum StatusType { Poison }
 
-    #region Lifecycle / Init
-
+    // ---------- Lifecycle ----------
     public override void OnStartServer()
     {
         base.OnStartServer();
-        TurnManager.Instance?.RegisterPlayer(this);
+        if (TurnManager.Instance != null)
+        {
+            TurnManager.Instance.RegisterPlayer(this);
+            turnManager = TurnManager.Instance;
+        }
     }
 
+    // ---------- Setup / init ----------
     [Server]
     public void Server_Init(CardDatabase db, int deckSize, int startGold, int startHand)
     {
         database = db;
         gold = startGold;
 
-        // current stats = max at start
+        // Reset current stats to max
         hp = maxHP;
         armor = maxArmor;
 
         handIds.Clear(); handLvls.Clear();
         setIds.Clear(); setLvls.Clear();
 
-        // very simple start draw
+        // Simple opening draw
         for (int i = 0; i < startHand; i++)
         {
             int id = database != null ? database.GetRandomId() : -1;
@@ -71,23 +83,35 @@ public class PlayerState : NetworkBehaviour
         }
     }
 
+    // Draw N cards from the database (random for now)
     [Server]
     public void Server_Draw(int count)
     {
-        if (database == null) return;
+        if (count <= 0 || database == null) return;
         for (int i = 0; i < count; i++)
         {
             int id = database.GetRandomId();
-            if (id >= 0) { handIds.Add(id); handLvls.Add(1); }
+            if (id >= 0)
+            {
+                handIds.Add(id);
+                handLvls.Add(1);
+            }
         }
     }
 
-    #endregion
-
-    #region Commands from Client
+    // ---------- Turn / commands ----------
 
     [Command]
-    public void CmdEndTurn() => turnManager?.Server_EndTurn(this);
+    public void CmdRequestStartGame()
+    {
+        TurnManager.Instance?.Server_AttemptStartGame();
+    }
+
+    [Command]
+    public void CmdEndTurn()
+    {
+        TurnManager.Instance?.Server_EndTurn(this);
+    }
 
     [Command]
     public void CmdUpgradeCard(int handIndex)
@@ -95,63 +119,93 @@ public class PlayerState : NetworkBehaviour
         TurnManager.Instance?.Server_UpgradeCard(this, handIndex);
     }
 
-    // Start game request used by StartGameUI & KeyboardHotkeys
-    [Command]
-    public void CmdRequestStartGame()
-    {
-        TurnManager.Instance?.Server_AttemptStartGame();
-    }
-
-    // Play an INSTANT card from hand -> resolves immediately on server
+    // Play an instant from hand, resolves immediately
     [Command]
     public void CmdPlayInstant(int handIndex, uint targetNetId)
     {
         if (!IsYourTurn()) return;
         if (!ValidHandIndex(handIndex)) return;
+        if (actionLock) return;
 
-        var def = database?.Get(handIds[handIndex]);
-        int lvl = handLvls[handIndex];
+        var def = database != null ? database.Get(handIds[handIndex]) : null;
+        if (def == null) return;
+
+        // Do not allow casting set-only reactions as instants
+        if (def.playStyle == CardDefinition.PlayStyle.SetReaction) return;
 
         var target = FindPlayerByNetId(targetNetId);
+        int lvl = handLvls[handIndex];
 
-        // remove from hand first (so sync rows update fast)
-        RemoveHandAt(handIndex);
-
-        CardEffectResolver.PlayInstant(def, lvl, this, target);
+        actionLock = true;
+        try
+        {
+            // Remove from hand first so SyncLists update immediately
+            RemoveHandAt(handIndex);
+            CardEffectResolver.PlayInstant(def, lvl, this, target);
+        }
+        finally { actionLock = false; }
     }
 
-    // ======= SET CARD: hand -> set (robust; allows test without authority issues) =======
+    // Move a hand card to the set row (only SetReaction allowed)
     [Command(requiresAuthority = false)]
     public void CmdSetCard(int handIndex)
     {
-        // Identify who sent this command
-        var senderIdentity = connectionToClient?.identity;
+        // Only allow the sender to operate on their own PlayerState
+        var senderIdentity = connectionToClient != null ? connectionToClient.identity : null;
         var senderPS = senderIdentity ? senderIdentity.GetComponent<PlayerState>() : null;
+        if (senderPS == null || senderPS != this) return;
 
-        if (senderPS == null)
+        if (actionLock) return;
+        if (!Server_IsSetReactionInHand(handIndex)) return;
+
+        actionLock = true;
+        try
         {
-            Debug.LogWarning("[PlayerState] CmdSetCard: sender has no PlayerState");
-            return;
+            Server_SetCard_ByIndex(handIndex);
         }
+        finally { actionLock = false; }
+    }
 
-        // Security: only allow a player to set THEIR OWN card
-        if (senderPS != this)
-        {
-            Debug.LogWarning($"[PlayerState] CmdSetCard: mismatched target. Sender netId={senderPS.netId}, target netId={netId}");
-            return;
-        }
+    // ---------- Helpers ----------
 
-        // For testing we allow setting ANY card at ANY time (no turn gate / style gate)
-        Server_SetCard_ByIndex(handIndex);
+    public bool IsYourTurn()
+    {
+        return (TurnManager.Instance != null && TurnManager.Instance.IsPlayersTurn(this));
+    }
+
+    private bool ValidHandIndex(int i)
+    {
+        return i >= 0 && i < handIds.Count && i < handLvls.Count;
+    }
+
+    private PlayerState FindPlayerByNetId(uint netId)
+    {
+        if (netId == 0) return null;
+        if (NetworkServer.spawned.TryGetValue(netId, out NetworkIdentity nid))
+            return nid != null ? nid.GetComponent<PlayerState>() : null;
+        return null;
+    }
+
+    private void RemoveHandAt(int index)
+    {
+        handIds.RemoveAt(index);
+        handLvls.RemoveAt(index);
+    }
+
+    [Server]
+    private bool Server_IsSetReactionInHand(int handIndex)
+    {
+        if (!ValidHandIndex(handIndex) || database == null) return false;
+        var def = database.Get(handIds[handIndex]);
+        return def != null && def.playStyle == CardDefinition.PlayStyle.SetReaction;
     }
 
     [Server]
     private void Server_SetCard_ByIndex(int handIndex)
     {
-        // Validate index
         if (handIndex < 0 || handIndex >= handIds.Count || handIndex >= handLvls.Count)
         {
-            Debug.LogWarning($"[PlayerState] Server_SetCard_ByIndex: invalid handIndex {handIndex} (hand count={handIds.Count})");
+            Debug.LogWarning("[PlayerState] Server_SetCard_ByIndex: invalid handIndex " + handIndex + " (hand count=" + handIds.Count + ")");
             return;
         }
 
@@ -165,101 +219,60 @@ public class PlayerState : NetworkBehaviour
         // Add to set
         setIds.Add(id);
         setLvls.Add(lvl);
-
-        Debug.Log($"[PlayerState] Server_SetCard_ByIndex: moved id={id} lvl={lvl} handIndex={handIndex} -> SET (player netId={netId}).");
-        // SyncLists will notify clients; visualizers will rebuild automatically
-    }
-
-    #endregion
-
-    #region Server Helpers
-
-    [Server]
-    private bool IsYourTurn()
-    {
-        return (TurnManager.Instance != null &&
-                TurnManager.Instance.IsPlayersTurn(this));
-    }
-
-    [Server]
-    private bool ValidHandIndex(int i)
-    {
-        return i >= 0 && i < handIds.Count && i < handLvls.Count;
-    }
-
-    [Server]
-    private PlayerState FindPlayerByNetId(uint netId)
-    {
-        if (netId == 0) return null;
-        if (NetworkServer.spawned.TryGetValue(netId, out NetworkIdentity nid))
-            return nid != null ? nid.GetComponent<PlayerState>() : null;
-        return null;
-    }
-
-    [Server]
-    private void RemoveHandAt(int index)
-    {
-        handIds.RemoveAt(index);
-        handLvls.RemoveAt(index);
     }
 
     [Server]
     public void Server_ConsumeSetAt(int index)
     {
-        if (index < 0 || index >= setIds.Count) return;
+        if (index < 0 || index >= setIds.Count || index >= setLvls.Count) return;
         setIds.RemoveAt(index);
         setLvls.RemoveAt(index);
     }
 
-    #endregion
+    // ---------- Damage / healing / statuses ----------
 
-    #region Combat / Status
-
-    // Central damage entry: applies armor, then HP; lets set-row react first
     [Server]
-    public void Server_ApplyDamage(PlayerState attacker, int dmg)
+    public void Server_ApplyDamage(PlayerState src, int amount)
     {
-        if (dmg <= 0) return;
+        if (amount <= 0) return;
 
-        // Defender’s set row can react/mitigate/reflect (and may consume a set card)
-        CardEffectResolver.TryReactOnIncomingHit(this, attacker, ref dmg);
-        if (dmg <= 0) return;
+        int incoming = amount;
+        // Give defender reactions a chance
+        CardEffectResolver.TryReactOnIncomingHit(this, src, ref incoming);
 
-        // Armor soaks first
-        int soak = Mathf.Min(armor, dmg);
-        armor -= soak;
-        dmg -= soak;
-
-        // HP
-        if (dmg > 0)
+        int left = incoming;
+        if (armor > 0)
         {
-            hp -= dmg;
-            if (hp < 0) hp = 0;
-            RpcHitFlash(dmg);
-            if (hp == 0)
-            {
-                // TODO: KO / death handling, revive hooks, etc.
-            }
+            int used = Mathf.Min(armor, left);
+            armor -= used;
+            left -= used;
         }
+        if (left > 0)
+        {
+            hp -= left;
+            if (hp < 0) hp = 0;
+        }
+
+        RpcHitFlash(incoming);
+        // TODO: death / knockout handling if needed
     }
 
     [Server]
-    public void Server_Heal(int amt)
+    public void Server_Heal(int amount)
     {
-        if (amt <= 0) return;
-        hp = Mathf.Min(maxHP, hp + amt);
-        RpcHealed(amt);
+        if (amount <= 0) return;
+        hp += amount;
+        if (hp > maxHP) hp = maxHP;
+        RpcHealed(amount);
     }
 
     [Server]
-    public void Server_AddPoison(int perTick, int turns)
+    public void Server_AddPoison(int magnitude, int turns)
     {
-        if (perTick <= 0 || turns <= 0) return;
-        statuses.Add(new StatusData { type = StatusType.Poison, magnitude = perTick, turns = turns });
-        RpcGotStatus("Poison", perTick, turns);
+        statuses.Add(new StatusData { type = StatusType.Poison, magnitude = magnitude, turns = turns });
+        RpcGotStatus("Poison", magnitude, turns);
     }
 
-    // Called at start of THIS player's turn (from TurnManager)
     [Server]
     public void Server_OnTurnStart_ProcessStatuses()
     {
@@ -278,13 +291,8 @@ public class PlayerState : NetworkBehaviour
         }
     }
 
-    #endregion
-
-    #region Client FX
-
-    [ClientRpc] private void RpcHitFlash(int dmg) { /* TODO: hit VFX/SFX */ }
-    [ClientRpc] private void RpcHealed(int amt) { /* TODO: heal VFX/SFX */ }
-    [ClientRpc] private void RpcGotStatus(string name, int mag, int t) { /* TODO: status UI */ }
-
-    #endregion
+    // ---------- Client FX hooks ----------
+    [ClientRpc] private void RpcHitFlash(int dmg) { /* TODO: add VFX */ }
+    [ClientRpc] private void RpcHealed(int amt) { /* TODO: add VFX */ }
+    [ClientRpc] private void RpcGotStatus(string name, int mag, int t) { /* TODO: add UI */ }
 }
