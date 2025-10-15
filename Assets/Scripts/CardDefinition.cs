@@ -8,6 +8,11 @@ public class CardDefinition : ScriptableObject
     public string cardName;
     [TextArea] public string description;
     public Sprite image;
+    [Header("3D Showcase (optional)")]
+    public GameObject showcasePrefab;      // drag a model prefab here (knife, bomb, etc.)
+    public Vector3 showcaseLocalOffset = new Vector3(0f, 0.15f, 0f);
+    public float showcaseLocalScale = 1f;
+
 
 
     [System.Serializable]

@@ -701,9 +701,9 @@ MonoBehaviour:
   cardSpawnPoint: {fileID: 0}
   cardPrefab3D: {fileID: 7461052816248502625, guid: bbc48dcd4ddd7eb4f99a1a6ea4e3a6a6, type: 3}
   database: {fileID: 11400000, guid: 7044ab7ef32f0534999f3b709a1bebaf, type: 2}
-  minorAxisRatio: 0.65
-  angleStepDegrees: 16
+  gapX: 0.12
   raiseY: 0
+  layFlatOnTable: 1
   tiltXDegrees: 30
   frontFacingYawOffset: 180
   handYawNudge: 0
