@@ -130,15 +130,15 @@ public class Card3DAdapter : MonoBehaviour
             }
             else
             {
-                // Prefer tier override; if 0, fallback to base definition chipCost
-                int chipCost = (tier.castChipCost > 0) ? tier.castChipCost : Mathf.Max(0, def.chipCost);
+                // Use per-tier override if present; else base definition chipCost.
+                // IMPORTANT: this uses the CURRENT level, not level+1.
+                int chipCost = def.GetCastChipCost(level);
                 if (hideZeroChipCost && chipCost == 0)
                     chipCostText.text = string.Empty;
                 else
                     chipCostText.text = string.Format(chipCostFormat, chipCost);
             }
         }
-
         // 3D showcase (optional)
         SpawnShowcase(def);
     }

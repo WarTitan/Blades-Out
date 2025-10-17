@@ -25,12 +25,15 @@ MonoBehaviour:
   durationTurns: 0
   arcs: 0
   targetAll: 0
+  chipCost: 2
   tiers:
   - attack: 1
     defense: 0
     costGold: 0
     effectText: Evrey player takes 1 DMG
+    castChipCost: 0
   - attack: 2
     defense: 0
-    costGold: 1
+    costGold: 3
     effectText: Evrey player takes 2 DMG
+    castChipCost: 0

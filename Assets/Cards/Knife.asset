@@ -25,12 +25,15 @@ MonoBehaviour:
   durationTurns: 0
   arcs: 0
   targetAll: 0
+  chipCost: 1
   tiers:
   - attack: 1
     defense: 0
     costGold: 0
     effectText: Deal 1 DMG
+    castChipCost: 0
   - attack: 2
     defense: 0
     costGold: 2
     effectText: Deal 2 DMG
+    castChipCost: 0

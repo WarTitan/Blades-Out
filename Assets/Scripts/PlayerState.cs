@@ -3,10 +3,11 @@ using Mirror;
 using System.Collections.Generic;
 
 // PlayerState for Blades Out
-// - Hearthstone-style chips: +1 max (up to 10) and refill at the start of your turn
-// - Chips are spent when casting instants and when setting reaction cards
-// - Global upgrades per cardId (all copies + future draws)
-// - Turn gating + debounce to prevent double-fires
+// - Hearthstone-style chips: +1 max (cap via TurnManager) & refill at start of your turn
+// - Chips spent when casting instants and when setting reaction cards
+// - Global upgrades per cardId (affects all copies + future draws)
+// - Turn gating + debounce + server action lock
+// - MaxHP/MaxArmor properties for UI scripts
 
 public class PlayerState : NetworkBehaviour
 {
@@ -21,9 +22,20 @@ public class PlayerState : NetworkBehaviour
     [SyncVar] public int maxHP = 5;
     [SyncVar] public int maxArmor = 5;
 
+    // Properties expected by some UI (e.g., StatusBarsForPlayer)
+    public int MaxHP => maxHP;
+    public int MaxArmor => maxArmor;
+
     [Header("Chips (Hearthstone style)")]
-    [SyncVar] public int chips = 0;     // current chips
-    [SyncVar] public int maxChips = 0;  // increases by +1 at start of your turns (cap 10 via TurnManager)
+    // Hooks so UI can refresh instantly
+    [SyncVar(hook = nameof(OnChipsChanged))] public int chips = 0;     // current
+    [SyncVar(hook = nameof(OnMaxChipsChanged))] public int maxChips = 0;  // increases +1 each of your turns, capped by TurnManager
+
+    // Simple events for UI
+    public event System.Action<PlayerState> ChipsChanged;
+    public event System.Action<PlayerState> MaxChipsChanged;
+    void OnChipsChanged(int oldV, int newV) { ChipsChanged?.Invoke(this); }
+    void OnMaxChipsChanged(int oldV, int newV) { MaxChipsChanged?.Invoke(this); }
 
     [Header("Seat / Turn")]
     [SyncVar] public int seatIndex = -1;
@@ -60,6 +72,8 @@ public class PlayerState : NetworkBehaviour
         }
     }
 
+    // ---------- Game init / draw ----------
+
     [Server]
     public void Server_Init(CardDatabase db, int deckSize, int startGold, int startHand)
     {
@@ -71,10 +85,12 @@ public class PlayerState : NetworkBehaviour
 
         handIds.Clear(); handLvls.Clear();
         setIds.Clear(); setLvls.Clear();
-        // Hearthstone flow: start at 0/0; first turn will bump to 1/1 and refill
+
+        // Hearthstone flow: start at 0/0; first turn bumps to 1/1 and refills
         chips = 0;
         maxChips = 0;
-        // upgradeLevels.Clear(); // uncomment if upgrades should reset each game
+        // If you want upgrades to reset each match, uncomment:
+        // upgradeLevels.Clear();
 
         for (int i = 0; i < startHand; i++)
         {
@@ -97,7 +113,7 @@ public class PlayerState : NetworkBehaviour
             if (id >= 0)
             {
                 handIds.Add(id);
-                handLvls.Add(GetLevelForNewInstance(id));
+                handLvls.Add(GetLevelForNewInstance(id)); // future draws use upgraded level if present
             }
         }
     }
@@ -106,6 +122,7 @@ public class PlayerState : NetworkBehaviour
 
     [Server] public void Server_RefillChipsToMax() { chips = maxChips; }
 
+    // Called by TurnManager at the start of your turn
     [Server]
     public void Server_IncreaseMaxChipsAndRefill(int cap, int amount = 1)
     {
@@ -251,6 +268,7 @@ public class PlayerState : NetworkBehaviour
         setLvls.Add(lvl);
     }
 
+    // Used by CardEffectResolver to consume a set reaction after it triggers.
     [Server]
     public void Server_ConsumeSetAt(int index)
     {
@@ -261,6 +279,7 @@ public class PlayerState : NetworkBehaviour
 
     // ===== Global-upgrade helpers =====
 
+    // effective level for a hand card considering the upgrade map
     [Server]
     public int Server_GetEffectiveLevelForHandIndex(int handIndex)
     {
@@ -270,6 +289,7 @@ public class PlayerState : NetworkBehaviour
         return handLvls[handIndex];
     }
 
+    // propagate current upgraded level to all copies in hand and set rows
     [Server]
     public void Server_PropagateUpgradeToAllCopies(int cardId)
     {
@@ -284,6 +304,7 @@ public class PlayerState : NetworkBehaviour
             if (setIds[i] == cardId) setLvls[i] = lvl;
     }
 
+    // level to assign when adding a new instance of this cardId to the hand
     [Server]
     private byte GetLevelForNewInstance(int cardId)
     {
