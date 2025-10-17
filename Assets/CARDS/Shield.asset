@@ -32,5 +32,5 @@ MonoBehaviour:
     effectText: Block 1 DMG
   - attack: 0
     defense: 2
-    costGold: 0
+    costGold: 2
     effectText: Block 2 DMG

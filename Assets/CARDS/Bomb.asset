@@ -19,6 +19,12 @@ MonoBehaviour:
   showcasePrefab: {fileID: 919132149155446097, guid: 79f7bbe732a52ea43a57a7467816bb68, type: 3}
   showcaseLocalOffset: {x: 0, y: 0, z: -0.2}
   showcaseLocalScale: 1
+  playStyle: 0
+  effect: 0
+  amount: 1
+  durationTurns: 0
+  arcs: 0
+  targetAll: 0
   tiers:
   - attack: 1
     defense: 0
@@ -26,5 +32,5 @@ MonoBehaviour:
     effectText: Evrey player takes 1 DMG
   - attack: 2
     defense: 0
-    costGold: 10
+    costGold: 1
     effectText: Evrey player takes 2 DMG

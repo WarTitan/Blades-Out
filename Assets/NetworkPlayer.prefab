@@ -939,6 +939,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
       insertIndex: -1
       addedObject: {fileID: -3410809289063261844}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -3160761859794444837}
   m_SourcePrefab: {fileID: 100100000, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
 --- !u!1 &3784944211829141594 stripped
 GameObject:
@@ -1054,6 +1057,7 @@ MonoBehaviour:
   maxArmor: 5
   seatIndex: 0
   turnManager: {fileID: 0}
+  minActionInterval: 0.1
 --- !u!114 &-5306346198277782966
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1151,12 +1155,36 @@ MonoBehaviour:
   maxDistance: 30
   hitTriggers: 0
   sphereCastRadius: 0.03
+  onlySelectOwnCards: 1
+  requireInHandToSelect: 1
   requireTurnToCast: 1
-  handOnlyForUse: 1
+  blockSelfTarget: 1
+  onlyCastFromHand: 1
+  deselectMouse: 324
+--- !u!114 &-3160761859794444837
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3784944211829141594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c68ac8c6f423a5f45a76f230b6c0cb46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerHotkeys
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  localPlayer: {fileID: -6304133020608627664}
+  raycaster: {fileID: -3410809289063261844}
+  startGameKey: 51
+  endTurnKey: 49
   setKey: 118
-  deselectKey: 324
-  debugCastNext: 102
-  debugRayAllKey: 96
+  upgradeKey: 50
+  deselectKey: 113
+  requireTurnToSet: 1
+  requireTurnToUpgrade: 1
 --- !u!4 &4597333103463066336 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}

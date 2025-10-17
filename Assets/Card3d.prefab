@@ -1045,7 +1045,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 09e79f725a6b3cc49a5e492ae1e642bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Card3DAdapter
-  database: {fileID: 0}
+  database: {fileID: 11400000, guid: 7044ab7ef32f0534999f3b709a1bebaf, type: 2}
   cardId: -1
   level: 1
   frontRenderer: {fileID: 1704120158991236685}
@@ -1053,9 +1053,9 @@ MonoBehaviour:
   cardDescriptionText: {fileID: 1794622820693433489}
   upgradeCostText: {fileID: 1487848672976111911}
   showUpgradeCost: 1
-  upgradeCostFormat: 69
-  maxLevelText: MAX
-  costMode: 1
+  upgradeCostFormat: '{0}'
+  maxLevelText: 69
+  costMode: 0
   specificTierLevel: 2
   autoFitAspect: 1
   targetHeight: 1
@@ -1064,8 +1064,6 @@ MonoBehaviour:
   extraShowcaseOffset: {x: 0, y: 0, z: 0}
   extraShowcaseScale: 1
   showcaseInitialEuler: {x: 180, y: 0, z: 0}
-  orientCreatedAnchorUpright: 1
-  keepCreatedAnchorUprightEachApply: 0
   fallbackShowcaseMaterial: {fileID: 0}
   targetShowcaseMaxSize: 3
 --- !u!114 &8193640734028192397

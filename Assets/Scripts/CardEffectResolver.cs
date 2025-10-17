@@ -9,33 +9,43 @@ public static class CardEffectResolver
     {
         if (def == null || caster == null) return;
 
+        // Pull level-scaled numbers from the card's tier.
+        // Tier.attack is the per-level "amount" you set in the Inspector.
+        var tier = def.GetTier(Mathf.Max(1, level));
+        int amt = tier.attack > 0 ? tier.attack : def.amount;   // fallback to base amount if tier not set
+        int dur = def.durationTurns;                            // duration is currently on the base def
+        int arcs = def.arcs;                                     // arcs from base def (change if you want it tiered)
+
         switch (def.effect)
         {
             case CardDefinition.EffectType.DealDamage:
-                if (target != null) target.Server_ApplyDamage(caster, def.amount);
+                if (target != null) target.Server_ApplyDamage(caster, amt);
                 break;
 
             case CardDefinition.EffectType.HealSelf:
-                caster.Server_Heal(def.amount);
+                caster.Server_Heal(amt);
                 break;
 
             case CardDefinition.EffectType.HealAll:
-                TurnManager.Instance?.Server_HealAll(def.amount);
+                TurnManager.Instance?.Server_HealAll(amt);
                 break;
 
             case CardDefinition.EffectType.Poison:
-                if (target != null) target.Server_AddPoison(def.amount, def.durationTurns);
+                if (target != null) target.Server_AddPoison(amt, dur);
                 break;
 
             case CardDefinition.EffectType.ChainArc:
-                if (target != null) TurnManager.Instance?.Server_ChainArc(caster, target, def.amount, def.arcs);
+                if (target != null) TurnManager.Instance?.Server_ChainArc(caster, target, amt, arcs);
                 break;
 
+            // Reactions are handled in TryReactOnIncomingHit; leave them as-is.
             default:
-                Debug.LogWarning($"[CardEffectResolver] Unhandled instant effect {def.effect}");
+                // Fallback: if you later add new instant types, they can default to amount-based damage
+                if (target != null) target.Server_ApplyDamage(caster, amt);
                 break;
         }
     }
+
 
     // ===== REACTIONS / SET CARDS =====
     // Invoked by defender when damage comes in; can modify damage and counter-hit

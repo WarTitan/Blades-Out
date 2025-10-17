@@ -5,69 +5,56 @@ using TMPro;
 public class Card3DAdapter : MonoBehaviour
 {
     [Header("Database Binding")]
-    [Tooltip("Card database that contains definitions for all cards.")]
     public CardDatabase database;
-    [Tooltip("Definition ID for this card (assigned via Bind).")]
     public int cardId = -1;
-    [Tooltip("Current card level (1-based).")]
     public int level = 1;
 
     [Header("Front Art (Quad)")]
-    [Tooltip("Renderer on your QuadFront (optional but recommended).")]
     public MeshRenderer frontRenderer;
 
     [Header("Texts (UI or 3D TMP allowed)")]
     public TMP_Text cardNameText;
     public TMP_Text cardDescriptionText;
-    public TMP_Text upgradeCostText;
 
-    [Header("Upgrade Cost Display")]
+    [Header("Upgrade (Gold) Cost Display")]
+    public TMP_Text upgradeCostText;
     public bool showUpgradeCost = true;
-    [Tooltip("Text format for showing cost, e.g. \"Upgrade: {0}g\".")]
     public string upgradeCostFormat = "Upgrade: {0}g";
-    [Tooltip("Text to show when already at max level (NextLevel mode).")]
     public string maxLevelText = "MAX";
 
     public enum CostMode { NextLevel, SpecificTier }
-    [Tooltip("NextLevel = cost to upgrade from current level to next. SpecificTier = show a fixed tier's cost.")]
     public CostMode costMode = CostMode.SpecificTier;
-    [Tooltip("When CostMode = SpecificTier, which tier level (1-based) to show.")]
     public int specificTierLevel = 2;
 
+    [Header("Chip (Cast) Cost Display")]
+    [Tooltip("Text for the chip cost to CAST/SET this card. Uses tier.castChipCost if >0, else CardDefinition.chipCost.")]
+    public TMP_Text chipCostText;
+    public bool showChipCost = true;
+    public bool hideZeroChipCost = false;
+    public string chipCostFormat = "Cost: {0}c";
+
     [Header("Front Fitting (optional)")]
-    [Tooltip("Auto-scale QuadFront's local X/Y to match sprite aspect.")]
     public bool autoFitAspect = true;
-    [Tooltip("Target local height for QuadFront when auto-fitting.")]
     public float targetHeight = 1f;
 
-    [Header("Showcase 3D Model")]
-    [Tooltip("Optional: where to place the 3D model. If null, one is created as a child and left alone.")]
+    [Header("Showcase 3D Model (optional)")]
     public Transform showcaseAnchor;
-    [Tooltip("Fallback model if the definition/tier has no showcasePrefab.")]
     public GameObject fallbackShowcasePrefab;
-    [Tooltip("Extra local offset added on top of definition's offset (X/Z along anchor plane, Y = up).")]
     public Vector3 extraShowcaseOffset = Vector3.zero;
-    [Tooltip("Extra scale multiplier for the showcase model.")]
     public float extraShowcaseScale = 1f;
-    [Tooltip("Starting local rotation (Euler) for the showcase model.")]
     public Vector3 showcaseInitialEuler = Vector3.zero;
 
-    [Header("Showcase Anchor Control")]
-    [Tooltip("If true and we CREATE an anchor, set it upright (local up). Assigned anchors are never touched.")]
-    public bool orientCreatedAnchorUpright = true;
-    [Tooltip("If true, we keep re-orienting a CREATED anchor each Apply. Leave OFF to tweak it at runtime.")]
-    public bool keepCreatedAnchorUprightEachApply = false;
-
     [Header("Showcase Normalization (optional)")]
-    [Tooltip("If assigned, used when the spawned model has no materials.")]
     public Material fallbackShowcaseMaterial;
-    [Tooltip("Largest local dimension (meters) to normalize the model to. 0 = disable normalize.")]
     public float targetShowcaseMaxSize = 0.25f;
 
     private GameObject spawnedShowcase;
     private bool createdAnchor = false;
 
-    /// <summary>Bind this instance to an id/level from the database.</summary>
+    static readonly int PROP_MAIN_TEX = Shader.PropertyToID("_MainTex");
+    static readonly int PROP_BASE_MAP = Shader.PropertyToID("_BaseMap");
+    MaterialPropertyBlock _mpb;
+
     public void Bind(int id, int lvl, CardDatabase db)
     {
         cardId = id;
@@ -76,7 +63,13 @@ public class Card3DAdapter : MonoBehaviour
         Apply();
     }
 
-    /// <summary>Re-apply data to visuals (safe to call after fields change).</summary>
+    public void Bind(int id, int lvl)
+    {
+        cardId = id;
+        level = Mathf.Max(1, lvl);
+        Apply();
+    }
+
     public void Apply()
     {
         if (database == null) return;
@@ -86,24 +79,21 @@ public class Card3DAdapter : MonoBehaviour
         // Name
         if (cardNameText != null) cardNameText.text = def.cardName;
 
-        // Description (prefer tier.effectText if provided)
+        // Description (prefer tier.effectText if present)
         string desc = def.description;
-        var tier = def.GetTier(level); // struct; effectText may be null/empty
+        var tier = def.GetTier(level);
         if (!string.IsNullOrEmpty(tier.effectText)) desc = tier.effectText;
         if (cardDescriptionText != null) cardDescriptionText.text = desc;
 
-        // Artwork
+        // Art
         if (def.image != null && frontRenderer != null)
         {
             var tex = def.image.texture;
-            if (tex != null && frontRenderer.material != null)
-                frontRenderer.material.mainTexture = tex;
-
-            if (autoFitAspect)
-                FitFrontToSprite(def.image, frontRenderer.transform, targetHeight);
+            if (tex != null) SetFrontTexture(tex);
+            if (autoFitAspect) FitFrontToSprite(def.image, frontRenderer.transform, targetHeight);
         }
 
-        // Cost text
+        // ----- GOLD UPGRADE COST -----
         if (upgradeCostText != null)
         {
             if (!showUpgradeCost)
@@ -113,9 +103,7 @@ public class Card3DAdapter : MonoBehaviour
             else if (costMode == CostMode.NextLevel)
             {
                 int cost = GetUpgradeCost(def, level);
-                upgradeCostText.text = (cost >= 0)
-                    ? string.Format(upgradeCostFormat, cost)
-                    : maxLevelText;
+                upgradeCostText.text = (cost >= 0) ? string.Format(upgradeCostFormat, cost) : maxLevelText;
             }
             else
             {
@@ -125,70 +113,81 @@ public class Card3DAdapter : MonoBehaviour
                     var t2 = def.GetTier(lvl);
                     upgradeCostText.text = string.Format(upgradeCostFormat, t2.costGold);
                 }
-                else upgradeCostText.text = string.Empty;
+                else
+                {
+                    upgradeCostText.text = string.Empty;
+                    Debug.LogWarning("[Card3DAdapter] No tier " + lvl + " on '" + def.cardName + "' (MaxLevel=" + def.MaxLevel + "). Cost hidden.");
+                }
             }
         }
 
-        // Showcase 3D model
+        // ----- CHIP (CAST) COST BADGE -----
+        if (chipCostText != null)
+        {
+            if (!showChipCost)
+            {
+                chipCostText.text = string.Empty;
+            }
+            else
+            {
+                // Prefer tier override; if 0, fallback to base definition chipCost
+                int chipCost = (tier.castChipCost > 0) ? tier.castChipCost : Mathf.Max(0, def.chipCost);
+                if (hideZeroChipCost && chipCost == 0)
+                    chipCostText.text = string.Empty;
+                else
+                    chipCostText.text = string.Format(chipCostFormat, chipCost);
+            }
+        }
+
+        // 3D showcase (optional)
         SpawnShowcase(def);
     }
 
-    /// <summary>Spawn/replace the floating 3D model. If you assigned an anchor, we won't move it.</summary>
+    private void SetFrontTexture(Texture tex)
+    {
+        if (frontRenderer == null || tex == null) return;
+        if (_mpb == null) _mpb = new MaterialPropertyBlock();
+
+        frontRenderer.GetPropertyBlock(_mpb, 0);
+
+        var mat = frontRenderer.sharedMaterial;
+        if (mat != null && mat.HasProperty(PROP_BASE_MAP))
+            _mpb.SetTexture(PROP_BASE_MAP, tex);
+        else
+            _mpb.SetTexture(PROP_MAIN_TEX, tex);
+
+        frontRenderer.SetPropertyBlock(_mpb, 0);
+    }
+
     private void SpawnShowcase(CardDefinition def)
     {
-        // Clean previous
         if (spawnedShowcase != null)
         {
-#if UNITY_EDITOR
-            if (!Application.isPlaying) DestroyImmediate(spawnedShowcase);
-            else Destroy(spawnedShowcase);
-#else
             Destroy(spawnedShowcase);
-#endif
             spawnedShowcase = null;
         }
 
-        // Resolve prefab (definition wins; else fallback)
         GameObject prefab = def.showcasePrefab != null ? def.showcasePrefab : fallbackShowcasePrefab;
         if (prefab == null) return;
 
-        // Ensure/prepare anchor:
-        //  - If you assigned one in Inspector, we RESPECT its transform (no changes).
-        //  - If none assigned, create it ONCE as a child so you can move it later.
         if (showcaseAnchor == null)
         {
             var go = new GameObject("ShowcaseAnchor");
-            go.transform.SetParent(transform, false);             // local to the card
+            go.transform.SetParent(transform, false);
             go.transform.localPosition = Vector3.zero;
             go.transform.localRotation = Quaternion.identity;
-            if (orientCreatedAnchorUpright)
-                go.transform.localRotation = Quaternion.Euler(0f, 0f, 0f); // upright in card local space
             showcaseAnchor = go.transform;
             createdAnchor = true;
         }
-        else
-        {
-            createdAnchor = false; // user-provided anchor → don't touch it
-        }
+        else createdAnchor = false;
 
-        // Optional: if we created it and you want it kept upright every Apply, re-orient it
-        if (createdAnchor && keepCreatedAnchorUprightEachApply && orientCreatedAnchorUpright)
-        {
-            showcaseAnchor.localRotation = Quaternion.Euler(0f, 0f, 0f);
-        }
-
-        // Spawn under the anchor
         spawnedShowcase = Instantiate(prefab, showcaseAnchor);
-
-        // 1) Baseline
         spawnedShowcase.transform.localPosition = Vector3.zero;
         spawnedShowcase.transform.localRotation = Quaternion.identity;
         spawnedShowcase.transform.localScale = Vector3.one;
 
-        // 2) Normalize first (so later scales/offsets stick)
         NormalizeShowcase(spawnedShowcase, targetShowcaseMaxSize, fallbackShowcaseMaterial);
 
-        // 3) Apply your data-driven offset/scale/rotation (relative to the anchor)
         Vector3 defOffset = def.showcaseLocalOffset;
         float defScale = (def.showcaseLocalScale <= 0f ? 1f : def.showcaseLocalScale);
         float s = Mathf.Max(0.0001f, defScale * Mathf.Max(0.0001f, extraShowcaseScale));
@@ -196,15 +195,8 @@ public class Card3DAdapter : MonoBehaviour
         spawnedShowcase.transform.localPosition += defOffset + extraShowcaseOffset;
         spawnedShowcase.transform.localScale *= s;
         spawnedShowcase.transform.localRotation = Quaternion.Euler(showcaseInitialEuler);
-
-        // 4) Spin + bob behaviour (auto-add if missing)
-        var floater = spawnedShowcase.GetComponent<global::FloatingShowcase>();
-        if (floater == null) floater = spawnedShowcase.AddComponent<global::FloatingShowcase>();
     }
 
-    /// <summary>
-    /// Assign fallback material if needed and auto-scale spawned model to a reasonable size.
-    /// </summary>
     private void NormalizeShowcase(GameObject go, float targetMaxSize, Material fallbackMat)
     {
         if (!go) return;
@@ -212,11 +204,10 @@ public class Card3DAdapter : MonoBehaviour
         var renderers = go.GetComponentsInChildren<Renderer>(true);
         if (renderers == null || renderers.Length == 0)
         {
-            Debug.LogWarning($"[Card3DAdapter] Showcase '{go.name}' has NO Renderer in children.");
+            Debug.LogWarning("[Card3DAdapter] Showcase '" + go.name + "' has NO Renderer in children.");
             return;
         }
 
-        // Assign fallback material on renderers that have none
         if (fallbackMat != null)
         {
             foreach (var r in renderers)
@@ -226,9 +217,8 @@ public class Card3DAdapter : MonoBehaviour
             }
         }
 
-        if (targetMaxSize <= 0f) return; // skip autoscale if disabled
+        if (targetMaxSize <= 0f) return;
 
-        // Build bounds in world space (enabled renderers only)
         Bounds b = new Bounds(go.transform.position, Vector3.zero);
         bool hasBounds = false;
         foreach (var r in renderers)
@@ -239,7 +229,6 @@ public class Card3DAdapter : MonoBehaviour
         }
         if (!hasBounds) return;
 
-        // Convert world bounds to local by dividing by parent lossyScale
         var parent = go.transform.parent;
         Vector3 parentScale = parent ? parent.lossyScale : Vector3.one;
         Vector3 localSize = new Vector3(
@@ -256,7 +245,6 @@ public class Card3DAdapter : MonoBehaviour
         }
     }
 
-    /// <summary>Cost to upgrade from currentLevel -> next level. Returns -1 if already max.</summary>
     private int GetUpgradeCost(CardDefinition def, int currentLevel)
     {
         if (currentLevel >= def.MaxLevel) return -1;
@@ -264,7 +252,6 @@ public class Card3DAdapter : MonoBehaviour
         return next.costGold;
     }
 
-    /// <summary>Fit the QuadFront's local scale to the sprite's aspect (width/height). Keeps Z scale unchanged.</summary>
     private void FitFrontToSprite(Sprite s, Transform quad, float desiredHeight)
     {
         if (s == null || quad == null || desiredHeight <= 0f) return;
@@ -274,16 +261,18 @@ public class Card3DAdapter : MonoBehaviour
         quad.localScale = new Vector3(desiredHeight * aspect, desiredHeight, quad.localScale.z);
     }
 
-#if UNITY_EDITOR
-    [ContextMenu("Fit Front Quad To Current Sprite")]
-    private void FitNowInEditor()
+    public void ClearShowcase()
     {
-        if (database == null) return;
-        var def = database.Get(cardId);
-        if (def == null || def.image == null || frontRenderer == null) return;
+        if (spawnedShowcase != null) { Destroy(spawnedShowcase); spawnedShowcase = null; }
+    }
 
-        FitFrontToSprite(def.image, frontRenderer.transform, targetHeight);
-        UnityEditor.EditorUtility.SetDirty(frontRenderer.transform);
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (!Application.isPlaying)
+        {
+            if (database != null && cardId >= 0) Apply();
+        }
     }
 #endif
 }

@@ -3,10 +3,10 @@ using Mirror;
 using System.Collections.Generic;
 
 // PlayerState for Blades Out
-// - Only SetReaction cards can be moved to the Set row
-// - Only one action at a time (server action lock to prevent multi-plays/sets)
-// - Integrates with TurnManager, CardDatabase, CardEffectResolver
-// - ASCII only
+// - Hearthstone-style chips: +1 max (up to 10) and refill at the start of your turn
+// - Chips are spent when casting instants and when setting reaction cards
+// - Global upgrades per cardId (all copies + future draws)
+// - Turn gating + debounce to prevent double-fires
 
 public class PlayerState : NetworkBehaviour
 {
@@ -18,35 +18,38 @@ public class PlayerState : NetworkBehaviour
     [SyncVar] public int armor = 5;
     [SyncVar] public int gold = 0;
 
-    // Exposed max values (UI may read these)
     [SyncVar] public int maxHP = 5;
     [SyncVar] public int maxArmor = 5;
 
-    public int MaxHP => maxHP;
-    public int MaxArmor => maxArmor;
+    [Header("Chips (Hearthstone style)")]
+    [SyncVar] public int chips = 0;     // current chips
+    [SyncVar] public int maxChips = 0;  // increases by +1 at start of your turns (cap 10 via TurnManager)
 
     [Header("Seat / Turn")]
     [SyncVar] public int seatIndex = -1;
     [HideInInspector] public TurnManager turnManager;
 
-    // --- CARDS ---
-    // Hand row
+    // Rows
     public readonly SyncList<int> handIds = new SyncList<int>();
     public readonly SyncList<byte> handLvls = new SyncList<byte>();
-
-    // Set row
     public readonly SyncList<int> setIds = new SyncList<int>();
     public readonly SyncList<byte> setLvls = new SyncList<byte>();
 
-    // Prevent overlapping actions in the same moment (server-side)
+    // Global upgrades per cardId (affects all copies + future draws)
+    public readonly SyncDictionary<int, byte> upgradeLevels = new SyncDictionary<int, byte>();
+
+    // Prevent overlapping actions
     private bool actionLock = false;
 
-    // Minimal status system (example: Poison)
+    // Debounce to avoid accidental double actions
+    private float lastActionTime = -999f;
+    [SerializeField] private float minActionInterval = 0.10f; // seconds
+
+    // Minimal status demo
     private readonly List<StatusData> statuses = new List<StatusData>();
     private struct StatusData { public StatusType type; public int magnitude; public int turns; }
     private enum StatusType { Poison }
 
-    // ---------- Lifecycle ----------
     public override void OnStartServer()
     {
         base.OnStartServer();
@@ -57,33 +60,33 @@ public class PlayerState : NetworkBehaviour
         }
     }
 
-    // ---------- Setup / init ----------
     [Server]
     public void Server_Init(CardDatabase db, int deckSize, int startGold, int startHand)
     {
         database = db;
         gold = startGold;
 
-        // Reset current stats to max
         hp = maxHP;
         armor = maxArmor;
 
         handIds.Clear(); handLvls.Clear();
         setIds.Clear(); setLvls.Clear();
+        // Hearthstone flow: start at 0/0; first turn will bump to 1/1 and refill
+        chips = 0;
+        maxChips = 0;
+        // upgradeLevels.Clear(); // uncomment if upgrades should reset each game
 
-        // Simple opening draw
         for (int i = 0; i < startHand; i++)
         {
             int id = database != null ? database.GetRandomId() : -1;
             if (id >= 0)
             {
                 handIds.Add(id);
-                handLvls.Add(1);
+                handLvls.Add(GetLevelForNewInstance(id)); // use upgraded level if present
             }
         }
     }
 
-    // Draw N cards from the database (random for now)
     [Server]
     public void Server_Draw(int count)
     {
@@ -94,75 +97,111 @@ public class PlayerState : NetworkBehaviour
             if (id >= 0)
             {
                 handIds.Add(id);
-                handLvls.Add(1);
+                handLvls.Add(GetLevelForNewInstance(id));
             }
         }
     }
 
-    // ---------- Turn / commands ----------
+    // ---------- Chips helpers ----------
 
-    [Command]
-    public void CmdRequestStartGame()
+    [Server] public void Server_RefillChipsToMax() { chips = maxChips; }
+
+    [Server]
+    public void Server_IncreaseMaxChipsAndRefill(int cap, int amount = 1)
     {
-        TurnManager.Instance?.Server_AttemptStartGame();
+        int newMax = Mathf.Min(cap, maxChips + Mathf.Max(1, amount));
+        maxChips = newMax;
+        chips = maxChips; // refill to full like Hearthstone
     }
 
-    [Command]
-    public void CmdEndTurn()
+    [Server]
+    public bool Server_TrySpendChips(int amount)
     {
-        TurnManager.Instance?.Server_EndTurn(this);
+        if (amount <= 0) return true;
+        if (chips < amount) return false;
+        chips -= amount;
+        return true;
     }
 
-    [Command]
-    public void CmdUpgradeCard(int handIndex)
+    [TargetRpc]
+    void TargetActionDenied(NetworkConnection target, string reason)
     {
-        TurnManager.Instance?.Server_UpgradeCard(this, handIndex);
+        Debug.LogWarning(reason);
     }
 
-    // Play an instant from hand, resolves immediately
+    // ---------- Commands ----------
+
+    [Command] public void CmdRequestStartGame() => TurnManager.Instance?.Server_AttemptStartGame();
+    [Command] public void CmdEndTurn() => TurnManager.Instance?.Server_EndTurn(this);
+    [Command] public void CmdUpgradeCard(int handIndex) => TurnManager.Instance?.Server_UpgradeCard(this, handIndex);
+
     [Command]
     public void CmdPlayInstant(int handIndex, uint targetNetId)
     {
         if (!IsYourTurn()) return;
         if (!ValidHandIndex(handIndex)) return;
+
+        // debounce + lock
+        if (Time.time - lastActionTime < minActionInterval) return;
+        lastActionTime = Time.time;
         if (actionLock) return;
 
         var def = database != null ? database.Get(handIds[handIndex]) : null;
         if (def == null) return;
+        if (def.playStyle == CardDefinition.PlayStyle.SetReaction) return; // cannot cast set-only
 
-        // Do not allow casting set-only reactions as instants
-        if (def.playStyle == CardDefinition.PlayStyle.SetReaction) return;
+        // poker chip cost (tier override -> base)
+        int lvl = handLvls[handIndex];
+        var tier = def.GetTier(lvl);
+        int cost = tier.castChipCost > 0 ? tier.castChipCost : Mathf.Max(0, def.chipCost);
+        if (!Server_TrySpendChips(cost))
+        {
+            TargetActionDenied(connectionToClient, "[Cast] Not enough chips (" + cost + " needed).");
+            return;
+        }
 
         var target = FindPlayerByNetId(targetNetId);
-        int lvl = handLvls[handIndex];
 
         actionLock = true;
         try
         {
-            // Remove from hand first so SyncLists update immediately
-            RemoveHandAt(handIndex);
+            RemoveHandAt(handIndex); // fast UI sync
             CardEffectResolver.PlayInstant(def, lvl, this, target);
         }
         finally { actionLock = false; }
     }
 
-    // Move a hand card to the set row (only SetReaction allowed)
+    // Hand -> Set (must be your turn, must be SetReaction), charge chips when setting
     [Command(requiresAuthority = false)]
     public void CmdSetCard(int handIndex)
     {
-        // Only allow the sender to operate on their own PlayerState
         var senderIdentity = connectionToClient != null ? connectionToClient.identity : null;
         var senderPS = senderIdentity ? senderIdentity.GetComponent<PlayerState>() : null;
         if (senderPS == null || senderPS != this) return;
 
+        if (!IsYourTurn()) return;
+
+        // debounce before lock
+        if (Time.time - lastActionTime < minActionInterval) return;
+        lastActionTime = Time.time;
+
         if (actionLock) return;
         if (!Server_IsSetReactionInHand(handIndex)) return;
 
-        actionLock = true;
-        try
+        // chip cost to SET the trap (tier override -> base)
+        int id = handIds[handIndex];
+        var def = database.Get(id);
+        int lvl = handLvls[handIndex];
+        var tier = def.GetTier(lvl);
+        int cost = tier.castChipCost > 0 ? tier.castChipCost : Mathf.Max(0, def.chipCost);
+        if (!Server_TrySpendChips(cost))
         {
-            Server_SetCard_ByIndex(handIndex);
+            TargetActionDenied(connectionToClient, "[Set] Not enough chips (" + cost + " needed).");
+            return;
         }
+
+        actionLock = true;
+        try { Server_SetCard_ByIndex(handIndex); }
         finally { actionLock = false; }
     }
 
@@ -173,16 +212,13 @@ public class PlayerState : NetworkBehaviour
         return (TurnManager.Instance != null && TurnManager.Instance.IsPlayersTurn(this));
     }
 
-    private bool ValidHandIndex(int i)
-    {
-        return i >= 0 && i < handIds.Count && i < handLvls.Count;
-    }
+    private bool ValidHandIndex(int i) => i >= 0 && i < handIds.Count && i < handLvls.Count;
 
     private PlayerState FindPlayerByNetId(uint netId)
     {
         if (netId == 0) return null;
         if (NetworkServer.spawned.TryGetValue(netId, out NetworkIdentity nid))
-            return nid != null ? nid.GetComponent<PlayerState>() : null;
+            return nid ? nid.GetComponent<PlayerState>() : null;
         return null;
     }
 
@@ -203,20 +239,14 @@ public class PlayerState : NetworkBehaviour
     [Server]
     private void Server_SetCard_ByIndex(int handIndex)
     {
-        if (handIndex < 0 || handIndex >= handIds.Count || handIndex >= handLvls.Count)
-        {
-            Debug.LogWarning("[PlayerState] Server_SetCard_ByIndex: invalid handIndex " + handIndex + " (hand count=" + handIds.Count + ")");
-            return;
-        }
+        if (handIndex < 0 || handIndex >= handIds.Count || handIndex >= handLvls.Count) return;
 
         int id = handIds[handIndex];
         byte lvl = handLvls[handIndex];
 
-        // Remove from hand
         handIds.RemoveAt(handIndex);
         handLvls.RemoveAt(handIndex);
 
-        // Add to set
         setIds.Add(id);
         setLvls.Add(lvl);
     }
@@ -229,7 +259,38 @@ public class PlayerState : NetworkBehaviour
         setLvls.RemoveAt(index);
     }
 
-    // ---------- Damage / healing / statuses ----------
+    // ===== Global-upgrade helpers =====
+
+    [Server]
+    public int Server_GetEffectiveLevelForHandIndex(int handIndex)
+    {
+        if (!ValidHandIndex(handIndex)) return 1;
+        int id = handIds[handIndex];
+        if (upgradeLevels.TryGetValue(id, out byte lvl)) return lvl;
+        return handLvls[handIndex];
+    }
+
+    [Server]
+    public void Server_PropagateUpgradeToAllCopies(int cardId)
+    {
+        if (!upgradeLevels.TryGetValue(cardId, out byte lvl)) return;
+
+        // Hand
+        for (int i = 0; i < handIds.Count && i < handLvls.Count; i++)
+            if (handIds[i] == cardId) handLvls[i] = lvl;
+
+        // Set row
+        for (int i = 0; i < setIds.Count && i < setLvls.Count; i++)
+            if (setIds[i] == cardId) setLvls[i] = lvl;
+    }
+
+    [Server]
+    private byte GetLevelForNewInstance(int cardId)
+    {
+        return upgradeLevels.TryGetValue(cardId, out byte lvl) ? lvl : (byte)1;
+    }
+
+    // ---------- Combat / Status ----------
 
     [Server]
     public void Server_ApplyDamage(PlayerState src, int amount)
@@ -237,7 +298,6 @@ public class PlayerState : NetworkBehaviour
         if (amount <= 0) return;
 
         int incoming = amount;
-        // Give defender reactions a chance
         CardEffectResolver.TryReactOnIncomingHit(this, src, ref incoming);
 
         int left = incoming;
@@ -247,30 +307,26 @@ public class PlayerState : NetworkBehaviour
             armor -= used;
             left -= used;
         }
-        if (left > 0)
-        {
-            hp -= left;
-            if (hp < 0) hp = 0;
-        }
+        if (left > 0) { hp = Mathf.Max(0, hp - left); }
 
         RpcHitFlash(incoming);
-        // TODO: death / knockout handling if needed
     }
 
     [Server]
     public void Server_Heal(int amount)
     {
-        if (amount <= 0) return;
-        hp += amount;
-        if (hp > maxHP) hp = maxHP;
-        RpcHealed(amount);
+        if (amount > 0)
+        {
+            hp = Mathf.Min(maxHP, hp + amount);
+            RpcHealed(amount);
+        }
     }
 
     [Server]
-    public void Server_AddPoison(int magnitude, int turns)
+    public void Server_AddPoison(int mag, int turns)
     {
-        statuses.Add(new StatusData { type = StatusType.Poison, magnitude = magnitude, turns = turns });
-        RpcGotStatus("Poison", magnitude, turns);
+        statuses.Add(new StatusData { type = StatusType.Poison, magnitude = mag, turns = turns });
+        RpcGotStatus("Poison", mag, turns);
     }
 
     [Server]
@@ -279,20 +335,18 @@ public class PlayerState : NetworkBehaviour
         for (int i = statuses.Count - 1; i >= 0; i--)
         {
             var s = statuses[i];
-            switch (s.type)
+            if (s.type == StatusType.Poison)
             {
-                case StatusType.Poison:
-                    Server_ApplyDamage(null, s.magnitude);
-                    s.turns -= 1;
-                    if (s.turns <= 0) statuses.RemoveAt(i);
-                    else statuses[i] = s;
-                    break;
+                Server_ApplyDamage(null, s.magnitude);
+                s.turns -= 1;
+                if (s.turns <= 0) statuses.RemoveAt(i);
+                else statuses[i] = s;
             }
         }
     }
 
-    // ---------- Client FX hooks ----------
-    [ClientRpc] private void RpcHitFlash(int dmg) { /* TODO: add VFX */ }
-    [ClientRpc] private void RpcHealed(int amt) { /* TODO: add VFX */ }
-    [ClientRpc] private void RpcGotStatus(string name, int mag, int t) { /* TODO: add UI */ }
+    // Client FX hooks
+    [ClientRpc] private void RpcHitFlash(int dmg) { }
+    [ClientRpc] private void RpcHealed(int amt) { }
+    [ClientRpc] private void RpcGotStatus(string name, int mag, int t) { }
 }
