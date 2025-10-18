@@ -1,28 +1,36 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Mirror;
 
-// Central hotkeys:
-// - 3 : Request Start Game
-// - E : End Turn
-// - V : Set the selected hand card (only OFF-turn; must be SetReaction)
-// - 2 : Upgrade the selected hand card (only OFF-turn; server checks gold/max)
-// - Q : Deselect (optional UI convenience)
+// Keyboard hotkeys for the local player.
+// 1  : End Turn
+// 2  : Upgrade selected hand card (OFF-turn only; server checks gold & max)
+// 3  : Request Start Game
+// 4  : Set selected hand card (must be SetReaction, only during YOUR turn, max 1 set)
+// Q/Esc : Deselect
+//
+// Attach to the same GameObject as PlayerState. It auto-finds CardRaycasterOnRoot in children.
 public class PlayerHotkeys : NetworkBehaviour
 {
     [Header("Refs (auto)")]
     public PlayerState localPlayer;
     public CardRaycasterOnRoot raycaster;
 
-    [Header("Keys")]
-    public KeyCode startGameKey = KeyCode.Alpha3;
-    public KeyCode endTurnKey = KeyCode.E;
-    public KeyCode setKey = KeyCode.V;
+    // Primary number-row keys
+    [Header("Key Bindings (number row)")]
+    public KeyCode endTurnKey = KeyCode.Alpha1;
     public KeyCode upgradeKey = KeyCode.Alpha2;
-    public KeyCode deselectKey = KeyCode.Q;
+    public KeyCode startGameKey = KeyCode.Alpha3;
+    public KeyCode setKey = KeyCode.Alpha4;
 
-    [Header("Rules")]
-    public bool requireOffTurnToSet = true;
-    public bool requireOffTurnToUpgrade = true;
+    // Numpad alternates
+    [Header("Key Bindings (numpad)")]
+    public KeyCode endTurnKeypad = KeyCode.Keypad1;
+    public KeyCode upgradeKeypad = KeyCode.Keypad2;
+    public KeyCode startGameKeypad = KeyCode.Keypad3;
+    public KeyCode setKeypad = KeyCode.Keypad4;
+
+    [Header("Other")]
+    public KeyCode deselectKey = KeyCode.Q;
 
     void Awake()
     {
@@ -30,86 +38,92 @@ public class PlayerHotkeys : NetworkBehaviour
         if (!raycaster) raycaster = GetComponentInChildren<CardRaycasterOnRoot>(true);
     }
 
+    public override void OnStartLocalPlayer()
+    {
+        base.OnStartLocalPlayer();
+        if (!localPlayer) localPlayer = GetComponent<PlayerState>();
+        if (!raycaster) raycaster = GetComponentInChildren<CardRaycasterOnRoot>(true);
+    }
+
     void Update()
     {
-        if (!isLocalPlayer || !localPlayer) return;
+        if (!isLocalPlayer) return;
+        if (!localPlayer) localPlayer = GetComponent<PlayerState>();
+        if (!raycaster) raycaster = GetComponentInChildren<CardRaycasterOnRoot>(true);
+        if (!localPlayer || !raycaster) return;
 
-        // 3 -> start game
-        if (Input.GetKeyDown(startGameKey))
+        // 3 -> Start Game
+        if (Pressed(startGameKey, startGameKeypad))
         {
-            Debug.Log("[Hotkeys] Start Game");
+            Debug.Log("[Hotkeys] Start Game requested.");
             localPlayer.CmdRequestStartGame();
         }
 
-        // E -> end turn
-        if (Input.GetKeyDown(endTurnKey))
+        // 1 -> End Turn
+        if (Pressed(endTurnKey, endTurnKeypad))
         {
-            Debug.Log("[Hotkeys] End Turn");
-            localPlayer.CmdEndTurn();
-        }
-
-        // V -> Set selected hand card (must be SetReaction), ONLY OFF-TURN
-        if (Input.GetKeyDown(setKey))
-        {
-            int handIndex = GetSelectedHandIndex();
-            if (handIndex < 0) { Debug.Log("[Hotkeys] No selected hand card to Set."); }
+            var tm = TurnManager.Instance;
+            if (tm && !tm.IsPlayersTurn(localPlayer))
+            {
+                Debug.LogWarning("[Hotkeys] Not your turn.");
+            }
             else
             {
-                var tm = TurnManager.Instance;
-                if (requireOffTurnToSet)
-                {
-                    if (tm == null) { Debug.LogWarning("[Hotkeys] TurnManager not ready."); return; }
-                    if (tm.IsPlayersTurn(localPlayer)) { Debug.LogWarning("[Hotkeys] Only OFF-turn."); return; }
-                }
-
-                // Style check (only SetReaction may be set)
-                if (handIndex >= localPlayer.handIds.Count) { Debug.LogWarning("[Hotkeys] Hand index out of range."); return; }
-                var def = localPlayer.database ? localPlayer.database.Get(localPlayer.handIds[handIndex]) : null;
-                if (def == null || def.playStyle != CardDefinition.PlayStyle.SetReaction)
-                {
-                    Debug.LogWarning("[Hotkeys] Selected card is not SetReaction; cannot Set.");
-                    return;
-                }
-
-                Debug.Log("[Hotkeys] CmdSetCard(" + handIndex + ")");
-                localPlayer.CmdSetCard(handIndex);
-                Deselect();
+                Debug.Log("[Hotkeys] End Turn.");
+                localPlayer.CmdEndTurn();
             }
         }
 
-        // 2 -> Upgrade selected hand card, ONLY OFF-TURN
-        if (Input.GetKeyDown(upgradeKey))
+        // 4 -> Set selected hand card (SetReaction only, YOUR turn, max 1 set)
+        if (Pressed(setKey, setKeypad))
         {
-            int handIndex = GetSelectedHandIndex();
-            if (handIndex < 0) { Debug.Log("[Hotkeys] No selected hand card to Upgrade."); }
+            int handIndex = raycaster.SelectedHandIndex;
+            if (handIndex < 0)
+            {
+                Debug.Log("[Hotkeys] No HAND card selected. Click a card in your hand first.");
+            }
             else
             {
                 var tm = TurnManager.Instance;
-                if (requireOffTurnToUpgrade)
+                if (tm && !tm.IsPlayersTurn(localPlayer))
                 {
-                    if (tm == null) { Debug.LogWarning("[Hotkeys] TurnManager not ready."); return; }
-                    if (tm.IsPlayersTurn(localPlayer)) { Debug.LogWarning("[Hotkeys] Only OFF-turn."); return; }
+                    Debug.LogWarning("[Hotkeys] Set is only during YOUR turn.");
                 }
-
-                Debug.Log("[Hotkeys] CmdUpgradeCard(" + handIndex + ")");
-                localPlayer.CmdUpgradeCard(handIndex);
+                else if (localPlayer.setIds.Count > 0)
+                {
+                    Debug.LogWarning("[Hotkeys] You already have a set card.");
+                }
+                else
+                {
+                    // Raycaster validates playstyle == SetReaction and logs reasons if it fails.
+                    raycaster.PublicTrySetSelected();
+                }
             }
         }
 
-        // Q -> Deselect
-        if (Input.GetKeyDown(deselectKey)) Deselect();
+        // 2 -> Upgrade selected hand card (OFF-turn only)
+        if (Pressed(upgradeKey, upgradeKeypad))
+        {
+            var tm = TurnManager.Instance;
+            if (tm && tm.IsPlayersTurn(localPlayer))
+            {
+                Debug.LogWarning("[Hotkeys] Upgrade is only OFF-turn.");
+            }
+            else
+            {
+                int hi = raycaster.SelectedHandIndex;
+                if (hi < 0) Debug.Log("[Hotkeys] Select a HAND card to upgrade.");
+                else localPlayer.CmdUpgradeCard(hi);
+            }
+        }
+
+        // Q or Esc -> Deselect
+        if (Input.GetKeyDown(deselectKey) || Input.GetKeyDown(KeyCode.Escape))
+        {
+            raycaster.DeselectPublic();
+        }
     }
 
-    int GetSelectedHandIndex()
-    {
-        if (!raycaster) raycaster = GetComponentInChildren<CardRaycasterOnRoot>(true);
-        if (!raycaster) return -1;
-        return raycaster.SelectedHandIndex;
-    }
-
-    void Deselect()
-    {
-        if (!raycaster) return;
-        raycaster.DeselectPublic();
-    }
+    bool Pressed(KeyCode main, KeyCode alt)
+        => Input.GetKeyDown(main) || Input.GetKeyDown(alt);
 }

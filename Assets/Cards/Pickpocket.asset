@@ -16,12 +16,16 @@ MonoBehaviour:
   cardName: 'Pickpocket '
   description: Steal 1 random card from an opponent
   image: {fileID: -987018163, guid: e552a0340b97f1340a9323973a014624, type: 3}
-  playStyle: 0
+  playStyle: 1
   effect: 0
   amount: 1
   durationTurns: 0
   arcs: 0
   chipCost: 2
+  setShowcasePrefab: {fileID: 0}
+  setShowcaseLocalOffset: {x: 0, y: 0, z: 0}
+  setShowcaseLocalEuler: {x: 0, y: 0, z: 0}
+  setShowcaseLocalScale: {x: 1, y: 1, z: 1}
   tiers:
   - attack: 0
     defense: 0

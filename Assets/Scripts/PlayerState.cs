@@ -14,13 +14,11 @@ public class PlayerState : NetworkBehaviour
 
     [SyncVar] public int maxHP = 5;
     [SyncVar] public int maxArmor = 5;
-
-    // For UI scripts that expect properties
     public int MaxHP => maxHP;
     public int MaxArmor => maxArmor;
 
     [Header("Chips (Hearthstone-style growth at END of your turn)")]
-    [SyncVar(hook = nameof(OnChipsChanged))] public int chips = 0;  // current
+    [SyncVar(hook = nameof(OnChipsChanged))] public int chips = 0;        // current
     [SyncVar(hook = nameof(OnMaxChipsChanged))] public int maxChips = 0;  // increases via TurnManager
 
     public event System.Action<PlayerState> ChipsChanged;
@@ -67,12 +65,7 @@ public class PlayerState : NetworkBehaviour
 
     // ───────────────────────────────────────────────── Game init / draw ─────────────────────────────────────────────────
 
-    /// <summary>
-    /// Start-of-game setup:
-    /// - 5 gold
-    /// - Chips start 1/1
-    /// - Exactly 3 starting cards
-    /// </summary>
+    /// Start-of-game: 5 gold, chips = 1/1, and draw 3 starting cards.
     [Server]
     public void Server_Init(CardDatabase db, int deckSize, int startGold, int startHand)
     {
@@ -120,7 +113,7 @@ public class PlayerState : NetworkBehaviour
 
     [Server] public void Server_RefillChipsToMax() { chips = maxChips; }
 
-    /// <summary>Called by TurnManager at END of your turn (increase + refill).</summary>
+    /// Called by TurnManager at END of your turn (increase + refill).
     [Server]
     public void Server_IncreaseMaxChipsAndRefill(int cap, int amount = 1)
     {
@@ -148,7 +141,7 @@ public class PlayerState : NetworkBehaviour
     [Command] public void CmdEndTurn() => TurnManager.Instance?.Server_EndTurn(this);
     [Command] public void CmdUpgradeCard(int handIndex) => TurnManager.Instance?.Server_UpgradeCard(this, handIndex);
 
-    /// <summary>Play an instant card on YOUR turn. Costs chips. Set-only cards cannot be cast.</summary>
+    /// Play an instant/instant-with-target card on YOUR turn. Costs chips. Set-only cards cannot be cast here.
     [Command]
     public void CmdPlayInstant(int handIndex, uint targetNetId)
     {
@@ -187,7 +180,11 @@ public class PlayerState : NetworkBehaviour
         finally { actionLock = false; }
     }
 
-    /// <summary>Set a reaction card ONLY when it's NOT your turn. Free (no chips).</summary>
+    // ───────────────────────────────────────────────── Set cards (your turn, cost chips, max 1) ─────────────────────────────────────────────────
+
+    [Server] private bool Server_CanSetAnother() => setIds.Count == 0;
+
+    /// Set a reaction card ONLY during YOUR turn. Costs chips. Max 1 set.
     [Command(requiresAuthority = false)]
     public void CmdSetCard(int handIndex)
     {
@@ -195,17 +192,62 @@ public class PlayerState : NetworkBehaviour
         var senderPS = senderIdentity ? senderIdentity.GetComponent<PlayerState>() : null;
         if (senderPS == null || senderPS != this) return;
 
-        if (IsYourTurn()) { TargetActionDenied(connectionToClient, "[Set] Only OFF-turn."); return; }
+        if (!IsYourTurn()) { TargetActionDenied(connectionToClient, "[Set] Only during YOUR turn."); return; }
+        if (!Server_CanSetAnother()) { TargetActionDenied(connectionToClient, "[Set] You already have a set card."); return; }
 
         if (Time.time - lastActionTime < minActionInterval) return;
         lastActionTime = Time.time;
-
         if (actionLock) return;
-        if (!Server_IsSetReactionInHand(handIndex)) return;
+
+        if (!Server_IsSetReactionInHand(handIndex)) { TargetActionDenied(connectionToClient, "[Set] This card can't be set."); return; }
+
+        // Pay chip cost to set
+        int id = handIds[handIndex];
+        int lvl = handLvls[handIndex];
+        var def = database != null ? database.Get(id) : null;
+        int cost = (def != null) ? def.GetCastChipCost(lvl) : 0;
+        if (!Server_TrySpendChips(cost))
+        {
+            TargetActionDenied(connectionToClient, "[Set] Not enough chips (" + cost + " needed).");
+            return;
+        }
 
         actionLock = true;
         try { Server_SetCard_ByIndex(handIndex); }
         finally { actionLock = false; }
+    }
+
+    /// Moves a card from Hand to Set. Also spawns status for Cactus (reflect for 3 turns).
+    [Server]
+    private void Server_SetCard_ByIndex(int handIndex)
+    {
+        if (!Server_CanSetAnother()) return;
+        if (handIndex < 0 || handIndex >= handIds.Count || handIndex >= handLvls.Count) return;
+
+        int id = handIds[handIndex];
+        byte lvl = handLvls[handIndex];
+
+        handIds.RemoveAt(handIndex);
+        handLvls.RemoveAt(handIndex);
+
+        setIds.Add(id);
+        setLvls.Add(lvl);
+
+        var d = database?.Get(id);
+        // Cactus "activates when you play it" and then lasts 3 turns
+        if (d != null && d.effect == CardDefinition.EffectType.Cactus_ReflectUpToX_For3Turns)
+        {
+            int refl = Mathf.Max(1, d.GetTier(lvl).attack);
+            Server_AddStatus_Cactus(refl, 3);
+        }
+    }
+
+    [Server]
+    public void Server_ConsumeSetAt(int index)
+    {
+        if (index < 0 || index >= setIds.Count || index >= setLvls.Count) return;
+        setIds.RemoveAt(index);
+        setLvls.RemoveAt(index);
     }
 
     // ───────────────────────────────────────────────── Helpers ─────────────────────────────────────────────────
@@ -225,7 +267,6 @@ public class PlayerState : NetworkBehaviour
     }
 
     [Server] public void Server_RemoveHandAt(int index) => Server_RemoveHandAt_Internal(index);
-
     private void RemoveHandAt(int index) => Server_RemoveHandAt_Internal(index);
 
     [Server]
@@ -245,38 +286,6 @@ public class PlayerState : NetworkBehaviour
         if (!ValidHandIndex(handIndex) || database == null) return false;
         var def = database.Get(handIds[handIndex]);
         return def != null && def.playStyle == CardDefinition.PlayStyle.SetReaction;
-    }
-
-    /// <summary>Moves a card from Hand to Set. Also spawns status for Cactus (reflect for 3 turns).</summary>
-    [Server]
-    private void Server_SetCard_ByIndex(int handIndex)
-    {
-        if (handIndex < 0 || handIndex >= handIds.Count || handIndex >= handLvls.Count) return;
-
-        int id = handIds[handIndex];
-        byte lvl = handLvls[handIndex];
-
-        handIds.RemoveAt(handIndex);
-        handLvls.RemoveAt(handIndex);
-
-        setIds.Add(id);
-        setLvls.Add(lvl);
-
-        // If it's a Cactus, attach a 3-turn reflect status (magnitude = tier.attack)
-        var d = database?.Get(id);
-        if (d != null && d.effect == CardDefinition.EffectType.Cactus_ReflectUpToX_For3Turns)
-        {
-            int refl = Mathf.Max(1, d.GetTier(lvl).attack);
-            Server_AddStatus_Cactus(refl, 3);
-        }
-    }
-
-    [Server]
-    public void Server_ConsumeSetAt(int index)
-    {
-        if (index < 0 || index >= setIds.Count || index >= setLvls.Count) return;
-        setIds.RemoveAt(index);
-        setLvls.RemoveAt(index);
     }
 
     // ───────────────────────────────────────────────── Global upgrades ─────────────────────────────────────────────────
@@ -315,7 +324,7 @@ public class PlayerState : NetworkBehaviour
 
         int incoming = amount;
 
-        // Allow reactions & statuses to modify/reflect
+        // Allow set reactions & statuses to modify/reflect
         CardEffectResolver.TryReactOnIncomingHit(this, src, ref incoming);
 
         int left = incoming;
@@ -404,7 +413,7 @@ public class PlayerState : NetworkBehaviour
         RpcGotStatus("C4", damage, turns);
     }
 
-    /// <summary>Called by resolver before consuming set reactions; reflects part/all of incoming damage.</summary>
+    /// Called by resolver before consuming set reactions; reflects part/all of incoming damage.
     [Server]
     public void Server_TryApplyCactusStatusReflect(PlayerState attacker, ref int incomingDamage)
     {
@@ -425,7 +434,7 @@ public class PlayerState : NetworkBehaviour
         }
     }
 
-    /// <summary>Process status effects at the START of this player's turn.</summary>
+    /// Process status effects at the START of this player's turn.
     [Server]
     public void Server_OnTurnStart_ProcessStatuses()
     {

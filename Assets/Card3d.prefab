@@ -583,8 +583,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: KNIFE
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: faea82b33a2271c4883de77fe0e935f0, type: 2}
-  m_sharedMaterial: {fileID: -4296390907919039560, guid: faea82b33a2271c4883de77fe0e935f0, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: b6347723fb9b45544a66817390c552e8, type: 2}
+  m_sharedMaterial: {fileID: -259431734531585110, guid: b6347723fb9b45544a66817390c552e8, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -618,7 +618,7 @@ MonoBehaviour:
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
-  m_characterSpacing: 10
+  m_characterSpacing: 0
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0

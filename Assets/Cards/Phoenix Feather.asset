@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Phoenix Feather
   m_EditorClassIdentifier: Assembly-CSharp::CardDefinition
   id: 5
-  cardName: Phoenix Feather
+  cardName: Phoenix
   description: Heal 2 HP + revive if at 0 HP
   image: {fileID: -915667492, guid: 4ad16fa4dd21835439d953d92db183c5, type: 3}
   playStyle: 0
@@ -22,6 +22,10 @@ MonoBehaviour:
   durationTurns: 0
   arcs: 0
   chipCost: 2
+  setShowcasePrefab: {fileID: 0}
+  setShowcaseLocalOffset: {x: 0, y: 0, z: 0}
+  setShowcaseLocalEuler: {x: 0, y: 0, z: 0}
+  setShowcaseLocalScale: {x: 1, y: 1, z: 1}
   tiers:
   - attack: 2
     defense: 0

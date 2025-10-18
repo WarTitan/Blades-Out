@@ -16,12 +16,16 @@ MonoBehaviour:
   cardName: C4
   description: Explodes in 3 turn, 3 DMG
   image: {fileID: -706093601, guid: cb3f57cef49acbe4aa32056df7acc232, type: 3}
-  playStyle: 0
+  playStyle: 2
   effect: 11
   amount: 3
   durationTurns: 0
   arcs: 0
   chipCost: 2
+  setShowcasePrefab: {fileID: 919132149155446097, guid: 73829fec9f8cc49409d8fe43fbdeb8b2, type: 3}
+  setShowcaseLocalOffset: {x: 0, y: 0, z: 0}
+  setShowcaseLocalEuler: {x: 0, y: 0, z: 0}
+  setShowcaseLocalScale: {x: 30, y: 30, z: 30}
   tiers:
   - attack: 3
     defense: 0

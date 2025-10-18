@@ -18,12 +18,16 @@ MonoBehaviour:
 
 '
   image: {fileID: 591096369, guid: 1073b574bfb86a547a7e64d405890c07, type: 3}
-  playStyle: 0
+  playStyle: 2
   effect: 12
   amount: 1
   durationTurns: 0
   arcs: 0
   chipCost: 2
+  setShowcasePrefab: {fileID: 919132149155446097, guid: 5eaf4e40f083e864a8071d77b83f3938, type: 3}
+  setShowcaseLocalOffset: {x: 0, y: 0, z: 0}
+  setShowcaseLocalEuler: {x: 0, y: 0, z: 0}
+  setShowcaseLocalScale: {x: 0.2, y: 0.2, z: 0.2}
   tiers:
   - attack: 1
     defense: 0

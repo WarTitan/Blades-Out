@@ -3,18 +3,22 @@
 [CreateAssetMenu(menuName = "BladesOut/Card Definition", fileName = "CardDefinition")]
 public class CardDefinition : ScriptableObject
 {
-    // ───────────────────────── Identity ─────────────────────────
+    // ───────── Identity ─────────
     [Header("Identity")]
-    [Tooltip("Unique across all cards.")]
-    public int id;
+    public int id; // unique across all cards
     public string cardName;
     [TextArea] public string description;
     public Sprite image;
 
-    // ───────────────────────── Types ─────────────────────────
-    public enum PlayStyle { Instant, SetReaction, SetDelayed }
+    // ───────── Play meta ─────────
+    public enum PlayStyle
+    {
+        Instant,            // plays immediately, no target
+        InstantWithTarget,  // select enemy then plays
+        SetReaction         // placed on set anchor; triggers on attack (Cactus applies immediately & lasts 3 turns)
+    }
 
-    // Keep legacy values first (compat), then new ones (alphabetical)
+    // Keep legacy first for compat, then alphabetically your new effects
     public enum EffectType
     {
         // legacy
@@ -45,7 +49,6 @@ public class CardDefinition : ScriptableObject
         Turtle_TargetSkipsNextTurn
     }
 
-    // ───────────────────────── Gameplay (fields) ─────────────────────────
     [Header("Gameplay")]
     public PlayStyle playStyle = PlayStyle.Instant;
     public EffectType effect = EffectType.DealDamage;
@@ -53,22 +56,30 @@ public class CardDefinition : ScriptableObject
     [Tooltip("Generic base amount for effects (damage/heal/etc.). Tier.attack overrides this.")]
     public int amount = 1;
 
-    [Tooltip("Base duration in turns for certain effects.")]
+    [Tooltip("Base duration in turns for certain effects (e.g., Poison); Cactus/C4 also use custom fields.")]
     public int durationTurns = 0;
 
     [Tooltip("For ChainArc-style effects (extra jumps after the first target).")]
     public int arcs = 0;
 
-    // ───────────────────────── Costs ─────────────────────────
+    // ───────── Costs ─────────
     [Header("Costs")]
-    [Tooltip("Base poker chip cost to CAST this card (tiers can override).")]
+    [Tooltip("Base poker chip cost to CAST/SET this card (tiers can override).")]
     public int chipCost = 0;
 
-    // ───────────────────────── Tiers ─────────────────────────
+    // ───────── 3D Showcase for Set cards ─────────
+    [Header("3D Showcase (for Set cards)")]
+    [Tooltip("Optional: 3D model to spawn on the Set Anchor when this card is set.")]
+    public GameObject setShowcasePrefab;
+    public Vector3 setShowcaseLocalOffset = Vector3.zero;
+    public Vector3 setShowcaseLocalEuler = Vector3.zero;
+    public Vector3 setShowcaseLocalScale = Vector3.one;
+
+    // ───────── Tiers ─────────
     [System.Serializable]
     public struct UpgradeTier
     {
-        [Tooltip("Per-level primary amount (damage/heal/armor/etc.).")]
+        [Tooltip("Per-level amount (damage/heal/armor/etc.).")]
         public int attack;
 
         [Tooltip("Optional secondary stat slot.")]
@@ -80,14 +91,13 @@ public class CardDefinition : ScriptableObject
         [TextArea, Tooltip("Optional per-tier rules text shown on the card.")]
         public string effectText;
 
-        [Tooltip("Optional per-level chip cost to CAST. 0 = use CardDefinition.chipCost.")]
+        [Tooltip("Optional per-level chip cost to CAST/SET. 0 = use CardDefinition.chipCost.")]
         public int castChipCost;
     }
 
     [Header("Tiers (index 0 = level 1)")]
     public UpgradeTier[] tiers;
 
-    // ───────────────────────── Helpers ─────────────────────────
     public int MaxLevel => (tiers != null && tiers.Length > 0) ? tiers.Length : 1;
 
     public UpgradeTier GetTier(int level)

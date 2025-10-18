@@ -10,24 +10,15 @@ public class Card3DAdapter : MonoBehaviour
     public int level = 1;
 
     [Header("Renderers")]
-    [Tooltip("Renders the CARD ART sprite (the picture).")]
-    public MeshRenderer frontRenderer;
-
-    [Tooltip("Renders the FULL CARD (frame/skin). We will swap its MATERIAL by turn/max level.")]
-    public MeshRenderer fullCardRenderer;
+    public MeshRenderer frontRenderer;      // art quad (card image)
+    public MeshRenderer fullCardRenderer;   // whole card frame
 
     [Header("Full Card Materials (by turn)")]
-    [Tooltip("Material used when it's the owner's turn (e.g., 'Chip' frame).")]
     public Material fullCardMatMyTurn;
+    public Material fullCardMatNotMyTurn;              // ← assign your "NOT MY Turn.mat" here
 
-    [Tooltip("Material used when it's NOT the owner's turn (e.g., 'Gold' frame).")]
-    public Material fullCardMatNotMyTurn;
-
-    [Header("Full Card Materials (MAX level)")]
-    [Tooltip("Material used when the card is MAX level AND it's the owner's turn.")]
+    [Header("Full Card Materials (MAX level, by turn)")]
     public Material fullCardMatMaxLevelMyTurn;
-
-    [Tooltip("Material used when the card is MAX level AND it's NOT the owner's turn.")]
     public Material fullCardMatMaxLevelNotMyTurn;
 
     [Header("Texts")]
@@ -50,22 +41,16 @@ public class Card3DAdapter : MonoBehaviour
     public bool useRomanNumerals = false;
 
     [Header("Visibility Rules")]
-    [Tooltip("When true: on owner's turn show CHIP only, off-turn show GOLD only.")]
+    [Tooltip("On owner's turn show CHIP only, off-turn show GOLD only.")]
     public bool toggleCostsByTurn = true;
-
-    [Tooltip("If no owner is found yet, show both costs (useful while spawning).")]
     public bool showBothWhenNoOwner = true;
 
-    // shader props
     static readonly int PROP_MAIN_TEX = Shader.PropertyToID("_MainTex");
     static readonly int PROP_BASE_MAP = Shader.PropertyToID("_BaseMap");
     MaterialPropertyBlock _mpb;
 
-    // owner detection (via CardView or parent PlayerState)
     PlayerState owner;
     CardView cv;
-
-    // state cache to avoid redundant work
     bool? lastMyTurn = null;
     bool lastWasMax = false;
 
@@ -86,7 +71,6 @@ public class Card3DAdapter : MonoBehaviour
     void Update()
     {
         if (owner == null) TryResolveOwner();
-        if (!toggleCostsByTurn && fullCardRenderer == null) return;
 
         bool hasOwner = owner != null;
         bool myTurn = hasOwner && TurnManager.Instance && TurnManager.Instance.IsPlayersTurn(owner);
@@ -102,6 +86,9 @@ public class Card3DAdapter : MonoBehaviour
             ApplyCostVisibility(myTurn, hasOwner, isMax);
             ApplyFullCardMaterial(myTurn, isMax);
         }
+
+        // Always enforce capacity/turn overrides for SetReaction cards in hand
+        ApplySetCardCapacityVisual(myTurn);
     }
 
     void TryResolveOwner()
@@ -137,6 +124,9 @@ public class Card3DAdapter : MonoBehaviour
         ApplyFullCardMaterial(myTurn, isMax);
         lastMyTurn = myTurn;
         lastWasMax = isMax;
+
+        // Also ensure correct capacity look on first bind
+        ApplySetCardCapacityVisual(myTurn);
     }
 
     // ───────── Public API ─────────
@@ -174,12 +164,10 @@ public class Card3DAdapter : MonoBehaviour
         if (def == null) { Debug.LogWarning("[Card3DAdapter] No definition for cardId " + cardId); return; }
         var tier = def.GetTier(level);
 
-        // Name / Description (prefer per-tier effectText)
         if (cardNameText) cardNameText.text = def.cardName;
         if (cardDescriptionText) cardDescriptionText.text =
             string.IsNullOrEmpty(tier.effectText) ? def.description : tier.effectText;
 
-        // ART (front image)
         if (def.image != null && frontRenderer != null)
         {
             var tex = def.image.texture;
@@ -191,18 +179,12 @@ public class Card3DAdapter : MonoBehaviour
             FitFrontToSprite(def.image, frontRenderer.transform, 1f);
             frontRenderer.enabled = true;
         }
-        else if (frontRenderer != null)
-        {
-            Debug.LogWarning("[Card3DAdapter] No sprite image or frontRenderer not assigned.");
-        }
 
-        // FULL CARD MATERIAL initial apply
         bool hasOwner = owner != null;
         bool myTurn = hasOwner && TurnManager.Instance && TurnManager.Instance.IsPlayersTurn(owner);
         bool isMax = level >= def.MaxLevel;
         ApplyFullCardMaterial(myTurn, isMax);
 
-        // COST TEXTS (values)
         if (upgradeCostText)
         {
             int nextCost = GetUpgradeCost(def, level);
@@ -211,17 +193,13 @@ public class Card3DAdapter : MonoBehaviour
 
         if (chipCostText)
         {
-            int chip = def.GetCastChipCost(level); // current level only
+            int chip = def.GetCastChipCost(level);
             chipCostText.text = string.Format(chipCostFormat, chip);
         }
 
-        // LEVEL BADGE
         if (levelText)
         {
-            if (hideLevelWhenOne && level <= 1)
-            {
-                levelText.text = string.Empty;
-            }
+            if (hideLevelWhenOne && level <= 1) levelText.text = string.Empty;
             else
             {
                 string lvStr = useRomanNumerals ? ToRoman(level) : level.ToString();
@@ -229,7 +207,6 @@ public class Card3DAdapter : MonoBehaviour
             }
         }
 
-        // COST VISIBILITY
         if (toggleCostsByTurn)
         {
             ApplyCostVisibility(myTurn, hasOwner, isMax);
@@ -241,18 +218,23 @@ public class Card3DAdapter : MonoBehaviour
             if (upgradeCostText) upgradeCostText.gameObject.SetActive(true);
             if (chipCostText) chipCostText.gameObject.SetActive(true);
         }
+
+        // ensure visual capacity rule applies on first bind too
+        ApplySetCardCapacityVisual(myTurn);
     }
 
     // ───────── helpers ─────────
 
     void ApplyCostVisibility(bool myTurn, bool hasOwner, bool isMax)
     {
-        bool showGold = !myTurn;   // still show gold off-turn, even at max (label prints "MAX")
+        // Your rule: show chips on owner's turn, gold off-turn.
+        bool showGold = !myTurn;
         bool showChip = myTurn;
 
         if (!hasOwner && showBothWhenNoOwner)
         {
-            showChip = true; showGold = true;
+            showChip = true;
+            showGold = true;
         }
 
         if (chipCostText) chipCostText.gameObject.SetActive(showChip);
@@ -267,7 +249,6 @@ public class Card3DAdapter : MonoBehaviour
 
         if (isMax)
         {
-            // Prefer dedicated max-level materials; fall back to normal per-turn mats.
             target = myTurn
                 ? (fullCardMatMaxLevelMyTurn != null ? fullCardMatMaxLevelMyTurn : fullCardMatMyTurn)
                 : (fullCardMatMaxLevelNotMyTurn != null ? fullCardMatMaxLevelNotMyTurn : fullCardMatNotMyTurn);
@@ -282,6 +263,45 @@ public class Card3DAdapter : MonoBehaviour
             fullCardRenderer.sharedMaterial = target;
             fullCardRenderer.enabled = true;
         }
+    }
+
+    /// Enforce special visuals for SetReaction cards in HAND:
+    /// - NOT my turn: force NotMyTurn material (max variant if max level).
+    /// - MY turn but I already have a set card: use disabled look (MaxLevelNotMyTurn) and hide chip cost.
+    void ApplySetCardCapacityVisual(bool myTurn)
+    {
+        if (!fullCardRenderer) return;
+        if (owner == null || database == null) return;
+
+        var def = database.Get(cardId);
+        if (def == null) return;
+
+        var cvLocal = cv != null ? cv : GetComponent<CardView>();
+        bool isInHand = cvLocal != null && cvLocal.isInHand;
+        bool isSetCard = def.playStyle == CardDefinition.PlayStyle.SetReaction;
+        if (!isInHand || !isSetCard) return;
+
+        // compute isMax for proper material selection
+        bool isMax = level >= def.MaxLevel;
+
+        if (!myTurn)
+        {
+            // Your request: set cards (in hand) use the "NOT MY TURN" mat when it's not my turn
+            Material m = isMax && fullCardMatMaxLevelNotMyTurn ? fullCardMatMaxLevelNotMyTurn : fullCardMatNotMyTurn;
+            if (m) fullCardRenderer.sharedMaterial = m;
+
+            // chip cost already hidden off-turn by ApplyCostVisibility
+            return;
+        }
+
+        // My turn: if I already have a set card, show disabled look and hide chip cost
+        bool alreadyHaveSet = owner.setIds.Count > 0;
+        if (alreadyHaveSet)
+        {
+            if (fullCardMatMaxLevelNotMyTurn) fullCardRenderer.sharedMaterial = fullCardMatMaxLevelNotMyTurn;
+            if (chipCostText) chipCostText.gameObject.SetActive(false);
+        }
+        // else: leave whatever material & cost visibility the normal turn-logic selected
     }
 
     bool SetTextureOn(MeshRenderer r, Texture tex)
