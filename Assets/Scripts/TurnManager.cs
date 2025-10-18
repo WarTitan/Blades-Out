@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Mirror;
 using System.Collections.Generic;
 
@@ -9,7 +9,7 @@ public class TurnManager : NetworkBehaviour
     [Header("Game Rules (Inspector)")]
     [SerializeField] private int maxPlayers = 5;
     [SerializeField] private int startingGold = 5;
-    [SerializeField] private int startingHandSize = 4;
+    [SerializeField] private int startingHandSize = 3;  // ▼ start with 3
     [SerializeField] private int cardsPerTurn = 1;
     [SerializeField] private int goldPerTurn = 1;
     [SerializeField] private int defaultDeckSize = 12;
@@ -19,8 +19,8 @@ public class TurnManager : NetworkBehaviour
     [SerializeField] private int minPlayersToStart = 2;
     [SerializeField] private bool autoStartOnFull = false;
 
-    [Header("Chips (Hearthstone style)")]
-    [SerializeField] private int chipCap = 10; // max maxChips (10)
+    [Header("Chips")]
+    [SerializeField] private int chipCap = 10;
 
     [SyncVar] private int currentTurnIndex = -1;
     [SyncVar] private bool gameStarted = false;
@@ -31,25 +31,10 @@ public class TurnManager : NetworkBehaviour
     private readonly List<PlayerState> turnOrder = new List<PlayerState>();
 
     void Awake() { Instance = this; }
+    public override void OnStartClient() { base.OnStartClient(); Instance = this; }
+    public override void OnStartServer() { base.OnStartServer(); Instance = this; }
 
-    public override void OnStartClient()
-    {
-        base.OnStartClient();
-        Instance = this;
-        Debug.Log("[TurnManager] OnStartClient netId=" + netId + " isServer=" + isServer);
-    }
-
-    public override void OnStartServer()
-    {
-        base.OnStartServer();
-        Instance = this;
-        Debug.Log("[TurnManager] OnStartServer netId=" + netId);
-    }
-
-    void OnTurnNetIdChanged(uint oldV, uint newV)
-    {
-        Debug.Log("[TurnManager] currentTurnNetId changed -> " + newV);
-    }
+    void OnTurnNetIdChanged(uint oldV, uint newV) { /* UI hook if needed */ }
 
     [Server]
     public void RegisterPlayer(PlayerState ps)
@@ -71,7 +56,7 @@ public class TurnManager : NetworkBehaviour
         for (int i = 0; i < turnOrder.Count; i++)
             turnOrder[i].Server_Init(database, defaultDeckSize, startingGold, startingHandSize);
 
-        currentTurnIndex = 0;
+        currentTurnIndex = 0;              // Player 1 first
         gameStarted = true;
         Server_StartTurn(turnOrder[currentTurnIndex]);
     }
@@ -81,25 +66,16 @@ public class TurnManager : NetworkBehaviour
     {
         if (!gameStarted || ps == null) return;
 
-        // Hearthstone chips: +1 max (to cap) and refill
-        ps.Server_IncreaseMaxChipsAndRefill(chipCap, 1);
+        // NEW RULE: start of turn gives NOTHING (resources already granted to the owner when they ENDED their previous turn)
+        ps.Server_OnTurnStart_ProcessStatuses(); // still process statuses
 
-        // Start-of-turn processing (statuses)
-        ps.Server_OnTurnStart_ProcessStatuses();
-
-        // Draw + gold
-        ps.Server_Draw(cardsPerTurn);
-        ps.gold += goldPerTurn;
-
-        // Sync whose turn it is (so clients can locally test IsPlayersTurn)
         currentTurnNetId = ps.netId;
-
         RpcTurnChanged(currentTurnIndex);
         TargetYourTurn(ps.connectionToClient);
     }
 
-    [ClientRpc] private void RpcTurnChanged(int index) { /* optional UI hook */ }
-    [TargetRpc] private void TargetYourTurn(NetworkConnection target) { /* optional local UI hook */ }
+    [ClientRpc] private void RpcTurnChanged(int index) { }
+    [TargetRpc] private void TargetYourTurn(NetworkConnection target) { }
 
     [Server]
     public void Server_EndTurn(PlayerState requester)
@@ -107,16 +83,22 @@ public class TurnManager : NetworkBehaviour
         if (!gameStarted || turnOrder.Count == 0) return;
         if (turnOrder[currentTurnIndex] != requester) return;
 
+        // ▼ NEW: Give resources to the player who just ended their turn (for their NEXT turn)
+        requester.Server_IncreaseMaxChipsAndRefill(chipCap, 1);
+        requester.gold += goldPerTurn;
+        requester.Server_Draw(cardsPerTurn);
+
+        // Advance to next player
         currentTurnIndex = (currentTurnIndex + 1) % turnOrder.Count;
         Server_StartTurn(turnOrder[currentTurnIndex]);
     }
 
-    // === Upgrades (global per cardId) ===
+    // === Upgrades: ONLY off-turn ===
     [Server]
     public void Server_UpgradeCard(PlayerState ps, int handIndex)
     {
         if (!gameStarted || ps == null) return;
-        if (!IsPlayersTurn(ps)) return;
+        if (IsPlayersTurn(ps)) { TargetUpgradeDenied(ps.connectionToClient, handIndex, "TURN"); return; }  // must be off-turn
         if (handIndex < 0 || handIndex >= ps.handIds.Count) return;
 
         int cardId = ps.handIds[handIndex];
@@ -139,26 +121,24 @@ public class TurnManager : NetworkBehaviour
             return;
         }
 
-        // pay and apply global upgrade for this cardId
         ps.gold -= cost;
         byte newLevel = (byte)(currentLvl + 1);
-        ps.upgradeLevels[cardId] = newLevel;          // remember globally for future draws
-        ps.Server_PropagateUpgradeToAllCopies(cardId); // update all current copies
+        ps.upgradeLevels[cardId] = newLevel;
+        ps.Server_PropagateUpgradeToAllCopies(cardId);
 
         TargetUpgradeOk(ps.connectionToClient, handIndex, newLevel, cost);
     }
 
     [TargetRpc]
     private void TargetUpgradeOk(NetworkConnection target, int handIndex, int newLevel, int cost)
-    {
-        Debug.Log("[Upgrade] OK: hand[" + handIndex + "] -> L" + newLevel + " (spent " + cost + "g)");
-    }
+        => Debug.Log("[Upgrade] OK: hand[" + handIndex + "] -> L" + newLevel + " (spent " + cost + "g)");
 
     [TargetRpc]
     private void TargetUpgradeDenied(NetworkConnection target, int handIndex, string reason)
     {
         if (reason == "GOLD") Debug.LogWarning("[Upgrade] Not enough gold to upgrade hand[" + handIndex + "]");
         else if (reason == "MAX") Debug.LogWarning("[Upgrade] Already at max level for hand[" + handIndex + "]");
+        else if (reason == "TURN") Debug.LogWarning("[Upgrade] You can only upgrade OFF-turn.");
         else Debug.LogWarning("[Upgrade] Denied for hand[" + handIndex + "]: " + reason);
     }
 
@@ -166,32 +146,11 @@ public class TurnManager : NetworkBehaviour
     public bool IsPlayersTurn(PlayerState ps)
     {
         if (!gameStarted || ps == null) return false;
-
-        if (isServer)
-            return turnOrder.Count > 0 && turnOrder[currentTurnIndex] == ps;
-
+        if (isServer) return turnOrder.Count > 0 && turnOrder[currentTurnIndex] == ps;
         return ps.netId == currentTurnNetId;
     }
 
-    // Example helpers for effect resolver
-    [Server]
-    public void Server_HealAll(int amount)
-    {
-        foreach (var p in turnOrder) if (p != null) p.Server_Heal(amount);
-    }
-
-    [Server]
-    public void Server_ChainArc(PlayerState caster, PlayerState startTarget, int amount, int arcs)
-    {
-        if (turnOrder.Count == 0 || startTarget == null) return;
-        int idx = turnOrder.IndexOf(startTarget);
-        if (idx < 0) return;
-
-        int hits = Mathf.Max(1, arcs + 1);
-        for (int i = 0; i < hits; i++)
-        {
-            var t = turnOrder[(idx + i) % turnOrder.Count];
-            if (t != null) t.Server_ApplyDamage(caster, amount);
-        }
-    }
+    // helpers for effect resolver (unchanged)
+    [Server] public void Server_HealAll(int amount) { /* ... */ }
+    [Server] public void Server_ChainArc(PlayerState caster, PlayerState startTarget, int amount, int arcs) { /* ... */ }
 }

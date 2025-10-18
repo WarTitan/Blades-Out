@@ -16,15 +16,11 @@ MonoBehaviour:
   cardName: Knife
   description: Deal 1 DMG
   image: {fileID: 1992122384, guid: 40d069d0c6aaf1f409ecca5eff0a3154, type: 3}
-  showcasePrefab: {fileID: 919132149155446097, guid: fe0ab2f3143469d49a5aee5ecbfb8d0c, type: 3}
-  showcaseLocalOffset: {x: 0, y: 0.3, z: 0}
-  showcaseLocalScale: 1
   playStyle: 0
-  effect: 0
+  effect: 14
   amount: 1
   durationTurns: 0
   arcs: 0
-  targetAll: 0
   chipCost: 1
   tiers:
   - attack: 1
@@ -36,4 +32,44 @@ MonoBehaviour:
     defense: 0
     costGold: 2
     effectText: Deal 2 DMG
+    castChipCost: 0
+  - attack: 3
+    defense: 0
+    costGold: 2
+    effectText: Deal 3 DMG
+    castChipCost: 0
+  - attack: 4
+    defense: 0
+    costGold: 2
+    effectText: Deal 4 DMG
+    castChipCost: 0
+  - attack: 5
+    defense: 0
+    costGold: 2
+    effectText: Deal 5 DMG
+    castChipCost: 0
+  - attack: 6
+    defense: 0
+    costGold: 2
+    effectText: Deal 6 DMG
+    castChipCost: 0
+  - attack: 7
+    defense: 0
+    costGold: 2
+    effectText: Deal 7 DMG
+    castChipCost: 0
+  - attack: 8
+    defense: 0
+    costGold: 2
+    effectText: Deal 8 DMG
+    castChipCost: 0
+  - attack: 9
+    defense: 0
+    costGold: 2
+    effectText: Deal 9 DMG
+    castChipCost: 0
+  - attack: 10
+    defense: 0
+    costGold: 2
+    effectText: Deal 10 DMG
     castChipCost: 0

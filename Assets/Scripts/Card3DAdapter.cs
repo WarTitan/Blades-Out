@@ -4,56 +4,153 @@ using TMPro;
 [DisallowMultipleComponent]
 public class Card3DAdapter : MonoBehaviour
 {
-    [Header("Database Binding")]
+    [Header("Bind")]
     public CardDatabase database;
     public int cardId = -1;
     public int level = 1;
 
-    [Header("Front Art (Quad)")]
+    [Header("Renderers")]
+    [Tooltip("Renders the CARD ART sprite (the picture).")]
     public MeshRenderer frontRenderer;
 
-    [Header("Texts (UI or 3D TMP allowed)")]
+    [Tooltip("Renders the FULL CARD (frame/skin). We will swap its MATERIAL by turn/max level.")]
+    public MeshRenderer fullCardRenderer;
+
+    [Header("Full Card Materials (by turn)")]
+    [Tooltip("Material used when it's the owner's turn (e.g., 'Chip' frame).")]
+    public Material fullCardMatMyTurn;
+
+    [Tooltip("Material used when it's NOT the owner's turn (e.g., 'Gold' frame).")]
+    public Material fullCardMatNotMyTurn;
+
+    [Header("Full Card Materials (MAX level)")]
+    [Tooltip("Material used when the card is MAX level AND it's the owner's turn.")]
+    public Material fullCardMatMaxLevelMyTurn;
+
+    [Tooltip("Material used when the card is MAX level AND it's NOT the owner's turn.")]
+    public Material fullCardMatMaxLevelNotMyTurn;
+
+    [Header("Texts")]
     public TMP_Text cardNameText;
     public TMP_Text cardDescriptionText;
 
-    [Header("Upgrade (Gold) Cost Display")]
+    [Header("Upgrade (Gold) Cost")]
     public TMP_Text upgradeCostText;
-    public bool showUpgradeCost = true;
     public string upgradeCostFormat = "Upgrade: {0}g";
     public string maxLevelText = "MAX";
 
-    public enum CostMode { NextLevel, SpecificTier }
-    public CostMode costMode = CostMode.SpecificTier;
-    public int specificTierLevel = 2;
-
-    [Header("Chip (Cast) Cost Display")]
-    [Tooltip("Text for the chip cost to CAST/SET this card. Uses tier.castChipCost if >0, else CardDefinition.chipCost.")]
+    [Header("Chip (Cast) Cost")]
     public TMP_Text chipCostText;
-    public bool showChipCost = true;
-    public bool hideZeroChipCost = false;
     public string chipCostFormat = "Cost: {0}c";
 
-    [Header("Front Fitting (optional)")]
-    public bool autoFitAspect = true;
-    public float targetHeight = 1f;
+    [Header("Level Badge")]
+    public TMP_Text levelText;
+    public string levelFormat = "Lv {0}";
+    public bool hideLevelWhenOne = false;
+    public bool useRomanNumerals = false;
 
-    [Header("Showcase 3D Model (optional)")]
-    public Transform showcaseAnchor;
-    public GameObject fallbackShowcasePrefab;
-    public Vector3 extraShowcaseOffset = Vector3.zero;
-    public float extraShowcaseScale = 1f;
-    public Vector3 showcaseInitialEuler = Vector3.zero;
+    [Header("Visibility Rules")]
+    [Tooltip("When true: on owner's turn show CHIP only, off-turn show GOLD only.")]
+    public bool toggleCostsByTurn = true;
 
-    [Header("Showcase Normalization (optional)")]
-    public Material fallbackShowcaseMaterial;
-    public float targetShowcaseMaxSize = 0.25f;
+    [Tooltip("If no owner is found yet, show both costs (useful while spawning).")]
+    public bool showBothWhenNoOwner = true;
 
-    private GameObject spawnedShowcase;
-    private bool createdAnchor = false;
-
+    // shader props
     static readonly int PROP_MAIN_TEX = Shader.PropertyToID("_MainTex");
     static readonly int PROP_BASE_MAP = Shader.PropertyToID("_BaseMap");
     MaterialPropertyBlock _mpb;
+
+    // owner detection (via CardView or parent PlayerState)
+    PlayerState owner;
+    CardView cv;
+
+    // state cache to avoid redundant work
+    bool? lastMyTurn = null;
+    bool lastWasMax = false;
+
+    void Awake()
+    {
+        cv = GetComponentInParent<CardView>(true);
+        TryResolveOwner();
+    }
+
+    void OnEnable()
+    {
+        TryResolveOwner();
+        lastMyTurn = null;
+        lastWasMax = false;
+        LateApplyTurnVisuals();
+    }
+
+    void Update()
+    {
+        if (owner == null) TryResolveOwner();
+        if (!toggleCostsByTurn && fullCardRenderer == null) return;
+
+        bool hasOwner = owner != null;
+        bool myTurn = hasOwner && TurnManager.Instance && TurnManager.Instance.IsPlayersTurn(owner);
+
+        bool isMax = false;
+        var def = (database != null) ? database.Get(cardId) : null;
+        if (def != null) isMax = level >= def.MaxLevel;
+
+        if (lastMyTurn == null || lastMyTurn.Value != myTurn || lastWasMax != isMax)
+        {
+            lastMyTurn = myTurn;
+            lastWasMax = isMax;
+            ApplyCostVisibility(myTurn, hasOwner, isMax);
+            ApplyFullCardMaterial(myTurn, isMax);
+        }
+    }
+
+    void TryResolveOwner()
+    {
+        if (owner != null) return;
+
+        if (cv == null) cv = GetComponentInParent<CardView>(true);
+        if (cv != null && cv.owner != null)
+        {
+            owner = cv.owner;
+            LateApplyTurnVisuals();
+        }
+        else
+        {
+            var ps = GetComponentInParent<PlayerState>(true);
+            if (ps != null)
+            {
+                owner = ps;
+                LateApplyTurnVisuals();
+            }
+        }
+    }
+
+    void LateApplyTurnVisuals()
+    {
+        bool hasOwner = owner != null;
+        bool myTurn = hasOwner && TurnManager.Instance && TurnManager.Instance.IsPlayersTurn(owner);
+
+        var def = (database != null) ? database.Get(cardId) : null;
+        bool isMax = def != null && level >= def.MaxLevel;
+
+        ApplyCostVisibility(myTurn, hasOwner, isMax);
+        ApplyFullCardMaterial(myTurn, isMax);
+        lastMyTurn = myTurn;
+        lastWasMax = isMax;
+    }
+
+    // ───────── Public API ─────────
+    public void SetOwner(PlayerState ps)
+    {
+        owner = ps;
+        LateApplyTurnVisuals();
+    }
+
+    public void SetLevel(int lvl)
+    {
+        level = Mathf.Max(1, lvl);
+        Apply();
+    }
 
     public void Bind(int id, int lvl, CardDatabase db)
     {
@@ -72,207 +169,166 @@ public class Card3DAdapter : MonoBehaviour
 
     public void Apply()
     {
-        if (database == null) return;
+        if (database == null) { Debug.LogWarning("[Card3DAdapter] No database."); return; }
         var def = database.Get(cardId);
-        if (def == null) return;
-
-        // Name
-        if (cardNameText != null) cardNameText.text = def.cardName;
-
-        // Description (prefer tier.effectText if present)
-        string desc = def.description;
+        if (def == null) { Debug.LogWarning("[Card3DAdapter] No definition for cardId " + cardId); return; }
         var tier = def.GetTier(level);
-        if (!string.IsNullOrEmpty(tier.effectText)) desc = tier.effectText;
-        if (cardDescriptionText != null) cardDescriptionText.text = desc;
 
-        // Art
+        // Name / Description (prefer per-tier effectText)
+        if (cardNameText) cardNameText.text = def.cardName;
+        if (cardDescriptionText) cardDescriptionText.text =
+            string.IsNullOrEmpty(tier.effectText) ? def.description : tier.effectText;
+
+        // ART (front image)
         if (def.image != null && frontRenderer != null)
         {
             var tex = def.image.texture;
-            if (tex != null) SetFrontTexture(tex);
-            if (autoFitAspect) FitFrontToSprite(def.image, frontRenderer.transform, targetHeight);
+            if (!SetTextureOn(frontRenderer, tex))
+            {
+                var mat = frontRenderer.material;
+                if (mat != null) mat.mainTexture = tex;
+            }
+            FitFrontToSprite(def.image, frontRenderer.transform, 1f);
+            frontRenderer.enabled = true;
+        }
+        else if (frontRenderer != null)
+        {
+            Debug.LogWarning("[Card3DAdapter] No sprite image or frontRenderer not assigned.");
         }
 
-        // ----- GOLD UPGRADE COST -----
-        if (upgradeCostText != null)
+        // FULL CARD MATERIAL initial apply
+        bool hasOwner = owner != null;
+        bool myTurn = hasOwner && TurnManager.Instance && TurnManager.Instance.IsPlayersTurn(owner);
+        bool isMax = level >= def.MaxLevel;
+        ApplyFullCardMaterial(myTurn, isMax);
+
+        // COST TEXTS (values)
+        if (upgradeCostText)
         {
-            if (!showUpgradeCost)
+            int nextCost = GetUpgradeCost(def, level);
+            upgradeCostText.text = (nextCost >= 0) ? string.Format(upgradeCostFormat, nextCost) : maxLevelText;
+        }
+
+        if (chipCostText)
+        {
+            int chip = def.GetCastChipCost(level); // current level only
+            chipCostText.text = string.Format(chipCostFormat, chip);
+        }
+
+        // LEVEL BADGE
+        if (levelText)
+        {
+            if (hideLevelWhenOne && level <= 1)
             {
-                upgradeCostText.text = string.Empty;
-            }
-            else if (costMode == CostMode.NextLevel)
-            {
-                int cost = GetUpgradeCost(def, level);
-                upgradeCostText.text = (cost >= 0) ? string.Format(upgradeCostFormat, cost) : maxLevelText;
+                levelText.text = string.Empty;
             }
             else
             {
-                int lvl = Mathf.Max(1, specificTierLevel);
-                if (lvl <= def.MaxLevel)
-                {
-                    var t2 = def.GetTier(lvl);
-                    upgradeCostText.text = string.Format(upgradeCostFormat, t2.costGold);
-                }
-                else
-                {
-                    upgradeCostText.text = string.Empty;
-                    Debug.LogWarning("[Card3DAdapter] No tier " + lvl + " on '" + def.cardName + "' (MaxLevel=" + def.MaxLevel + "). Cost hidden.");
-                }
+                string lvStr = useRomanNumerals ? ToRoman(level) : level.ToString();
+                levelText.text = string.Format(levelFormat, lvStr);
             }
         }
 
-        // ----- CHIP (CAST) COST BADGE -----
-        if (chipCostText != null)
+        // COST VISIBILITY
+        if (toggleCostsByTurn)
         {
-            if (!showChipCost)
-            {
-                chipCostText.text = string.Empty;
-            }
-            else
-            {
-                // Use per-tier override if present; else base definition chipCost.
-                // IMPORTANT: this uses the CURRENT level, not level+1.
-                int chipCost = def.GetCastChipCost(level);
-                if (hideZeroChipCost && chipCost == 0)
-                    chipCostText.text = string.Empty;
-                else
-                    chipCostText.text = string.Format(chipCostFormat, chipCost);
-            }
+            ApplyCostVisibility(myTurn, hasOwner, isMax);
+            lastMyTurn = myTurn;
+            lastWasMax = isMax;
         }
-        // 3D showcase (optional)
-        SpawnShowcase(def);
+        else
+        {
+            if (upgradeCostText) upgradeCostText.gameObject.SetActive(true);
+            if (chipCostText) chipCostText.gameObject.SetActive(true);
+        }
     }
 
-    private void SetFrontTexture(Texture tex)
+    // ───────── helpers ─────────
+
+    void ApplyCostVisibility(bool myTurn, bool hasOwner, bool isMax)
     {
-        if (frontRenderer == null || tex == null) return;
+        bool showGold = !myTurn;   // still show gold off-turn, even at max (label prints "MAX")
+        bool showChip = myTurn;
+
+        if (!hasOwner && showBothWhenNoOwner)
+        {
+            showChip = true; showGold = true;
+        }
+
+        if (chipCostText) chipCostText.gameObject.SetActive(showChip);
+        if (upgradeCostText) upgradeCostText.gameObject.SetActive(showGold);
+    }
+
+    void ApplyFullCardMaterial(bool myTurn, bool isMax)
+    {
+        if (!fullCardRenderer) return;
+
+        Material target = null;
+
+        if (isMax)
+        {
+            // Prefer dedicated max-level materials; fall back to normal per-turn mats.
+            target = myTurn
+                ? (fullCardMatMaxLevelMyTurn != null ? fullCardMatMaxLevelMyTurn : fullCardMatMyTurn)
+                : (fullCardMatMaxLevelNotMyTurn != null ? fullCardMatMaxLevelNotMyTurn : fullCardMatNotMyTurn);
+        }
+        else
+        {
+            target = myTurn ? fullCardMatMyTurn : fullCardMatNotMyTurn;
+        }
+
+        if (target != null)
+        {
+            fullCardRenderer.sharedMaterial = target;
+            fullCardRenderer.enabled = true;
+        }
+    }
+
+    bool SetTextureOn(MeshRenderer r, Texture tex)
+    {
+        if (!r || tex == null) return false;
         if (_mpb == null) _mpb = new MaterialPropertyBlock();
+        r.GetPropertyBlock(_mpb, 0);
 
-        frontRenderer.GetPropertyBlock(_mpb, 0);
-
-        var mat = frontRenderer.sharedMaterial;
+        var mat = r.sharedMaterial;
         if (mat != null && mat.HasProperty(PROP_BASE_MAP))
             _mpb.SetTexture(PROP_BASE_MAP, tex);
         else
             _mpb.SetTexture(PROP_MAIN_TEX, tex);
 
-        frontRenderer.SetPropertyBlock(_mpb, 0);
+        r.SetPropertyBlock(_mpb, 0);
+        return true;
     }
 
-    private void SpawnShowcase(CardDefinition def)
-    {
-        if (spawnedShowcase != null)
-        {
-            Destroy(spawnedShowcase);
-            spawnedShowcase = null;
-        }
-
-        GameObject prefab = def.showcasePrefab != null ? def.showcasePrefab : fallbackShowcasePrefab;
-        if (prefab == null) return;
-
-        if (showcaseAnchor == null)
-        {
-            var go = new GameObject("ShowcaseAnchor");
-            go.transform.SetParent(transform, false);
-            go.transform.localPosition = Vector3.zero;
-            go.transform.localRotation = Quaternion.identity;
-            showcaseAnchor = go.transform;
-            createdAnchor = true;
-        }
-        else createdAnchor = false;
-
-        spawnedShowcase = Instantiate(prefab, showcaseAnchor);
-        spawnedShowcase.transform.localPosition = Vector3.zero;
-        spawnedShowcase.transform.localRotation = Quaternion.identity;
-        spawnedShowcase.transform.localScale = Vector3.one;
-
-        NormalizeShowcase(spawnedShowcase, targetShowcaseMaxSize, fallbackShowcaseMaterial);
-
-        Vector3 defOffset = def.showcaseLocalOffset;
-        float defScale = (def.showcaseLocalScale <= 0f ? 1f : def.showcaseLocalScale);
-        float s = Mathf.Max(0.0001f, defScale * Mathf.Max(0.0001f, extraShowcaseScale));
-
-        spawnedShowcase.transform.localPosition += defOffset + extraShowcaseOffset;
-        spawnedShowcase.transform.localScale *= s;
-        spawnedShowcase.transform.localRotation = Quaternion.Euler(showcaseInitialEuler);
-    }
-
-    private void NormalizeShowcase(GameObject go, float targetMaxSize, Material fallbackMat)
-    {
-        if (!go) return;
-
-        var renderers = go.GetComponentsInChildren<Renderer>(true);
-        if (renderers == null || renderers.Length == 0)
-        {
-            Debug.LogWarning("[Card3DAdapter] Showcase '" + go.name + "' has NO Renderer in children.");
-            return;
-        }
-
-        if (fallbackMat != null)
-        {
-            foreach (var r in renderers)
-            {
-                if (r.sharedMaterials == null || r.sharedMaterials.Length == 0)
-                    r.sharedMaterial = fallbackMat;
-            }
-        }
-
-        if (targetMaxSize <= 0f) return;
-
-        Bounds b = new Bounds(go.transform.position, Vector3.zero);
-        bool hasBounds = false;
-        foreach (var r in renderers)
-        {
-            if (!r.enabled) continue;
-            if (!hasBounds) { b = r.bounds; hasBounds = true; }
-            else b.Encapsulate(r.bounds);
-        }
-        if (!hasBounds) return;
-
-        var parent = go.transform.parent;
-        Vector3 parentScale = parent ? parent.lossyScale : Vector3.one;
-        Vector3 localSize = new Vector3(
-            b.size.x / Mathf.Max(0.0001f, parentScale.x),
-            b.size.y / Mathf.Max(0.0001f, parentScale.y),
-            b.size.z / Mathf.Max(0.0001f, parentScale.z)
-        );
-
-        float maxDim = Mathf.Max(localSize.x, Mathf.Abs(localSize.y), localSize.z);
-        if (maxDim > 0.0001f)
-        {
-            float mul = targetMaxSize / maxDim;
-            go.transform.localScale = go.transform.localScale * mul;
-        }
-    }
-
-    private int GetUpgradeCost(CardDefinition def, int currentLevel)
+    int GetUpgradeCost(CardDefinition def, int currentLevel)
     {
         if (currentLevel >= def.MaxLevel) return -1;
-        var next = def.GetTier(currentLevel + 1);
-        return next.costGold;
+        return def.GetTier(currentLevel + 1).costGold;
     }
 
-    private void FitFrontToSprite(Sprite s, Transform quad, float desiredHeight)
+    void FitFrontToSprite(Sprite s, Transform quad, float desiredHeight)
     {
         if (s == null || quad == null || desiredHeight <= 0f) return;
         float w = s.rect.width, h = s.rect.height;
         if (h <= 0f) return;
         float aspect = w / h;
-        quad.localScale = new Vector3(desiredHeight * aspect, desiredHeight, quad.localScale.z);
+        var sc = quad.localScale;
+        quad.localScale = new Vector3(desiredHeight * aspect, desiredHeight, sc.z);
     }
 
-    public void ClearShowcase()
+    string ToRoman(int n)
     {
-        if (spawnedShowcase != null) { Destroy(spawnedShowcase); spawnedShowcase = null; }
-    }
-
-#if UNITY_EDITOR
-    private void OnValidate()
-    {
-        if (!Application.isPlaying)
+        if (n <= 0) return "0";
+        if (n > 3999) n = 3999;
+        (int val, string sym)[] map = new (int, string)[]
         {
-            if (database != null && cardId >= 0) Apply();
-        }
+            (1000,"M"),(900,"CM"),(500,"D"),(400,"CD"),
+            (100,"C"),(90,"XC"),(50,"L"),(40,"XL"),
+            (10,"X"),(9,"IX"),(5,"V"),(4,"IV"),(1,"I")
+        };
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        foreach (var (v, s) in map)
+            while (n >= v) { sb.Append(s); n -= v; }
+        return sb.ToString();
     }
-#endif
 }

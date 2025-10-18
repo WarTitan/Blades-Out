@@ -1,14 +1,12 @@
 using UnityEngine;
 using Mirror;
 
-// ONE place for all keyboard hotkeys for a player.
+// Central hotkeys:
 // - 3 : Request Start Game
 // - E : End Turn
-// - V : Set the currently selected hand card (must be SetReaction)
-// - 2 : Upgrade the currently selected hand card (server checks gold & max level)
-// - Q : Deselect selected card (optional; right-click also deselects via Raycaster)
-//
-// Attach this to the same GameObject that has PlayerState. It will auto-find the Raycaster.
+// - V : Set the selected hand card (only OFF-turn; must be SetReaction)
+// - 2 : Upgrade the selected hand card (only OFF-turn; server checks gold/max)
+// - Q : Deselect (optional UI convenience)
 public class PlayerHotkeys : NetworkBehaviour
 {
     [Header("Refs (auto)")]
@@ -23,8 +21,8 @@ public class PlayerHotkeys : NetworkBehaviour
     public KeyCode deselectKey = KeyCode.Q;
 
     [Header("Rules")]
-    public bool requireTurnToSet = true;
-    public bool requireTurnToUpgrade = true;
+    public bool requireOffTurnToSet = true;
+    public bool requireOffTurnToUpgrade = true;
 
     void Awake()
     {
@@ -34,8 +32,7 @@ public class PlayerHotkeys : NetworkBehaviour
 
     void Update()
     {
-        if (!isLocalPlayer) return;
-        if (!localPlayer) return;
+        if (!isLocalPlayer || !localPlayer) return;
 
         // 3 -> start game
         if (Input.GetKeyDown(startGameKey))
@@ -51,18 +48,18 @@ public class PlayerHotkeys : NetworkBehaviour
             localPlayer.CmdEndTurn();
         }
 
-        // V -> Set selected hand card (must be SetReaction)
+        // V -> Set selected hand card (must be SetReaction), ONLY OFF-TURN
         if (Input.GetKeyDown(setKey))
         {
             int handIndex = GetSelectedHandIndex();
             if (handIndex < 0) { Debug.Log("[Hotkeys] No selected hand card to Set."); }
             else
             {
-                if (requireTurnToSet)
+                var tm = TurnManager.Instance;
+                if (requireOffTurnToSet)
                 {
-                    var tm = TurnManager.Instance;
                     if (tm == null) { Debug.LogWarning("[Hotkeys] TurnManager not ready."); return; }
-                    if (!tm.IsPlayersTurn(localPlayer)) { Debug.LogWarning("[Hotkeys] Not your turn."); return; }
+                    if (tm.IsPlayersTurn(localPlayer)) { Debug.LogWarning("[Hotkeys] Only OFF-turn."); return; }
                 }
 
                 // Style check (only SetReaction may be set)
@@ -80,27 +77,26 @@ public class PlayerHotkeys : NetworkBehaviour
             }
         }
 
-        // 2 -> Upgrade selected hand card
+        // 2 -> Upgrade selected hand card, ONLY OFF-TURN
         if (Input.GetKeyDown(upgradeKey))
         {
             int handIndex = GetSelectedHandIndex();
             if (handIndex < 0) { Debug.Log("[Hotkeys] No selected hand card to Upgrade."); }
             else
             {
-                if (requireTurnToUpgrade)
+                var tm = TurnManager.Instance;
+                if (requireOffTurnToUpgrade)
                 {
-                    var tm = TurnManager.Instance;
                     if (tm == null) { Debug.LogWarning("[Hotkeys] TurnManager not ready."); return; }
-                    if (!tm.IsPlayersTurn(localPlayer)) { Debug.LogWarning("[Hotkeys] Not your turn."); return; }
+                    if (tm.IsPlayersTurn(localPlayer)) { Debug.LogWarning("[Hotkeys] Only OFF-turn."); return; }
                 }
 
                 Debug.Log("[Hotkeys] CmdUpgradeCard(" + handIndex + ")");
                 localPlayer.CmdUpgradeCard(handIndex);
-                // keep selection after upgrade so player can spam upgrades if they have gold
             }
         }
 
-        // Q -> Deselect (optional; right-click also works via Raycaster)
+        // Q -> Deselect
         if (Input.GetKeyDown(deselectKey)) Deselect();
     }
 

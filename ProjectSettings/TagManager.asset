@@ -41,6 +41,9 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: CardsUI
+    uniqueID: 3003771027
+    locked: 0
   m_RenderingLayers:
   - Default
   - Light Layer 1

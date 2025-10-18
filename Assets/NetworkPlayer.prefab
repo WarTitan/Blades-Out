@@ -1055,6 +1055,8 @@ MonoBehaviour:
   gold: 0
   maxHP: 5
   maxArmor: 5
+  chips: 0
+  maxChips: 0
   seatIndex: 0
   turnManager: {fileID: 0}
   minActionInterval: 0.1
@@ -1074,13 +1076,13 @@ MonoBehaviour:
   cardSpawnPoint: {fileID: 0}
   cardPrefab3D: {fileID: 7461052816248502625, guid: bbc48dcd4ddd7eb4f99a1a6ea4e3a6a6, type: 3}
   database: {fileID: 11400000, guid: 7044ab7ef32f0534999f3b709a1bebaf, type: 2}
-  gapX: 0.12
+  gapX: 0.16
   raiseY: 0
-  layFlatOnTable: 1
-  tiltXDegrees: 30
+  layFlatOnTable: 0
+  tiltXDegrees: 40
   frontFacingYawOffset: 180
   rowYawNudge: 0
-  cardLocalScale: {x: 0.05, y: 0.05, z: 0.05}
+  cardLocalScale: {x: 0.07, y: 0.07, z: 0.07}
   verboseLogs: 1
 --- !u!114 &-3118809153901716693
 MonoBehaviour:
@@ -1183,8 +1185,8 @@ MonoBehaviour:
   setKey: 118
   upgradeKey: 50
   deselectKey: 113
-  requireTurnToSet: 1
-  requireTurnToUpgrade: 1
+  requireOffTurnToSet: 1
+  requireOffTurnToUpgrade: 1
 --- !u!4 &4597333103463066336 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}

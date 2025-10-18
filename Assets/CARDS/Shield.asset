@@ -16,15 +16,11 @@ MonoBehaviour:
   cardName: Shield
   description: Block 1 DMG
   image: {fileID: -240136403, guid: f928eef8bf886b14bba1e945990cde52, type: 3}
-  showcasePrefab: {fileID: 919132149155446097, guid: 516a3e2d2f803fd44a55c89301f45fc0, type: 3}
-  showcaseLocalOffset: {x: 0, y: 0, z: -1}
-  showcaseLocalScale: 1
   playStyle: 1
-  effect: 0
+  effect: 21
   amount: 1
   durationTurns: 0
   arcs: 0
-  targetAll: 0
   chipCost: 3
   tiers:
   - attack: 0
@@ -34,6 +30,46 @@ MonoBehaviour:
     castChipCost: 0
   - attack: 0
     defense: 2
-    costGold: 4
+    costGold: 2
     effectText: Block 2 DMG
+    castChipCost: 0
+  - attack: 0
+    defense: 3
+    costGold: 2
+    effectText: Block 3 DMG
+    castChipCost: 0
+  - attack: 0
+    defense: 4
+    costGold: 2
+    effectText: Block 4 DMG
+    castChipCost: 0
+  - attack: 0
+    defense: 5
+    costGold: 2
+    effectText: Block 5 DMG
+    castChipCost: 0
+  - attack: 0
+    defense: 6
+    costGold: 2
+    effectText: Block 6 DMG
+    castChipCost: 0
+  - attack: 0
+    defense: 7
+    costGold: 2
+    effectText: Block 7 DMG
+    castChipCost: 0
+  - attack: 0
+    defense: 8
+    costGold: 2
+    effectText: Block 8 DMG
+    castChipCost: 0
+  - attack: 0
+    defense: 9
+    costGold: 2
+    effectText: Block 9 DMG
+    castChipCost: 0
+  - attack: 0
+    defense: 10
+    costGold: 2
+    effectText: Block 10 DMG
     castChipCost: 0

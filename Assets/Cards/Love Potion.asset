@@ -10,14 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4acf1391760cecd4dad51fe600af9a76, type: 3}
-  m_Name: Bomb
+  m_Name: Love Potion
   m_EditorClassIdentifier: Assembly-CSharp::CardDefinition
-  id: 0
-  cardName: Bomb
-  description: Evrey player takes 1 DMG
-  image: {fileID: 2076744250, guid: 03f555c09f4b78247a6536a015c8f7ad, type: 3}
+  id: 4
+  cardName: Love Potion
+  description: Heal 1 HP
+  image: {fileID: 1817068260, guid: 4d6b54469207fc748b6ee7dec477f317, type: 3}
   playStyle: 0
-  effect: 10
+  effect: 16
   amount: 1
   durationTurns: 0
   arcs: 0
@@ -26,50 +26,50 @@ MonoBehaviour:
   - attack: 1
     defense: 0
     costGold: 0
-    effectText: Evrey player takes 1 DMG
+    effectText: Heal 1 HP
     castChipCost: 0
   - attack: 2
     defense: 0
-    costGold: 3
-    effectText: Evrey player takes 2 DMG
+    costGold: 0
+    effectText: Heal 2 HP
     castChipCost: 0
   - attack: 3
     defense: 0
-    costGold: 3
-    effectText: Evrey player takes 3 DMG
+    costGold: 0
+    effectText: Heal 3 HP
     castChipCost: 0
   - attack: 4
     defense: 0
-    costGold: 3
-    effectText: Evrey player takes 4 DMG
+    costGold: 0
+    effectText: Heal 4 HP
     castChipCost: 0
   - attack: 5
     defense: 0
-    costGold: 3
-    effectText: Evrey player takes 5 DMG
+    costGold: 0
+    effectText: Heal 5 HP
     castChipCost: 0
   - attack: 6
     defense: 0
-    costGold: 3
-    effectText: Evrey player takes 6 DMG
+    costGold: 0
+    effectText: Heal 6 HP
     castChipCost: 0
   - attack: 7
     defense: 0
-    costGold: 3
-    effectText: Evrey player takes 7 DMG
+    costGold: 0
+    effectText: Heal 7 HP
     castChipCost: 0
-  - attack: 6
+  - attack: 8
     defense: 0
-    costGold: 3
-    effectText: Evrey player takes 8 DMG
-    castChipCost: 0
-  - attack: 9
-    defense: 0
-    costGold: 3
-    effectText: Evrey player takes 9 DMG
+    costGold: 0
+    effectText: Heal 8 HP
     castChipCost: 0
   - attack: 9
     defense: 0
-    costGold: 3
-    effectText: Evrey player takes 10 DMG
+    costGold: 0
+    effectText: Heal 9 HP
+    castChipCost: 0
+  - attack: 10
+    defense: 0
+    costGold: 0
+    effectText: Heal 10 HP
     castChipCost: 0

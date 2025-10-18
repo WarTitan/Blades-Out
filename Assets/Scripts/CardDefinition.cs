@@ -3,7 +3,7 @@
 [CreateAssetMenu(menuName = "BladesOut/Card Definition", fileName = "CardDefinition")]
 public class CardDefinition : ScriptableObject
 {
-    // ───────────────────────────────────────────────── Identity ─────────────────────────────────────────────────
+    // ───────────────────────── Identity ─────────────────────────
     [Header("Identity")]
     [Tooltip("Unique across all cards.")]
     public int id;
@@ -11,72 +11,83 @@ public class CardDefinition : ScriptableObject
     [TextArea] public string description;
     public Sprite image;
 
-    // ───────────────────────────────────────────────── 3D Showcase ───────────────────────────────────────────────
-    [Header("3D Showcase (optional)")]
-    public GameObject showcasePrefab;
-    public Vector3 showcaseLocalOffset = new Vector3(0f, 0.15f, 0f);
-    public float showcaseLocalScale = 1f;
-
-    // ───────────────────────────────────────────────── Gameplay core ────────────────────────────────────────────
+    // ───────────────────────── Types ─────────────────────────
     public enum PlayStyle { Instant, SetReaction, SetDelayed }
+
+    // Keep legacy values first (compat), then new ones (alphabetical)
     public enum EffectType
     {
-        DealDamage,             // amount
-        HealSelf,               // amount
-        HealAll,                // amount to everyone
-        Poison,                 // amount per tick, durationTurns
-        Reflect1,               // reflect X dmg on next hit (consumed)
-        ReflectFirstAttack,     // reflect full first attack (consumed)
-        FirstAttackerTakes2,    // on next hit, attacker takes X (consumed)
-        ChainArc                // deal amount to target, then arcs times to next players
+        // legacy
+        DealDamage,
+        HealSelf,
+        HealAll,
+        Poison,
+        Reflect1,
+        ReflectFirstAttack,
+        FirstAttackerTakes2,
+        ChainArc,
+
+        // new (alphabetical)
+        BearTrap_FirstAttackerTakesX,
+        BlackHole_DiscardHandsRedrawSame,
+        Bomb_AllPlayersTakeX,
+        C4_ExplodeOnTargetAfter3Turns,
+        Cactus_ReflectUpToX_For3Turns,
+        GoblinHands_MoveOneSetItemToCaster,
+        Knife_DealX,
+        KnifePotion_DealX_HealXSelf,
+        LovePotion_HealXSelf,
+        Mirror_CopyLastPlayedByYou,
+        MirrorShield_ReflectFirstAttackFull,
+        PhoenixFeather_HealX_ReviveTo2IfDead,
+        Pickpocket_StealOneRandomHandCard,
+        Shield_GainXArmor,
+        Turtle_TargetSkipsNextTurn
     }
 
+    // ───────────────────────── Gameplay (fields) ─────────────────────────
     [Header("Gameplay")]
     public PlayStyle playStyle = PlayStyle.Instant;
     public EffectType effect = EffectType.DealDamage;
 
-    [Tooltip("Generic base amount for effects (damage/heal/etc.). Tier values override this when present.")]
+    [Tooltip("Generic base amount for effects (damage/heal/etc.). Tier.attack overrides this.")]
     public int amount = 1;
 
-    [Tooltip("Turns for Poison/Delayed etc.")]
+    [Tooltip("Base duration in turns for certain effects.")]
     public int durationTurns = 0;
 
     [Tooltip("For ChainArc-style effects (extra jumps after the first target).")]
     public int arcs = 0;
 
-    [Tooltip("If true, applies to all players (e.g., HealAll).")]
-    public bool targetAll = false;
-
-    // ───────────────────────────────────────────────── Costs ────────────────────────────────────────────────────
+    // ───────────────────────── Costs ─────────────────────────
     [Header("Costs")]
-    [Tooltip("Base poker chip cost to CAST/SET this card when the tier doesn't override.")]
+    [Tooltip("Base poker chip cost to CAST this card (tiers can override).")]
     public int chipCost = 0;
 
-    // ───────────────────────────────────────────────── Tiers ────────────────────────────────────────────────────
+    // ───────────────────────── Tiers ─────────────────────────
     [System.Serializable]
     public struct UpgradeTier
     {
-        [Tooltip("Per-level 'attack' number (e.g., damage/heal).")]
+        [Tooltip("Per-level primary amount (damage/heal/armor/etc.).")]
         public int attack;
 
-        [Tooltip("Per-level 'defense' number (optional stat for your designs).")]
+        [Tooltip("Optional secondary stat slot.")]
         public int defense;
 
         [Tooltip("Gold to upgrade FROM the previous tier TO this tier.")]
         public int costGold;
 
-        [TextArea]
-        [Tooltip("Optional per-tier rules text shown on the card.")]
+        [TextArea, Tooltip("Optional per-tier rules text shown on the card.")]
         public string effectText;
 
-        [Tooltip("Optional per-level chip cost to CAST/SET. 0 = use CardDefinition.chipCost.")]
+        [Tooltip("Optional per-level chip cost to CAST. 0 = use CardDefinition.chipCost.")]
         public int castChipCost;
     }
 
     [Header("Tiers (index 0 = level 1)")]
     public UpgradeTier[] tiers;
 
-    // ───────────────────────────────────────────────── Helpers ─────────────────────────────────────────────────
+    // ───────────────────────── Helpers ─────────────────────────
     public int MaxLevel => (tiers != null && tiers.Length > 0) ? tiers.Length : 1;
 
     public UpgradeTier GetTier(int level)
@@ -86,9 +97,6 @@ public class CardDefinition : ScriptableObject
         return tiers[i];
     }
 
-    /// <summary>
-    /// Convenience: chip cost for a given level (uses tier.castChipCost if >0, else base chipCost).
-    /// </summary>
     public int GetCastChipCost(int level)
     {
         var t = GetTier(level);
