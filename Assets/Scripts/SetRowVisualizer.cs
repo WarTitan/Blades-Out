@@ -19,10 +19,20 @@ public class SetRowVisualizer : MonoBehaviour
 
     Transform _lastAnchor;
 
+    // --- Unity 2023+ compat helper ---
+    static T FindFirst<T>() where T : Object
+    {
+#if UNITY_2023_1_OR_NEWER
+        return Object.FindFirstObjectByType<T>();
+#else
+        return Object.FindObjectOfType<T>();
+#endif
+    }
+
     void Awake()
     {
         if (!playerState) playerState = GetComponent<PlayerState>();
-        if (!database) database = FindObjectOfType<CardDatabase>();
+        if (!database) database = FindFirst<CardDatabase>();
     }
 
     void OnEnable()

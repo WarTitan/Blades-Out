@@ -4,6 +4,19 @@ using System.Linq;
 
 public static class CardEffectResolver
 {
+    // ---------- compat helper for Unity 2023+ ----------
+    // Use FindObjectsByType on 2023+, fall back to FindObjectsOfType on older versions.
+    static T[] FindAll<T>(bool sorted = false) where T : UnityEngine.Object
+    {
+#if UNITY_2023_1_OR_NEWER
+        return UnityEngine.Object.FindObjectsByType<T>(
+            sorted ? UnityEngine.FindObjectsSortMode.InstanceID
+                   : UnityEngine.FindObjectsSortMode.None);
+#else
+        return UnityEngine.Object.FindObjectsOfType<T>();
+#endif
+    }
+
     // ===== INSTANTS & SETUP =====
     [Server]
     public static void PlayInstant(CardDefinition def, int level, PlayerState caster, PlayerState target)
@@ -32,7 +45,7 @@ public static class CardEffectResolver
                 break;
 
             case CardDefinition.EffectType.Bomb_AllPlayersTakeX:
-                foreach (var p in Object.FindObjectsOfType<PlayerState>())
+                foreach (var p in FindAll<PlayerState>())
                     p.Server_ApplyDamage(caster, X);
                 break;
 
@@ -42,7 +55,7 @@ public static class CardEffectResolver
                 break;
 
             case CardDefinition.EffectType.BlackHole_DiscardHandsRedrawSame:
-                foreach (var p in Object.FindObjectsOfType<PlayerState>())
+                foreach (var p in FindAll<PlayerState>())
                 {
                     int count = p.handIds.Count;
                     p.handIds.Clear();
@@ -121,7 +134,7 @@ public static class CardEffectResolver
                 break;
 
             case CardDefinition.EffectType.HealAll:
-                foreach (var p in Object.FindObjectsOfType<PlayerState>())
+                foreach (var p in FindAll<PlayerState>())
                     p.Server_Heal(X);
                 break;
 
