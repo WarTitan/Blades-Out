@@ -10,61 +10,68 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4acf1391760cecd4dad51fe600af9a76, type: 3}
-  m_Name: Phoenix Feather
+  m_Name: Cactus
   m_EditorClassIdentifier: Assembly-CSharp::CardDefinition
-  id: 5
-  cardName: Phoenix Feather
-  description: Heal 2 HP + revive if at 0 HP
-  image: {fileID: -915667492, guid: 4ad16fa4dd21835439d953d92db183c5, type: 3}
+  id: 6
+  cardName: Cactus
+  description: 'Reflect 1 DMG, lasts 3 turns
+
+'
+  image: {fileID: 591096369, guid: 1073b574bfb86a547a7e64d405890c07, type: 3}
   playStyle: 0
-  effect: 19
+  effect: 12
   amount: 1
   durationTurns: 0
   arcs: 0
   chipCost: 2
   tiers:
+  - attack: 1
+    defense: 0
+    costGold: 2
+    effectText: Reflect 1 DMG, lasts 3 turns
+    castChipCost: 0
   - attack: 2
     defense: 0
-    costGold: 0
-    effectText: Heal 2 HP + revive if at 0 HP
+    costGold: 2
+    effectText: Reflect 2 DMG, lasts 3 turns
     castChipCost: 0
   - attack: 3
     defense: 0
-    costGold: 0
-    effectText: Heal 3 HP + revive if at 0 HP
+    costGold: 2
+    effectText: Reflect 3 DMG, lasts 3 turns
     castChipCost: 0
   - attack: 4
     defense: 0
-    costGold: 0
-    effectText: Heal 4 HP + revive if at 0 HP
+    costGold: 2
+    effectText: Reflect 4 DMG, lasts 3 turns
     castChipCost: 0
   - attack: 5
     defense: 0
-    costGold: 0
-    effectText: Heal 5 HP + revive if at 0 HP
+    costGold: 2
+    effectText: Reflect 5 DMG, lasts 3 turns
     castChipCost: 0
   - attack: 6
     defense: 0
-    costGold: 0
-    effectText: Heal 6 HP + revive if at 0 HP
+    costGold: 2
+    effectText: Reflect 6 DMG, lasts 3 turns
     castChipCost: 0
   - attack: 7
     defense: 0
-    costGold: 0
-    effectText: Heal 7 HP + revive if at 0 HP
+    costGold: 2
+    effectText: Reflect 7 DMG, lasts 3 turns
     castChipCost: 0
   - attack: 8
     defense: 0
-    costGold: 0
-    effectText: Heal 8 HP + revive if at 0 HP
+    costGold: 2
+    effectText: Reflect 8 DMG, lasts 3 turns
     castChipCost: 0
   - attack: 9
     defense: 0
-    costGold: 0
-    effectText: Heal 9 HP + revive if at 0 HP
+    costGold: 2
+    effectText: Reflect 9 DMG, lasts 3 turns
     castChipCost: 0
   - attack: 10
     defense: 0
-    costGold: 0
-    effectText: Heal 10 HP + revive if at 0 HP
+    costGold: 2
+    effectText: Reflect 10 DMG, lasts 3 turns
     castChipCost: 0

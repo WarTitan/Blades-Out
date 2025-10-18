@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4acf1391760cecd4dad51fe600af9a76, type: 3}
+  m_Name: Bear trap
+  m_EditorClassIdentifier: Assembly-CSharp::CardDefinition
+  id: 11
+  cardName: Bear trap
+  description: 1st attacker takes 1 DMG
+  image: {fileID: -351392540, guid: 733b5cfd81e3f0546a65c5cfaba756d5, type: 3}
+  playStyle: 0
+  effect: 8
+  amount: 1
+  durationTurns: 0
+  arcs: 0
+  chipCost: 1
+  tiers:
+  - attack: 1
+    defense: 0
+    costGold: 1
+    effectText: 1st attacker takes 1 DMG
+    castChipCost: 1
+  - attack: 2
+    defense: 0
+    costGold: 1
+    effectText: 1st attacker takes 2 DMG
+    castChipCost: 1
+  - attack: 3
+    defense: 0
+    costGold: 1
+    effectText: 1st attacker takes 3 DMG
+    castChipCost: 1
+  - attack: 4
+    defense: 0
+    costGold: 1
+    effectText: 1st attacker takes 4 DMG
+    castChipCost: 1
+  - attack: 5
+    defense: 0
+    costGold: 1
+    effectText: 1st attacker takes 5 DMG
+    castChipCost: 1
+  - attack: 6
+    defense: 0
+    costGold: 1
+    effectText: 1st attacker takes 6 DMG
+    castChipCost: 1
+  - attack: 7
+    defense: 0
+    costGold: 1
+    effectText: 1st attacker takes 7 DMG
+    castChipCost: 1
+  - attack: 8
+    defense: 0
+    costGold: 1
+    effectText: 1st attacker takes 8 DMG
+    castChipCost: 1
+  - attack: 9
+    defense: 0
+    costGold: 1
+    effectText: 1st attacker takes 9 DMG
+    castChipCost: 1
+  - attack: 10
+    defense: 0
+    costGold: 1
+    effectText: 1st attacker takes 10 DMG
+    castChipCost: 1
