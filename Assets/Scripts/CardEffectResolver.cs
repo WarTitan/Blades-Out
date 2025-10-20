@@ -30,16 +30,7 @@ public static class CardEffectResolver
 
         switch (def.effect)
         {
-            // ───────── Named instants ─────────
-            case CardDefinition.EffectType.Knife_DealX:
-                if (target != null) target.Server_ApplyDamage(caster, X);
-                break;
-
-            case CardDefinition.EffectType.KnifePotion_DealX_HealXSelf:
-                if (target != null) target.Server_ApplyDamage(caster, X);
-                caster.Server_Heal(X);
-                break;
-
+            // ───────── Named instants (no target) ─────────
             case CardDefinition.EffectType.LovePotion_HealXSelf:
                 caster.Server_Heal(X);
                 break;
@@ -50,7 +41,7 @@ public static class CardEffectResolver
                 break;
 
             case CardDefinition.EffectType.PhoenixFeather_HealX_ReviveTo2IfDead:
-                // proactive self-cast: just heal for X
+                // Proactive cast: just heal now (auto-revive is handled in lethal damage path).
                 caster.Server_Heal(X);
                 break;
 
@@ -68,30 +59,14 @@ public static class CardEffectResolver
                 caster.Server_AddArmor(X);
                 break;
 
-            case CardDefinition.EffectType.Pickpocket_StealOneRandomHandCard:
-                if (target != null && target.handIds.Count > 0)
-                {
-                    int take = Random.Range(0, target.handIds.Count);
-                    int cardId = target.handIds[take];
-                    byte lvl = target.handLvls[take];
-                    target.Server_RemoveHandAt(take);
-                    caster.Server_AddToHand(cardId, lvl);
-                }
+            // ───────── Named instants with target ─────────
+            case CardDefinition.EffectType.Knife_DealX:
+                if (target != null) target.Server_ApplyDamage(caster, X);
                 break;
 
-            case CardDefinition.EffectType.GoblinHands_MoveOneSetItemToCaster:
-                // Moves the FIRST set item found from target to caster.
-                if (target != null)
-                {
-                    int idx = FindFirstMovableSetIndex(target);
-                    if (idx >= 0)
-                    {
-                        int id = target.setIds[idx];
-                        byte lvl = target.setLvls[idx];
-                        target.Server_ConsumeSetAt(idx);
-                        caster.Server_AddToSet(id, lvl);
-                    }
-                }
+            case CardDefinition.EffectType.KnifePotion_DealX_HealXSelf:
+                if (target != null) target.Server_ApplyDamage(caster, X);
+                caster.Server_Heal(X);
                 break;
 
             case CardDefinition.EffectType.C4_ExplodeOnTargetAfter3Turns:
@@ -103,6 +78,49 @@ public static class CardEffectResolver
                 }
                 break;
 
+            case CardDefinition.EffectType.GoblinHands_MoveOneSetItemToCaster:
+                // Move the first set item from TARGET to a RANDOM OTHER PLAYER (not the target).
+                if (target != null && target.setIds.Count > 0)
+                {
+                    int idx = FindFirstMovableSetIndex(target);
+                    if (idx >= 0)
+                    {
+                        int movedId = target.setIds[idx];
+                        byte movedLvl = target.setLvls[idx];
+                        target.Server_ConsumeSetAt(idx);
+
+                        // Pick a random player that's NOT the original target. If none, fall back to caster.
+                        var allPlayers = FindAll<PlayerState>();
+                        var candidates = allPlayers.Where(p => p != null && p != target).ToArray();
+                        PlayerState destination = null;
+
+                        if (candidates.Length > 0)
+                        {
+                            int r = Random.Range(0, candidates.Length);
+                            destination = candidates[r];
+                        }
+                        else
+                        {
+                            destination = caster;
+                        }
+
+                        if (destination != null)
+                            destination.Server_AddToSet(movedId, movedLvl);
+                    }
+                }
+                break;
+
+            case CardDefinition.EffectType.Pickpocket_StealOneRandomHandCard:
+                if (target != null && target.handIds.Count > 0)
+                {
+                    int take = Random.Range(0, target.handIds.Count);
+                    int cardId = target.handIds[take];
+                    byte lvl = target.handLvls[take];
+                    target.Server_RemoveHandAt(take);
+                    caster.Server_AddToHand(cardId, lvl);
+                }
+                break;
+
             case CardDefinition.EffectType.Turtle_TargetSkipsNextTurn:
                 if (target != null)
                 {
@@ -111,20 +129,19 @@ public static class CardEffectResolver
                 }
                 break;
 
-            // ───────── Named reactions put in set by player (off-turn) ─────────
-            // NOTE: These are placed via CmdSetCard; their effects are in TryReactOnIncomingHit / status system.
-            case CardDefinition.EffectType.Cactus_ReflectUpToX_For3Turns:
-            case CardDefinition.EffectType.BearTrap_FirstAttackerTakesX:
-            case CardDefinition.EffectType.MirrorShield_ReflectFirstAttackFull:
-                // Nothing to do here on instant cast; these are handled as SET reactions elsewhere.
-                break;
-
             case CardDefinition.EffectType.Mirror_CopyLastPlayedByYou:
-                // Handled in PlayerState: Mirror stays in hand. Here we just fire the stored effect if valid.
+                // Mirror stays in hand; fire stored effect.
                 caster.Server_PlayLastStoredCardCopy(target);
                 break;
 
-            // ───────── Legacy effects (kept working) ─────────
+            // ───────── Set reactions (placed via CmdSetCard; triggered on attack) ─────────
+            case CardDefinition.EffectType.Cactus_ReflectUpToX_For3Turns:
+            case CardDefinition.EffectType.BearTrap_FirstAttackerTakesX:
+            case CardDefinition.EffectType.MirrorShield_ReflectFirstAttackFull:
+                // No direct instant effect here; handled as set/status.
+                break;
+
+            // ───────── Legacy (kept for compatibility) ─────────
             case CardDefinition.EffectType.DealDamage:
                 if (target != null) target.Server_ApplyDamage(caster, X);
                 break;
@@ -156,14 +173,13 @@ public static class CardEffectResolver
             caster.Server_RecordLastPlayed(def.id, level);
     }
 
-    // Find a movable item (skip non-item reactions if you want). Here we just take first.
+    // Find a movable item (here: first set entry).
     static int FindFirstMovableSetIndex(PlayerState ps)
     {
         for (int i = 0; i < ps.setIds.Count; i++)
         {
             var d = ps.database?.Get(ps.setIds[i]);
             if (d == null) continue;
-            // Treat anything in set as movable except MirrorShield (up to you)
             return i;
         }
         return -1;
@@ -177,7 +193,9 @@ public static class CardEffectResolver
         if (defender == null) return;
 
         // 1) First, check durable statuses (e.g., Cactus reflect across turns)
-        defender.Server_TryApplyCactusStatusReflect(attacker, ref incomingDamage);
+        int incomingBefore = incomingDamage;
+        defender.Server_TryApplyCactusStatusReflect(attacker, ref incomingBefore);
+        incomingDamage = incomingBefore;
 
         // 2) Then scan defender's set row for one-shot reactions
         for (int i = 0; i < defender.setIds.Count; i++)
@@ -210,7 +228,7 @@ public static class CardEffectResolver
                     }
                     break;
 
-                    // (Cactus is now status-driven; leave set card for visuals; status decrements on turn start)
+                    // (Cactus is status-driven; the set card persists as a visual until duration ends.)
             }
         }
     }

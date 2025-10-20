@@ -3,72 +3,100 @@ using Mirror;
 using UnityEngine.EventSystems;
 using System.Text;
 
+[AddComponentMenu("Cards/Card Raycaster (Root, Client-Only, Verbose)")]
 public class CardRaycasterOnRoot : MonoBehaviour
 {
     [Header("Raycast")]
     public Camera cam;
-    public float maxDistance = 100f;
-    [Tooltip("Optional filter. Leave empty to hit everything.")]
     public LayerMask raycastMask = ~0;
+    public float maxDistance = 100f;
+
+    [Header("Client gating")]
+    public bool preferUpgradeWhenClientThinksOffTurn = false;
+
+    [Header("Self-heal")]
+    public bool allowOwnerInference = true;
 
     [Header("Debug")]
-    public bool verbose = false;
-
-    [Header("Debug Overlay (On-Screen)")]
-    public bool debugOverlay = false;
+    public bool verbose = true;
+    public bool debugOverlay = true;
     public Vector2 overlayPosition = new Vector2(16, 16);
-    public int overlayWidth = 420;
+    public int overlayWidth = 500;
 
-    // selection (hand)
     int selectedHandIndex = -1;
     CardView selectedView;
 
     PlayerState localPlayer;
     TurnManager tm;
 
-    // last debug reason shown in overlay
     string lastFailureReason = "";
     float lastFailureTime = 0f;
+    string lastHitInfo = "";
 
-    // === PUBLIC API used by PlayerHotkeys/UI ===
+    // DB cache + warning gate
+    CardDatabase cachedDB;
+    static bool warnedNoDB = false;
+
     public int SelectedHandIndex => selectedHandIndex;
     public void DeselectPublic() => ClearSelection();
     public void PublicTrySetSelected() => TrySetSelected();
     public void PublicTryCastSelectedOn(PlayerState target) => TryCastSelectedOn(target);
     public void PublicSelectCardInHand(CardView cv) => SelectCardInHand(cv);
 
-    void Awake()
+    void Start()
     {
+        TryResolveLocalPlayer(true);
         if (!cam) cam = Camera.main;
+        if (verbose) Debug.Log("[Raycaster] Boot complete.");
     }
 
     void Update()
     {
-        if (localPlayer == null) TryResolveLocalPlayer();
-        if (tm == null) tm = TurnManager.Instance;
-        if (!cam || !localPlayer) return;
+        if (localPlayer == null || tm == null || cam == null)
+        {
+            TryResolveLocalPlayer(false);
+            if (!cam) cam = Camera.main;
+        }
+        if (localPlayer == null || cam == null) return;
 
-        // Right-click = deselect
         if (Input.GetMouseButtonDown(1))
         {
             ClearSelection();
             return;
         }
 
-        // Ignore clicks over UI
         if (EventSystem.current && EventSystem.current.IsPointerOverGameObject())
             return;
 
-        // Left click = main interaction
         if (Input.GetMouseButtonDown(0))
         {
             RaycastHit hit;
+            lastHitInfo = "";
             if (TryRaycast(out hit))
             {
-                // 1) Card clicked?
+                LogHitInfo(hit);
+
                 var cv = hit.transform.GetComponentInParent<CardView>();
-                if (cv && cv.owner == localPlayer)
+                if (cv)
                 {
+                    // Bind missing owner fast if the card lives under our PlayerState
+                    if (allowOwnerInference && cv.owner == null)
+                    {
+                        var parentPs = hit.transform.GetComponentInParent<PlayerState>();
+                        if (parentPs == localPlayer)
+                        {
+                            cv.Init(localPlayer, cv.handIndex, cv.cardId, cv.level, cv.isInHand);
+                            if (verbose) Debug.Log("[Raycaster] Fixed missing CardView.owner by inferring parent PlayerState.");
+                        }
+                    }
+
+                    if (cv.owner != localPlayer)
+                    {
+                        Warn($"Ignored card (not yours). ownerSeat={(cv.owner ? cv.owner.seatIndex : -999)} localSeat={localPlayer.seatIndex}");
+                        ClearSelection();
+                        return;
+                    }
+
                     if (cv.isInHand)
                     {
                         HandleClickHandCard(cv);
@@ -76,23 +104,24 @@ public class CardRaycasterOnRoot : MonoBehaviour
                     }
                     else
                     {
-                        // set-row card clicked -> ignore for play, just clear
                         if (verbose) Debug.Log("[Raycaster] Clicked a set-row card. Selection cleared.");
                         ClearSelection();
                         return;
                     }
                 }
 
-                // 2) Player clicked? (cast for InstantWithTarget if we have selection)
-                var ps = hit.transform.GetComponentInParent<PlayerState>();
-                if (ps && selectedHandIndex >= 0)
+                var ps2 = hit.transform.GetComponentInParent<PlayerState>();
+                if (ps2 && selectedHandIndex >= 0)
                 {
-                    TryCastSelectedOn(ps);
+                    TryCastSelectedOn(ps2);
                     return;
                 }
             }
+            else
+            {
+                if (verbose) Debug.Log("[Raycaster] Raycast hit nothing.");
+            }
 
-            // Clicked nothing relevant
             ClearSelection();
         }
     }
@@ -105,29 +134,31 @@ public class CardRaycasterOnRoot : MonoBehaviour
         sb.AppendLine("<b>Raycaster Debug</b>");
 
         bool myTurn = tm && tm.IsPlayersTurn(localPlayer);
-        sb.AppendLine($"Turn: {(myTurn ? "YOURS" : "Other")}");
+        sb.AppendLine($"Local: seat={localPlayer.seatIndex}, netId={localPlayer.netId}");
+        sb.AppendLine($"Turn (client view): {(myTurn ? "YOURS" : "Other")}");
         sb.AppendLine($"Chips: {localPlayer.chips}/{localPlayer.maxChips}   Gold: {localPlayer.gold}");
         sb.AppendLine($"Set Count: {localPlayer.setIds.Count}");
 
+        if (!string.IsNullOrEmpty(lastHitInfo))
+        {
+            sb.AppendLine("");
+            sb.AppendLine("<b>Last Raycast:</b>");
+            sb.AppendLine(lastHitInfo);
+        }
+
         if (selectedHandIndex >= 0 && selectedHandIndex < localPlayer.handIds.Count)
         {
-            var id = localPlayer.handIds[selectedHandIndex];
-            var lvl = localPlayer.handLvls[selectedHandIndex];
-            var db = localPlayer.database;
-            var def = db ? db.Get(id) : null;
+            int id = localPlayer.handIds[selectedHandIndex];
+            int lvl = localPlayer.handLvls[selectedHandIndex];
+            var def = ResolveDef(id);
 
+            sb.AppendLine("");
             sb.AppendLine("<b>Selected:</b>");
             if (def != null)
             {
-                sb.AppendLine($"- {def.cardName}  (id {id}, L{lvl}, style {def.playStyle}, effect {def.effect})");
+                var inferred = InferPlayStyle(def);
+                sb.AppendLine($"- {def.cardName}  (id {id}, L{lvl}, style {def.playStyle} -> inferred {inferred}, effect {def.effect})");
                 sb.AppendLine($"- Chip Cost: {def.GetCastChipCost(lvl)}");
-
-                string castReason, setReason;
-                CanCastReason(out castReason, localPlayer, selectedHandIndex, target: null);
-                CanSetReason(out setReason, localPlayer, selectedHandIndex);
-
-                sb.AppendLine($"Cast OK? {(string.IsNullOrEmpty(castReason) ? "Yes" : "No")} {(castReason ?? "")}");
-                sb.AppendLine($"Set  OK? {(string.IsNullOrEmpty(setReason) ? "Yes" : "No")} {(setReason ?? "")}");
             }
             else
             {
@@ -136,6 +167,7 @@ public class CardRaycasterOnRoot : MonoBehaviour
         }
         else
         {
+            sb.AppendLine("");
             sb.AppendLine("<i>No hand card selected</i>");
         }
 
@@ -146,101 +178,176 @@ public class CardRaycasterOnRoot : MonoBehaviour
         }
 
         var style = new GUIStyle(GUI.skin.box) { richText = true, alignment = TextAnchor.UpperLeft, wordWrap = true };
-        Rect r = new Rect(overlayPosition.x, overlayPosition.y, overlayWidth, Screen.height * 0.5f);
+        Rect r = new Rect(overlayPosition.x, overlayPosition.y, overlayWidth, Screen.height * 0.7f);
         GUI.Box(r, sb.ToString(), style);
     }
 
-    // ───────── Core helpers ─────────
-    void TryResolveLocalPlayer()
+    // ---------- Core helpers ----------
+    void TryResolveLocalPlayer(bool bootLog)
     {
-        if (!NetworkClient.active || NetworkClient.localPlayer == null) return;
-        localPlayer = NetworkClient.localPlayer.GetComponent<PlayerState>();
-        if (!cam) cam = Camera.main;
-        if (verbose && localPlayer != null) Debug.Log("[Raycaster] Local player & camera resolved.");
+        if (NetworkClient.active && NetworkClient.localPlayer != null)
+        {
+            var ps = NetworkClient.localPlayer.GetComponent<PlayerState>()
+                     ?? NetworkClient.localPlayer.GetComponentInChildren<PlayerState>(true);
+            if (ps != null && ps != localPlayer)
+            {
+                localPlayer = ps;
+                tm = TurnManager.Instance;
+                if (bootLog || verbose)
+                    Debug.Log($"[Raycaster] Local player resolved (localPlayer): seat={ps.seatIndex}, netId={ps.netId}");
+            }
+        }
+
+        // Pre-bind DB if possible
+        ResolveDB();
+    }
+
+    CardDatabase ResolveDB()
+    {
+        if (cachedDB) return cachedDB;
+
+        // 1) Use player's reference if present
+        if (localPlayer && localPlayer.database) cachedDB = localPlayer.database;
+
+        // 2) Find a CardDatabase MonoBehaviour in the scene
+        if (!cachedDB)
+        {
+#if UNITY_2023_1_OR_NEWER
+            cachedDB = Object.FindFirstObjectByType<CardDatabase>();
+#else
+            cachedDB = Object.FindObjectOfType<CardDatabase>();
+#endif
+        }
+
+        // 3) As a last resort, check any PlayerState.database in scene
+        if (!cachedDB)
+        {
+#if UNITY_2023_1_OR_NEWER
+            var players = Object.FindObjectsByType<PlayerState>(FindObjectsSortMode.None);
+#else
+            var players = Object.FindObjectsOfType<PlayerState>();
+#endif
+            foreach (var p in players)
+            {
+                if (p != null && p.database != null)
+                {
+                    cachedDB = p.database;
+                    break;
+                }
+            }
+        }
+
+        if (!cachedDB && !warnedNoDB)
+        {
+            warnedNoDB = true;
+            Warn("No CardDatabase found in scene.");
+        }
+        else if (cachedDB && verbose)
+        {
+            Debug.Log("[Raycaster] CardDatabase resolved.");
+        }
+
+        // keep local player in sync (client-side only)
+        if (cachedDB && localPlayer && localPlayer.database == null)
+            localPlayer.database = cachedDB;
+
+        return cachedDB;
+    }
+
+    CardDefinition ResolveDef(int cardId)
+    {
+        var db = ResolveDB();
+        if (!db) return null;
+        var def = db.Get(cardId);
+        if (def == null && verbose) Debug.LogWarning($"[Raycaster] CardDefinition not found for cardId={cardId}.");
+        return def;
     }
 
     bool TryRaycast(out RaycastHit hit)
     {
         Ray r = cam.ScreenPointToRay(Input.mousePosition);
-        if (raycastMask.value == ~0)
-            return Physics.Raycast(r, out hit, maxDistance, ~0, QueryTriggerInteraction.Collide);
-        else
-            return Physics.Raycast(r, out hit, maxDistance, raycastMask, QueryTriggerInteraction.Collide);
+        return Physics.Raycast(r, out hit, maxDistance, raycastMask, QueryTriggerInteraction.Collide);
     }
 
     void HandleClickHandCard(CardView cv)
     {
-        bool myTurn = tm && tm.IsPlayersTurn(localPlayer);
+        // Always attempt server command only when we know what to do.
+        bool clientThinksMyTurn = tm && tm.IsPlayersTurn(localPlayer);
 
-        // NOT my turn → try upgrade immediately
-        if (!myTurn)
+        if (verbose)
+            Debug.Log("[Raycaster] Click hand card: handIndex=" + cv.handIndex + ", cardId=" + cv.cardId + ", lvl=" + cv.level + ", inHand=" + cv.isInHand);
+
+        // Repair init if needed
+        if ((cv.cardId <= 0 || cv.level <= 0) && cv.handIndex >= 0 && cv.handIndex < localPlayer.handIds.Count)
         {
-            int handIndex = cv.handIndex;
-            if (handIndex >= 0)
-            {
-                if (verbose) Debug.Log($"[Raycaster] Off-turn click: try upgrade hand[{handIndex}]");
-                localPlayer.CmdUpgradeCard(handIndex);
-            }
+            cv.cardId = localPlayer.handIds[cv.handIndex];
+            cv.level = localPlayer.handLvls[cv.handIndex];
+            if (verbose) Debug.Log("[Raycaster] Repaired CardView cardId/level from PlayerState hand arrays.");
+        }
+
+        if (cv.handIndex < 0)
+        {
+            Warn("CardView.handIndex is -1. Fix HandVisualizer to Init(...) with correct index.");
             ClearSelection();
             return;
         }
 
-        // MY turn
-        var db = localPlayer.database;
-        var def = db ? db.Get(cv.cardId) : null;
-        if (def == null) { ClearSelection(); return; }
+        // OFF-TURN: try UPGRADE (server enforces and uses gold)
+        if (!clientThinksMyTurn && preferUpgradeWhenClientThinksOffTurn)
+        {
+            localPlayer.CmdUpgradeCard(cv.handIndex);
+            if (verbose) Debug.Log("[Raycaster] Off-turn: requested upgrade.");
+            ClearSelection();
+            return;
+        }
 
-        int handIndexNow = cv.handIndex;
-        int lvl = cv.level;
+        // MY TURN
+        var def = ResolveDef(cv.cardId);
+        if (def == null)
+        {
+            // Do NOT auto-cast; we cannot infer play style.
+            // Keep selection so user can click a target; server will enforce target requirement.
+            if (verbose) Debug.LogWarning("[Raycaster] No definition on clicked card; selecting and waiting for target.");
+            SelectCardInHand(cv);
+            return;
+        }
 
-        switch (def.playStyle)
+        var style = InferPlayStyle(def);
+
+        switch (style)
         {
             case CardDefinition.PlayStyle.Instant:
-                {
-                    // Auto-cast immediately
-                    string reasonCast;
-                    if (!string.IsNullOrEmpty(CanCastReason(out reasonCast, localPlayer, handIndexNow, target: null)))
-                    {
-                        Fail(reasonCast);
-                        ClearSelection();
-                        return;
-                    }
-                    localPlayer.CmdPlayInstant(handIndexNow, 0);
-                    if (verbose) Debug.Log("[Raycaster] Auto-cast Instant.");
-                    ClearSelection();
-                    break;
-                }
+                localPlayer.CmdPlayInstant(cv.handIndex, 0);
+                if (verbose) Debug.Log("[Raycaster] Requested cast: Instant.");
+                ClearSelection();
+                break;
 
             case CardDefinition.PlayStyle.InstantWithTarget:
+                SelectCardInHand(cv);
+                if (verbose)
                 {
-                    // Select, then wait for enemy click
-                    SelectCardInHand(cv);
-                    if (verbose) Debug.Log("[Raycaster] Selected InstantWithTarget. Click an enemy to cast.");
-                    break;
+                    if (def.playStyle != style)
+                        Debug.Log("[Raycaster] Auto-corrected PlayStyle " + def.playStyle + " -> " + style + " for '" + def.cardName + "'.");
+                    Debug.Log("[Raycaster] Selected InstantWithTarget. Click an enemy to cast.");
                 }
+                break;
 
             case CardDefinition.PlayStyle.SetReaction:
-                {
-                    // Auto-set if allowed (chips + capacity)
-                    string reasonSet;
-                    if (!string.IsNullOrEmpty(CanSetReason(out reasonSet, localPlayer, handIndexNow)))
-                    {
-                        Fail(reasonSet);
-                        ClearSelection();
-                        return;
-                    }
-                    localPlayer.CmdSetCard(handIndexNow);
-                    if (verbose) Debug.Log("[Raycaster] Auto-set SetReaction.");
-                    ClearSelection();
-                    break;
-                }
+                localPlayer.CmdSetCard(cv.handIndex);
+                if (verbose) Debug.Log("[Raycaster] Requested set: SetReaction.");
+                ClearSelection();
+                break;
         }
     }
 
+
     void SelectCardInHand(CardView cv)
     {
-        if (cv == null || cv.owner != localPlayer || !cv.isInHand) return;
-        ClearSelection(); // single select
+        if (cv == null) return;
+        if (cv.owner != localPlayer) { Warn("Select ignored: not your card."); return; }
+        if (!cv.isInHand) { Warn("Select ignored: not in hand."); return; }
+
+        ClearSelection();
         selectedView = cv;
         selectedHandIndex = cv.handIndex;
         if (verbose) Debug.Log($"[Raycaster] Selected hand[{selectedHandIndex}] {DescribeSelectedForLog()}");
@@ -253,53 +360,71 @@ public class CardRaycasterOnRoot : MonoBehaviour
         lastFailureReason = "";
     }
 
-    // Called by hotkeys/UI: try to set the currently selected hand card
     void TrySetSelected()
     {
-        if (localPlayer == null || tm == null) return;
-        if (selectedHandIndex < 0) { Fail("Select a HAND card to set."); return; }
-
-        string reason;
-        if (!string.IsNullOrEmpty(CanSetReason(out reason, localPlayer, selectedHandIndex)))
-        {
-            Fail(reason);
-            return;
-        }
-
+        if (localPlayer == null) return;
+        if (selectedHandIndex < 0) { Warn("Select a HAND card to set."); return; }
         localPlayer.CmdSetCard(selectedHandIndex);
-        if (verbose) Debug.Log("[Raycaster] Set OK -> CmdSetCard sent.");
+        if (verbose) Debug.Log("[Raycaster] Requested set via selection.");
         ClearSelection();
     }
 
     void TryCastSelectedOn(PlayerState target)
     {
-        if (localPlayer == null || tm == null) return;
+        if (localPlayer == null) return;
         if (selectedHandIndex < 0) return;
 
-        // Ensure selected card is InstantWithTarget
-        var db = localPlayer.database;
-        var def = db ? db.Get(localPlayer.handIds[selectedHandIndex]) : null;
-        if (def == null) { ClearSelection(); return; }
-        if (def.playStyle != CardDefinition.PlayStyle.InstantWithTarget)
+        // Try to get definition (may be null on clone before DB resolves)
+        CardDefinition def = null;
+        if (selectedHandIndex < localPlayer.handIds.Count)
+            def = ResolveDef(localPlayer.handIds[selectedHandIndex]);
+
+        // If def known and not a targeted card, ignore.
+        if (def != null)
         {
-            ClearSelection();
-            return;
+            var style = InferPlayStyle(def);
+            if (style != CardDefinition.PlayStyle.InstantWithTarget)
+            {
+                ClearSelection();
+                return;
+            }
         }
 
-        string reason;
-        if (!string.IsNullOrEmpty(CanCastReason(out reason, localPlayer, selectedHandIndex, target)))
-        {
-            Fail(reason);
-            return;
-        }
-
+        // Send with target anyway; server will enforce and deny if not a targeted card.
         uint netId = target ? target.netId : 0;
         localPlayer.CmdPlayInstant(selectedHandIndex, netId);
-        if (verbose) Debug.Log("[Raycaster] Cast on target OK.");
+        if (verbose) Debug.Log("[Raycaster] Requested cast on target.");
         ClearSelection();
     }
 
-    // ───────── Validation + Debug helpers ─────────
+    void LogHitInfo(RaycastHit hit)
+    {
+        var tr = hit.transform;
+        var sb = new StringBuilder();
+        sb.AppendLine($"Object: {tr.name} (layer={LayerMask.LayerToName(tr.gameObject.layer)}/{tr.gameObject.layer})");
+        sb.AppendLine($"Path: {GetHierarchyPath(tr)}");
+        var comps = tr.GetComponents<Component>();
+        sb.Append("Comps: ");
+        for (int i = 0; i < comps.Length; i++)
+        {
+            if (i > 0) sb.Append(", ");
+            sb.Append(comps[i].GetType().Name);
+        }
+        lastHitInfo = sb.ToString();
+        if (verbose) Debug.Log("[Raycaster] " + lastHitInfo);
+    }
+
+    string GetHierarchyPath(Transform t)
+    {
+        var sb = new StringBuilder();
+        while (t != null)
+        {
+            sb.Insert(0, "/" + t.name);
+            t = t.parent;
+        }
+        return sb.ToString();
+    }
+
     string DescribeSelectedForLog()
     {
         if (localPlayer == null || selectedHandIndex < 0 || selectedHandIndex >= localPlayer.handIds.Count)
@@ -307,131 +432,45 @@ public class CardRaycasterOnRoot : MonoBehaviour
 
         int id = localPlayer.handIds[selectedHandIndex];
         int lvl = localPlayer.handLvls[selectedHandIndex];
-        var def = localPlayer.database ? localPlayer.database.Get(id) : null;
+        var def = ResolveDef(id);
 
         if (def == null) return $"id={id}, L{lvl} (no def)";
         int chip = def.GetCastChipCost(lvl);
         bool myTurn = tm && tm.IsPlayersTurn(localPlayer);
-        return $"{def.cardName} (id {id}) L{lvl} [{def.playStyle}] effect={def.effect}, chipCost={chip}, myTurn={myTurn}, chips={localPlayer.chips}/{localPlayer.maxChips}, gold={localPlayer.gold}, setCount={localPlayer.setIds.Count}";
+        return $"{def.cardName} (id {id}) L{lvl} [{def.playStyle}] effect={def.effect}, chipCost={chip}, myTurn(client)={myTurn}, chips={localPlayer.chips}/{localPlayer.maxChips}, gold={localPlayer.gold}, setCount={localPlayer.setIds.Count}";
     }
 
-    string CanCastReason(out string reason, PlayerState me, int handIndex, PlayerState target)
+    CardDefinition.PlayStyle InferPlayStyle(CardDefinition def)
     {
-        reason = null;
-        if (tm != null && !tm.IsPlayersTurn(me))
+        switch (def.effect)
         {
-            reason = "Cast denied: not your turn.";
-            return reason;
-        }
+            case CardDefinition.EffectType.LovePotion_HealXSelf:
+            case CardDefinition.EffectType.Bomb_AllPlayersTakeX:
+            case CardDefinition.EffectType.PhoenixFeather_HealX_ReviveTo2IfDead:
+            case CardDefinition.EffectType.BlackHole_DiscardHandsRedrawSame:
+            case CardDefinition.EffectType.Shield_GainXArmor:
+                return CardDefinition.PlayStyle.Instant;
 
-        if (handIndex < 0 || handIndex >= me.handIds.Count)
-        {
-            reason = "Cast denied: invalid hand index.";
-            return reason;
-        }
+            case CardDefinition.EffectType.Knife_DealX:
+            case CardDefinition.EffectType.KnifePotion_DealX_HealXSelf:
+            case CardDefinition.EffectType.C4_ExplodeOnTargetAfter3Turns:
+            case CardDefinition.EffectType.GoblinHands_MoveOneSetItemToCaster:
+            case CardDefinition.EffectType.Pickpocket_StealOneRandomHandCard:
+            case CardDefinition.EffectType.Turtle_TargetSkipsNextTurn:
+                return CardDefinition.PlayStyle.InstantWithTarget;
 
-        var db = me.database;
-        if (!db)
-        {
-            reason = "Cast denied: no CardDatabase on player.";
-            return reason;
+            case CardDefinition.EffectType.Cactus_ReflectUpToX_For3Turns:
+            case CardDefinition.EffectType.BearTrap_FirstAttackerTakesX:
+            case CardDefinition.EffectType.MirrorShield_ReflectFirstAttackFull:
+                return CardDefinition.PlayStyle.SetReaction;
         }
-
-        int id = me.handIds[handIndex];
-        var def = db.Get(id);
-        if (def == null)
-        {
-            reason = $"Cast denied: no definition for cardId={id}.";
-            return reason;
-        }
-
-        // Must be Instant or InstantWithTarget
-        if (def.playStyle == CardDefinition.PlayStyle.SetReaction)
-        {
-            reason = $"Cast denied: '{def.cardName}' is a SetReaction card.";
-            return reason;
-        }
-
-        // Cost check
-        int lvl = me.handLvls[handIndex];
-        int cost = def.GetCastChipCost(lvl);
-        if (me.chips < cost)
-        {
-            reason = $"Cast denied: need {cost} chips, you have {me.chips}.";
-            return reason;
-        }
-
-        // If InstantWithTarget → require target
-        if (def.playStyle == CardDefinition.PlayStyle.InstantWithTarget && target == null)
-        {
-            reason = $"Cast denied: '{def.cardName}' needs a target.";
-            return reason;
-        }
-
-        return reason; // null = OK
+        return def.playStyle;
     }
 
-    string CanSetReason(out string reason, PlayerState me, int handIndex)
+    void Warn(string msg)
     {
-        reason = null;
-
-        // Set only during YOUR turn
-        if (tm != null && !tm.IsPlayersTurn(me))
-        {
-            reason = "Set denied: only during YOUR turn.";
-            return reason;
-        }
-
-        // Only if you have 0 set cards
-        if (me.setIds.Count > 0)
-        {
-            reason = "Set denied: you already have a set card.";
-            return reason;
-        }
-
-        if (handIndex < 0 || handIndex >= me.handIds.Count)
-        {
-            reason = "Set denied: invalid hand index.";
-            return reason;
-        }
-
-        var db = me.database;
-        if (!db)
-        {
-            reason = "Set denied: no CardDatabase on player.";
-            return reason;
-        }
-
-        int id = me.handIds[handIndex];
-        var def = db.Get(id);
-        if (def == null)
-        {
-            reason = $"Set denied: no definition for cardId={id}.";
-            return reason;
-        }
-
-        if (def.playStyle != CardDefinition.PlayStyle.SetReaction)
-        {
-            reason = $"Set denied: '{def.cardName}' is not a SetReaction card.";
-            return reason;
-        }
-
-        // Cost check for setting now
-        int lvl = me.handLvls[handIndex];
-        int cost = def.GetCastChipCost(lvl);
-        if (me.chips < cost)
-        {
-            reason = $"Set denied: need {cost} chips, you have {me.chips}.";
-            return reason;
-        }
-
-        return reason; // null = OK
-    }
-
-    void Fail(string reason)
-    {
-        lastFailureReason = reason;
+        lastFailureReason = msg;
         lastFailureTime = Time.time;
-        Debug.LogWarning("[Raycaster] " + reason);
+        Debug.LogWarning("[Raycaster] " + msg);
     }
 }

@@ -10,18 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4acf1391760cecd4dad51fe600af9a76, type: 3}
-  m_Name: Pickpocket
+  m_Name: 1Pickpocket
   m_EditorClassIdentifier: Assembly-CSharp::CardDefinition
   id: 12
   cardName: 'Pickpocket '
   description: Steal 1 random card from an opponent
   image: {fileID: -987018163, guid: e552a0340b97f1340a9323973a014624, type: 3}
   playStyle: 1
-  effect: 0
+  effect: 20
   amount: 1
   durationTurns: 0
   arcs: 0
-  chipCost: 2
+  chipCost: 1
   setShowcasePrefab: {fileID: 0}
   setShowcaseLocalOffset: {x: 0, y: 0, z: 0}
   setShowcaseLocalEuler: {x: 0, y: 0, z: 0}

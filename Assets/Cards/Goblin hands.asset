@@ -21,7 +21,7 @@ MonoBehaviour:
   amount: 1
   durationTurns: 0
   arcs: 0
-  chipCost: 2
+  chipCost: 1
   setShowcasePrefab: {fileID: 0}
   setShowcaseLocalOffset: {x: 0, y: 0, z: 0}
   setShowcaseLocalEuler: {x: 0, y: 0, z: 0}

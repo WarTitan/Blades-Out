@@ -17,9 +17,16 @@ public class PlayerState : NetworkBehaviour
     public int MaxHP => maxHP;
     public int MaxArmor => maxArmor;
 
+    [Header("Life state")]
+    [SyncVar(hook = nameof(OnDeadChanged))] public bool isDead = false;
+    void OnDeadChanged(bool oldV, bool newV)
+    {
+        // Hook for UI if you want to gray out hand, etc.
+    }
+
     [Header("Chips (Hearthstone-style growth at END of your turn)")]
-    [SyncVar(hook = nameof(OnChipsChanged))] public int chips = 0;        // current
-    [SyncVar(hook = nameof(OnMaxChipsChanged))] public int maxChips = 0;  // increases via TurnManager
+    [SyncVar(hook = nameof(OnChipsChanged))] public int chips = 0;
+    [SyncVar(hook = nameof(OnMaxChipsChanged))] public int maxChips = 0;
 
     public event System.Action<PlayerState> ChipsChanged;
     public event System.Action<PlayerState> MaxChipsChanged;
@@ -36,7 +43,7 @@ public class PlayerState : NetworkBehaviour
     public readonly SyncList<int> setIds = new SyncList<int>();
     public readonly SyncList<byte> setLvls = new SyncList<byte>();
 
-    // Global upgrades per cardId (affects all copies + future draws)
+    // Upgrades per cardId
     public readonly SyncDictionary<int, byte> upgradeLevels = new SyncDictionary<int, byte>();
 
     // Action safety
@@ -49,9 +56,16 @@ public class PlayerState : NetworkBehaviour
     private struct StatusData { public StatusType type; public int magnitude; public int turns; }
     private enum StatusType { Poison, CactusReflect, TurtleSkip, C4Fuse }
 
-    // For Mirror card (copy last played)
+    // Mirror "copy last played"
     private int lastPlayedCardId = -1;
     private int lastPlayedCardLevel = 1;
+
+    public enum TurnStartDirective
+    {
+        Normal,
+        SkipNoRewards,
+        AutoEndWithRewardsAndPass
+    }
 
     public override void OnStartServer()
     {
@@ -63,9 +77,15 @@ public class PlayerState : NetworkBehaviour
         }
     }
 
-    // ───────────────────────────────────────────────── Game init / draw ─────────────────────────────────────────────────
+    public override void OnStartClient()
+    {
+        base.OnStartClient();
+        if (database == null)
+            database = CardDatabase.FindOrLoadActive();
+    }
 
-    /// Start-of-game: 5 gold, chips = 1/1, and draw 3 starting cards.
+    // ---------------- Game init / draw ----------------
+
     [Server]
     public void Server_Init(CardDatabase db, int deckSize, int startGold, int startHand)
     {
@@ -78,9 +98,11 @@ public class PlayerState : NetworkBehaviour
         hp = maxHP;
         armor = maxArmor;
 
+        isDead = false;
+
         handIds.Clear(); handLvls.Clear();
         setIds.Clear(); setLvls.Clear();
-        // upgradeLevels.Clear(); // uncomment if you want upgrades reset per match
+        // upgradeLevels.Clear();
 
         const int startingCards = 3;
         for (int i = 0; i < startingCards; i++)
@@ -109,11 +131,10 @@ public class PlayerState : NetworkBehaviour
         }
     }
 
-    // ───────────────────────────────────────────────── Chips helpers ─────────────────────────────────────────────────
+    // ---------------- Chips / gold ----------------
 
     [Server] public void Server_RefillChipsToMax() { chips = maxChips; }
 
-    /// Called by TurnManager at END of your turn (increase + refill).
     [Server]
     public void Server_IncreaseMaxChipsAndRefill(int cap, int amount = 1)
     {
@@ -135,26 +156,104 @@ public class PlayerState : NetworkBehaviour
     void TargetActionDenied(NetworkConnection target, string reason)
         => Debug.LogWarning(reason);
 
-    // ───────────────────────────────────────────────── Commands ─────────────────────────────────────────────────
+    // ---------------- Authority helper ----------------
 
-    [Command] public void CmdRequestStartGame() => TurnManager.Instance?.Server_AttemptStartGame();
-    [Command] public void CmdEndTurn() => TurnManager.Instance?.Server_EndTurn(this);
-    [Command] public void CmdUpgradeCard(int handIndex) => TurnManager.Instance?.Server_UpgradeCard(this, handIndex);
+    bool Server_VerifySenderIsOwner()
+    {
+        var senderIdentity = connectionToClient != null ? connectionToClient.identity : null;
+        var senderPS = senderIdentity ? senderIdentity.GetComponent<PlayerState>() : null;
+        return senderPS == this;
+    }
 
-    /// Play an instant/instant-with-target card on YOUR turn. Costs chips. Set-only cards cannot be cast here.
-    [Command]
+    // ---------------- Commands ----------------
+
+    [Command(requiresAuthority = false)]
+    public void CmdRequestStartGame()
+    {
+        if (!Server_VerifySenderIsOwner()) return;
+        TurnManager.Instance?.Server_AttemptStartGame();
+    }
+
+    [Command(requiresAuthority = false)]
+    public void CmdEndTurn()
+    {
+        if (!Server_VerifySenderIsOwner()) return;
+        if (isDead) { TargetActionDenied(connectionToClient, "[Turn] You are dead."); return; }
+        TurnManager.Instance?.Server_EndTurn(this);
+    }
+
+    [Command(requiresAuthority = false)]
+    public void CmdUpgradeCard(int handIndex)
+    {
+        if (!Server_VerifySenderIsOwner()) return;
+        if (isDead) { TargetActionDenied(connectionToClient, "[Upgrade] You are dead."); return; }
+        TurnManager.Instance?.Server_UpgradeCard(this, handIndex);
+    }
+
+    // Cast instant/target during YOUR turn. Dead players cannot act. Phoenix self-cast while alive is still allowed at <max HP.
+    [Command(requiresAuthority = false)]
     public void CmdPlayInstant(int handIndex, uint targetNetId)
     {
-        if (!IsYourTurn()) { TargetActionDenied(connectionToClient, "[Cast] Only during YOUR turn."); return; }
-        if (!ValidHandIndex(handIndex)) return;
+        if (!Server_VerifySenderIsOwner()) return;
 
+        if (isDead)
+        {
+            TargetActionDenied(connectionToClient, "[Cast] You are dead.");
+            return;
+        }
+
+        if (!IsYourTurn())
+        {
+            TargetActionDenied(connectionToClient, "[Cast] Only during YOUR turn.");
+            return;
+        }
+        if (!ValidHandIndex(handIndex)) return;
         if (Time.time - lastActionTime < minActionInterval) return;
-        lastActionTime = Time.time;
         if (actionLock) return;
 
+        lastActionTime = Time.time;
+
         var def = database != null ? database.Get(handIds[handIndex]) : null;
-        if (def == null) return;
-        if (def.playStyle == CardDefinition.PlayStyle.SetReaction) return; // cannot cast set-only
+        if (def == null)
+        {
+            TargetActionDenied(connectionToClient, "[Cast] No definition for this card.");
+            return;
+        }
+
+        // Block self-heals at full HP (allow when dead via start-of-turn logic only)
+        if (def.effect == CardDefinition.EffectType.LovePotion_HealXSelf ||
+            def.effect == CardDefinition.EffectType.PhoenixFeather_HealX_ReviveTo2IfDead)
+        {
+            if (hp >= maxHP && hp > 0)
+            {
+                TargetActionDenied(connectionToClient, "[Cast] You are already at full HP.");
+                return;
+            }
+        }
+
+        bool needsTarget = false;
+        switch (def.effect)
+        {
+            case CardDefinition.EffectType.Knife_DealX:
+            case CardDefinition.EffectType.KnifePotion_DealX_HealXSelf:
+            case CardDefinition.EffectType.C4_ExplodeOnTargetAfter3Turns:
+            case CardDefinition.EffectType.GoblinHands_MoveOneSetItemToCaster:
+            case CardDefinition.EffectType.Pickpocket_StealOneRandomHandCard:
+            case CardDefinition.EffectType.Turtle_TargetSkipsNextTurn:
+                needsTarget = true; break;
+        }
+
+        if (needsTarget && targetNetId == 0)
+        {
+            TargetActionDenied(connectionToClient, "[Cast] This card needs a target.");
+            return;
+        }
+
+        if (def.playStyle == CardDefinition.PlayStyle.SetReaction)
+        {
+            TargetActionDenied(connectionToClient, "[Cast] This card must be set, not cast.");
+            return;
+        }
 
         int lvl = handLvls[handIndex];
         int cost = def.GetCastChipCost(lvl);
@@ -166,7 +265,6 @@ public class PlayerState : NetworkBehaviour
 
         var target = FindPlayerByNetId(targetNetId);
 
-        // Mirror special-case: stays in hand
         bool keepInHand = (def.effect == CardDefinition.EffectType.Mirror_CopyLastPlayedByYou);
 
         actionLock = true;
@@ -180,17 +278,14 @@ public class PlayerState : NetworkBehaviour
         finally { actionLock = false; }
     }
 
-    // ───────────────────────────────────────────────── Set cards (your turn, cost chips, max 1) ─────────────────────────────────────────────────
-
+    // Set reaction (your turn only). Dead players cannot act.
     [Server] private bool Server_CanSetAnother() => setIds.Count == 0;
 
-    /// Set a reaction card ONLY during YOUR turn. Costs chips. Max 1 set.
     [Command(requiresAuthority = false)]
     public void CmdSetCard(int handIndex)
     {
-        var senderIdentity = connectionToClient != null ? connectionToClient.identity : null;
-        var senderPS = senderIdentity ? senderIdentity.GetComponent<PlayerState>() : null;
-        if (senderPS == null || senderPS != this) return;
+        if (!Server_VerifySenderIsOwner()) return;
+        if (isDead) { TargetActionDenied(connectionToClient, "[Set] You are dead."); return; }
 
         if (!IsYourTurn()) { TargetActionDenied(connectionToClient, "[Set] Only during YOUR turn."); return; }
         if (!Server_CanSetAnother()) { TargetActionDenied(connectionToClient, "[Set] You already have a set card."); return; }
@@ -201,7 +296,6 @@ public class PlayerState : NetworkBehaviour
 
         if (!Server_IsSetReactionInHand(handIndex)) { TargetActionDenied(connectionToClient, "[Set] This card can't be set."); return; }
 
-        // Pay chip cost to set
         int id = handIds[handIndex];
         int lvl = handLvls[handIndex];
         var def = database != null ? database.Get(id) : null;
@@ -217,7 +311,6 @@ public class PlayerState : NetworkBehaviour
         finally { actionLock = false; }
     }
 
-    /// Moves a card from Hand to Set. Also spawns status for Cactus (reflect for 3 turns).
     [Server]
     private void Server_SetCard_ByIndex(int handIndex)
     {
@@ -234,7 +327,6 @@ public class PlayerState : NetworkBehaviour
         setLvls.Add(lvl);
 
         var d = database?.Get(id);
-        // Cactus "activates when you play it" and then lasts 3 turns
         if (d != null && d.effect == CardDefinition.EffectType.Cactus_ReflectUpToX_For3Turns)
         {
             int refl = Mathf.Max(1, d.GetTier(lvl).attack);
@@ -250,7 +342,7 @@ public class PlayerState : NetworkBehaviour
         setLvls.RemoveAt(index);
     }
 
-    // ───────────────────────────────────────────────── Helpers ─────────────────────────────────────────────────
+    // ---------------- Helpers ----------------
 
     public bool IsYourTurn()
         => (TurnManager.Instance != null && TurnManager.Instance.IsPlayersTurn(this));
@@ -288,7 +380,7 @@ public class PlayerState : NetworkBehaviour
         return def != null && def.playStyle == CardDefinition.PlayStyle.SetReaction;
     }
 
-    // ───────────────────────────────────────────────── Global upgrades ─────────────────────────────────────────────────
+    // ---------------- Global upgrades ----------------
 
     [Server]
     public int Server_GetEffectiveLevelForHandIndex(int handIndex)
@@ -315,7 +407,7 @@ public class PlayerState : NetworkBehaviour
     private byte GetLevelForNewInstance(int cardId)
         => upgradeLevels.TryGetValue(cardId, out byte lvl) ? lvl : (byte)1;
 
-    // ───────────────────────────────────────────────── Combat / statuses ─────────────────────────────────────────────────
+    // ---------------- Combat / statuses ----------------
 
     [Server]
     public void Server_ApplyDamage(PlayerState src, int amount)
@@ -337,33 +429,16 @@ public class PlayerState : NetworkBehaviour
             left -= used;
         }
 
-        // Phoenix Feather auto-revive if lethal
-        if (left > 0 && (hp - left) <= 0)
-        {
-            int phoenixIdx = FindFirstCardInHand(CardDefinition.EffectType.PhoenixFeather_HealX_ReviveTo2IfDead);
-            if (phoenixIdx >= 0)
-            {
-                var def = database.Get(handIds[phoenixIdx]);
-                int lvl = handLvls[phoenixIdx];
-                int cost = def.GetCastChipCost(lvl);
-                if (Server_TrySpendChips(cost))
-                {
-                    // consume and revive
-                    Server_RemoveHandAt_Internal(phoenixIdx);
-
-                    // base revive to 2
-                    hp = Mathf.Max(2, hp);
-
-                    // extra heal by tier.attack if present
-                    int healX = def.GetTier(lvl).attack;
-                    if (healX > 0) hp = Mathf.Min(maxHP, hp + healX);
-
-                    left = 0; // prevent death from this hit
-                }
-            }
-        }
-
+        // DO NOT auto-revive here. Death is finalized now; phoenix is handled at start of your turn.
         if (left > 0) { hp = Mathf.Max(0, hp - left); }
+
+        // mark death state
+        bool nowDead = (hp <= 0);
+        isDead = nowDead;
+
+        // check for endgame when someone dies
+        if (nowDead && TurnManager.Instance != null)
+            TurnManager.Instance.Server_CheckForEndGame();
 
         RpcHitFlash(incoming);
     }
@@ -374,6 +449,7 @@ public class PlayerState : NetworkBehaviour
         if (amount > 0)
         {
             hp = Mathf.Min(maxHP, hp + amount);
+            if (hp > 0) isDead = false;
             RpcHealed(amount);
         }
     }
@@ -413,7 +489,6 @@ public class PlayerState : NetworkBehaviour
         RpcGotStatus("C4", damage, turns);
     }
 
-    /// Called by resolver before consuming set reactions; reflects part/all of incoming damage.
     [Server]
     public void Server_TryApplyCactusStatusReflect(PlayerState attacker, ref int incomingDamage)
     {
@@ -423,22 +498,59 @@ public class PlayerState : NetworkBehaviour
             if (s.type != StatusType.CactusReflect) continue;
             if (attacker == null || incomingDamage <= 0) break;
 
-            // reflect up to magnitude (doesn't exceed incoming)
             int reflect = Mathf.Clamp(s.magnitude, 0, incomingDamage);
             if (reflect > 0)
             {
                 attacker.Server_ApplyDamage(this, reflect);
                 incomingDamage = Mathf.Max(0, incomingDamage - reflect);
             }
-            return; // cactus persists; timer handled at turn start
+            return; // persists; timer handled at turn start
         }
     }
 
-    /// Process status effects at the START of this player's turn.
+    // START of your turn: handle death -> auto phoenix, turtle, etc.
+    // Returns directive for TurnManager to act on.
     [Server]
-    public void Server_OnTurnStart_ProcessStatuses()
+    public TurnStartDirective Server_OnTurnStart_ProcessStatuses()
     {
-        bool skippedTurn = false;
+        // 1) If dead: try auto phoenix from hand. If succeed -> alive; else skip without rewards.
+        if (hp <= 0 || isDead)
+        {
+            int phoenixIdx = FindFirstCardInHand(CardDefinition.EffectType.PhoenixFeather_HealX_ReviveTo2IfDead);
+            if (phoenixIdx >= 0 && database != null)
+            {
+                var def = database.Get(handIds[phoenixIdx]);
+                int lvl = handLvls[phoenixIdx];
+                int cost = def != null ? def.GetCastChipCost(lvl) : 0;
+
+                if (Server_TrySpendChips(cost))
+                {
+                    // consume and revive
+                    Server_RemoveHandAt_Internal(phoenixIdx);
+
+                    // revive to 2 then extra heal by tier.attack
+                    hp = Mathf.Max(2, hp);
+                    int healX = def != null ? def.GetTier(lvl).attack : 0;
+                    if (healX > 0) hp = Mathf.Min(maxHP, hp + healX);
+
+                    isDead = false;
+                    // continue to status processing below (can still turtle-auto-end)
+                }
+                else
+                {
+                    // cannot pay -> stay dead, skip
+                    return TurnStartDirective.SkipNoRewards;
+                }
+            }
+            else
+            {
+                // no phoenix -> stay dead, skip
+                return TurnStartDirective.SkipNoRewards;
+            }
+        }
+
+        // 2) Process statuses normally (poison, cactus tick, C4, turtle)
+        TurnStartDirective directive = TurnStartDirective.Normal;
 
         for (int i = statuses.Count - 1; i >= 0; i--)
         {
@@ -450,6 +562,8 @@ public class PlayerState : NetworkBehaviour
                 s.turns -= 1;
                 if (s.turns <= 0) statuses.RemoveAt(i);
                 else statuses[i] = s;
+
+                if (isDead) return TurnStartDirective.SkipNoRewards; // died from poison
             }
             else if (s.type == StatusType.CactusReflect)
             {
@@ -464,31 +578,28 @@ public class PlayerState : NetworkBehaviour
             }
             else if (s.type == StatusType.TurtleSkip)
             {
-                int idx = FindFirstSetWithEffect(CardDefinition.EffectType.Turtle_TargetSkipsNextTurn);
-                if (idx >= 0) Server_ConsumeSetAt(idx);
+                // auto-end with rewards and pass turtle away
                 statuses.RemoveAt(i);
-                skippedTurn = true;
+                directive = TurnStartDirective.AutoEndWithRewardsAndPass;
+                // don't break; continue to clean others
             }
             else if (s.type == StatusType.C4Fuse)
             {
                 s.turns -= 1;
                 if (s.turns <= 0)
                 {
-                    // explode on owner
                     Server_ApplyDamage(null, s.magnitude);
                     int idx = FindFirstSetWithEffect(CardDefinition.EffectType.C4_ExplodeOnTargetAfter3Turns);
                     if (idx >= 0) Server_ConsumeSetAt(idx);
                     statuses.RemoveAt(i);
+
+                    if (isDead) return TurnStartDirective.SkipNoRewards;
                 }
                 else statuses[i] = s;
             }
         }
 
-        // If Turtle says skip, end the turn immediately.
-        if (skippedTurn && TurnManager.Instance != null && TurnManager.Instance.IsPlayersTurn(this))
-        {
-            TurnManager.Instance.Server_EndTurn(this);
-        }
+        return directive;
     }
 
     int FindFirstSetWithEffect(CardDefinition.EffectType fx)
@@ -511,7 +622,7 @@ public class PlayerState : NetworkBehaviour
         return -1;
     }
 
-    // Mirror helpers (store/trigger last played)
+    // Mirror helpers
     [Server]
     public void Server_RecordLastPlayed(int defId, int lvl)
     { lastPlayedCardId = defId; lastPlayedCardLevel = Mathf.Max(1, lvl); }

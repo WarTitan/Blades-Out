@@ -14,66 +14,61 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CardDefinition
   id: 3
   cardName: Shield
-  description: Block 1 DMG
+  description: Get 2 armor
   image: {fileID: -240136403, guid: f928eef8bf886b14bba1e945990cde52, type: 3}
   playStyle: 0
   effect: 21
   amount: 1
   durationTurns: 0
   arcs: 0
-  chipCost: 3
+  chipCost: 1
   setShowcasePrefab: {fileID: 0}
   setShowcaseLocalOffset: {x: 0, y: 0, z: 0}
   setShowcaseLocalEuler: {x: 0, y: 0, z: 0}
   setShowcaseLocalScale: {x: 1, y: 1, z: 1}
   tiers:
-  - attack: 0
-    defense: 1
+  - attack: 1
+    defense: 0
     costGold: 0
-    effectText: Block 1 DMG
+    effectText: Get 2 armor
     castChipCost: 0
-  - attack: 0
-    defense: 2
+  - attack: 3
+    defense: 0
     costGold: 2
-    effectText: Block 2 DMG
+    effectText: Get 3 armor
     castChipCost: 0
-  - attack: 0
-    defense: 3
+  - attack: 4
+    defense: 0
     costGold: 2
-    effectText: Block 3 DMG
+    effectText: Get 4 armor
     castChipCost: 0
-  - attack: 0
-    defense: 4
+  - attack: 5
+    defense: 0
     costGold: 2
-    effectText: Block 4 DMG
+    effectText: Get 5 armor
     castChipCost: 0
-  - attack: 0
-    defense: 5
+  - attack: 6
+    defense: 0
     costGold: 2
-    effectText: Block 5 DMG
+    effectText: Get 6 armor
     castChipCost: 0
-  - attack: 0
-    defense: 6
+  - attack: 7
+    defense: 0
     costGold: 2
-    effectText: Block 6 DMG
+    effectText: Get 7 armor
     castChipCost: 0
-  - attack: 0
-    defense: 7
+  - attack: 8
+    defense: 0
     costGold: 2
-    effectText: Block 7 DMG
+    effectText: Get 8 armor
     castChipCost: 0
-  - attack: 0
-    defense: 8
+  - attack: 9
+    defense: 0
     costGold: 2
-    effectText: Block 8 DMG
+    effectText: Get 9 armor
     castChipCost: 0
-  - attack: 0
-    defense: 9
+  - attack: 10
+    defense: 0
     costGold: 2
-    effectText: Block 9 DMG
-    castChipCost: 0
-  - attack: 0
-    defense: 10
-    costGold: 2
-    effectText: Block 10 DMG
+    effectText: Get 10 armor
     castChipCost: 0

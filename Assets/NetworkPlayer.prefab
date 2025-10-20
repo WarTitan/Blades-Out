@@ -240,10 +240,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 86f7d19ab6ec1584ca6f1ff9daf57e83, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CrosshairDot
-  sizePx: 6
+  lengthPx: 20
+  thicknessPx: 4
+  gapPx: 18
   alpha: 0.9
-  color: {r: 1, g: 1, b: 1, a: 1}
+  color: {r: 0, g: 0, b: 0, a: 1}
   hideCursor: 1
+  roundOuterCaps: 1
 --- !u!1001 &1742179290809297810
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -942,6 +945,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
       insertIndex: -1
       addedObject: {fileID: -3160761859794444837}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3832227869102362727}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6618253040967709873}
   m_SourcePrefab: {fileID: 100100000, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
 --- !u!1 &3784944211829141594 stripped
 GameObject:
@@ -1055,6 +1064,7 @@ MonoBehaviour:
   gold: 0
   maxHP: 5
   maxArmor: 5
+  isDead: 0
   chips: 0
   maxChips: 0
   seatIndex: 0
@@ -1076,7 +1086,7 @@ MonoBehaviour:
   cardSpawnPoint: {fileID: 0}
   cardPrefab3D: {fileID: 7461052816248502625, guid: bbc48dcd4ddd7eb4f99a1a6ea4e3a6a6, type: 3}
   database: {fileID: 11400000, guid: 7044ab7ef32f0534999f3b709a1bebaf, type: 2}
-  gapX: 0.16
+  gapX: 0.18
   raiseY: 0
   layFlatOnTable: 0
   tiltXDegrees: 40
@@ -1125,12 +1135,6 @@ MonoBehaviour:
   database: {fileID: 11400000, guid: 7044ab7ef32f0534999f3b709a1bebaf, type: 2}
   gapX: 0.12
   raiseY: 0
-  layFlatOnTable: 1
-  tiltXDegrees: 90
-  frontFacingYawOffset: 180
-  rowYawNudge: 0
-  faceDown: 0
-  cardLocalScale: {x: 0.05, y: 0.05, z: 0.05}
   verboseLogs: 1
 --- !u!114 &-3410809289063261844
 MonoBehaviour:
@@ -1144,25 +1148,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1440b86c7b0a716448a5a71e21416bf0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CardRaycasterOnRoot
-  syncDirection: 0
-  syncMode: 0
-  syncInterval: 0
   cam: {fileID: 5127393552435462056}
-  cardMask:
+  raycastMask:
     serializedVersion: 2
-    m_Bits: 64
-  playerMask:
-    serializedVersion: 2
-    m_Bits: 128
+    m_Bits: 4294967295
   maxDistance: 30
-  hitTriggers: 0
-  sphereCastRadius: 0.03
-  onlySelectOwnCards: 1
-  requireInHandToSelect: 1
-  requireTurnToCast: 1
-  blockSelfTarget: 1
-  onlyCastFromHand: 1
-  deselectMouse: 324
+  preferUpgradeWhenClientThinksOffTurn: 1
+  allowOwnerInference: 1
+  verbose: 1
+  debugOverlay: 0
+  overlayPosition: {x: 16, y: 16}
+  overlayWidth: 500
 --- !u!114 &-3160761859794444837
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1180,13 +1176,60 @@ MonoBehaviour:
   syncInterval: 0
   localPlayer: {fileID: -6304133020608627664}
   raycaster: {fileID: -3410809289063261844}
-  startGameKey: 51
   endTurnKey: 49
-  setKey: 118
   upgradeKey: 50
+  startGameKey: 51
+  setKey: 118
+  endTurnKeypad: 257
+  upgradeKeypad: 258
+  startGameKeypad: 259
+  setKeypad: 260
   deselectKey: 113
-  requireOffTurnToSet: 1
-  requireOffTurnToUpgrade: 1
+--- !u!114 &3832227869102362727
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3784944211829141594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db0434cb4f65ec74e9582c6edf800772, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DraftDrawNet
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+--- !u!114 &6618253040967709873
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3784944211829141594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea9af33bb9a99da478346e9ef206ec23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DraftDrawPicker
+  useSceneInstanceIfAvailable: 1
+  persistSettingsIfAutoCreated: 1
+  centerOffsetX: 0
+  centerOffsetY: 0.22
+  centerOffsetZ: -0.08
+  spreadX: 0.18
+  spreadZ: 0
+  cardLocalScale: {x: 0.07, y: 0.07, z: 0.07}
+  colliderWorldSize: {x: 0.18, y: 0.26, z: 0.05}
+  overrideLayerForPicks: 1
+  pickLayer: 0
+  cameraOverride: {fileID: 5127393552435462056}
+  raycastMask:
+    serializedVersion: 2
+    m_Bits: 64
+  stripPinToAnchorOnChildren: 1
+  stripFloatingShowcaseOnChildren: 1
+  stripCardViewOnChildren: 1
 --- !u!4 &4597333103463066336 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}

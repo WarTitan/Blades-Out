@@ -10,66 +10,70 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4acf1391760cecd4dad51fe600af9a76, type: 3}
-  m_Name: Bomb
+  m_Name: 1Knife
   m_EditorClassIdentifier: Assembly-CSharp::CardDefinition
-  id: 0
-  cardName: Bomb
-  description: Evrey player takes 1 DMG
-  image: {fileID: 2076744250, guid: 03f555c09f4b78247a6536a015c8f7ad, type: 3}
-  playStyle: 0
-  effect: 10
+  id: 1
+  cardName: Knife
+  description: Deal 1 DMG
+  image: {fileID: 1992122384, guid: 40d069d0c6aaf1f409ecca5eff0a3154, type: 3}
+  playStyle: 1
+  effect: 14
   amount: 1
   durationTurns: 0
   arcs: 0
-  chipCost: 2
+  chipCost: 1
+  setShowcasePrefab: {fileID: 0}
+  setShowcaseLocalOffset: {x: 0, y: 0, z: 0}
+  setShowcaseLocalEuler: {x: 0, y: 0, z: 0}
+  setShowcaseLocalScale: {x: 1, y: 1, z: 1}
   tiers:
   - attack: 1
     defense: 0
     costGold: 0
-    effectText: Evrey player takes 1 DMG
+    effectText: Deal 1 DMG
     castChipCost: 0
   - attack: 2
     defense: 0
-    costGold: 3
-    effectText: Evrey player takes 2 DMG
+    costGold: 2
+    effectText: Deal 2 DMG
     castChipCost: 0
   - attack: 3
     defense: 0
-    costGold: 3
-    effectText: Evrey player takes 3 DMG
+    costGold: 2
+    effectText: Deal 3 DMG
     castChipCost: 0
   - attack: 4
     defense: 0
-    costGold: 3
-    effectText: Evrey player takes 4 DMG
+    costGold: 2
+    effectText: Deal 4 DMG
     castChipCost: 0
   - attack: 5
     defense: 0
-    costGold: 3
-    effectText: Evrey player takes 5 DMG
+    costGold: 2
+    effectText: Deal 5 DMG
     castChipCost: 0
   - attack: 6
     defense: 0
-    costGold: 3
-    effectText: Evrey player takes 6 DMG
+    costGold: 2
+    effectText: Deal 6 DMG
     castChipCost: 0
   - attack: 7
     defense: 0
-    costGold: 3
-    effectText: Evrey player takes 7 DMG
+    costGold: 2
+    effectText: Deal 7 DMG
     castChipCost: 0
-  - attack: 6
+  - attack: 8
     defense: 0
-    costGold: 3
-    effectText: Evrey player takes 8 DMG
-    castChipCost: 0
-  - attack: 9
-    defense: 0
-    costGold: 3
-    effectText: Evrey player takes 9 DMG
+    costGold: 2
+    effectText: Deal 8 DMG
     castChipCost: 0
   - attack: 9
     defense: 0
-    costGold: 3
-    effectText: Evrey player takes 10 DMG
+    costGold: 2
+    effectText: Deal 9 DMG
+    castChipCost: 0
+  - attack: 10
+    defense: 0
+    costGold: 2
+    effectText: Deal 10 DMG
     castChipCost: 0

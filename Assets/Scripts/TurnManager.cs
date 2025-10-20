@@ -9,7 +9,7 @@ public class TurnManager : NetworkBehaviour
     [Header("Game Rules (Inspector)")]
     [SerializeField] private int maxPlayers = 5;
     [SerializeField] private int startingGold = 5;
-    [SerializeField] private int startingHandSize = 3;  // ▼ start with 3
+    [SerializeField] private int startingHandSize = 3;
     [SerializeField] private int cardsPerTurn = 1;
     [SerializeField] private int goldPerTurn = 1;
     [SerializeField] private int defaultDeckSize = 12;
@@ -34,7 +34,9 @@ public class TurnManager : NetworkBehaviour
     public override void OnStartClient() { base.OnStartClient(); Instance = this; }
     public override void OnStartServer() { base.OnStartServer(); Instance = this; }
 
-    void OnTurnNetIdChanged(uint oldV, uint newV) { /* UI hook if needed */ }
+    void OnTurnNetIdChanged(uint oldV, uint newV) { /* optional UI hook */ }
+
+    // ---------------- Registration / start ----------------
 
     [Server]
     public void RegisterPlayer(PlayerState ps)
@@ -53,29 +55,21 @@ public class TurnManager : NetworkBehaviour
         if (gameStarted) return;
         if (turnOrder.Count < minPlayersToStart) return;
 
+        // reset deaths before new game
+        foreach (var p in turnOrder)
+        {
+            if (p == null) continue;
+            p.isDead = false;
+        }
+
         for (int i = 0; i < turnOrder.Count; i++)
             turnOrder[i].Server_Init(database, defaultDeckSize, startingGold, startingHandSize);
 
-        currentTurnIndex = 0;              // Player 1 first
         gameStarted = true;
-        Server_StartTurn(turnOrder[currentTurnIndex]);
+        Server_StartTurnFrom(0);
     }
 
-    [Server]
-    private void Server_StartTurn(PlayerState ps)
-    {
-        if (!gameStarted || ps == null) return;
-
-        // NEW RULE: start of turn gives NOTHING (resources already granted to the owner when they ENDED their previous turn)
-        ps.Server_OnTurnStart_ProcessStatuses(); // still process statuses
-
-        currentTurnNetId = ps.netId;
-        RpcTurnChanged(currentTurnIndex);
-        TargetYourTurn(ps.connectionToClient);
-    }
-
-    [ClientRpc] private void RpcTurnChanged(int index) { }
-    [TargetRpc] private void TargetYourTurn(NetworkConnection target) { }
+    // ---------------- Turn flow ----------------
 
     [Server]
     public void Server_EndTurn(PlayerState requester)
@@ -83,22 +77,113 @@ public class TurnManager : NetworkBehaviour
         if (!gameStarted || turnOrder.Count == 0) return;
         if (turnOrder[currentTurnIndex] != requester) return;
 
-        // ▼ NEW: Give resources to the player who just ended their turn (for their NEXT turn)
+        // Rewards for the player who ended their turn (applies to their next turn)
+        // Rewards for the player who ended their turn (applies to their next turn)
         requester.Server_IncreaseMaxChipsAndRefill(chipCap, 1);
         requester.gold += goldPerTurn;
-        requester.Server_Draw(cardsPerTurn);
 
-        // Advance to next player
-        currentTurnIndex = (currentTurnIndex + 1) % turnOrder.Count;
-        Server_StartTurn(turnOrder[currentTurnIndex]);
+        // start a draft instead of auto draw
+        var draft = requester.GetComponent<DraftDrawNet>();
+        if (draft != null)
+            draft.Server_StartDraft(cardsPerTurn); // usually 1
+        else
+            requester.Server_Draw(cardsPerTurn);   // fallback if the component is missing
+
+
+        int next = NextIndex(currentTurnIndex);
+        Server_StartTurnFrom(next);
     }
 
-    // === Upgrades: ONLY off-turn ===
+    [Server]
+    public void Server_SkipTurn(PlayerState who)
+    {
+        if (!gameStarted || turnOrder.Count == 0) return;
+        if (!IsPlayersTurn(who)) return;
+        int next = NextIndex(currentTurnIndex);
+        Server_StartTurnFrom(next);
+    }
+
+    // Resolve directives BEFORE locking the turn owner.
+    [Server]
+    private void Server_StartTurnFrom(int startIndex)
+    {
+        if (!gameStarted || turnOrder.Count == 0) return;
+
+        int idx = Mathf.Abs(startIndex) % turnOrder.Count;
+
+        // Loop to resolve chained skips / deaths / turtles, with a safety cap
+        for (int safety = 0; safety < 32; safety++)
+        {
+            var ps = turnOrder[idx];
+            if (ps == null)
+            {
+                idx = NextIndex(idx);
+                continue;
+            }
+
+            // Dead players cannot take a turn (unless auto-revive happens inside)
+            var directive = ps.Server_OnTurnStart_ProcessStatuses(); // handles death & phoenix & turtle
+
+            if (directive == PlayerState.TurnStartDirective.SkipNoRewards)
+            {
+                // still dead or instructed to skip w/o rewards
+                idx = NextIndex(idx);
+                continue;
+            }
+
+            if (directive == PlayerState.TurnStartDirective.AutoEndWithRewardsAndPass)
+            {
+                // Lock owner so UIs flip correctly
+                currentTurnIndex = idx;
+                currentTurnNetId = ps.netId;
+                RpcTurnChanged(currentTurnIndex);
+                TargetYourTurn(ps.connectionToClient);
+
+                // Pass turtle to a random other player
+                Server_PassTurtleFrom(ps);
+
+                // Immediately auto-end WITH rewards
+                Server_EndTurn(ps);
+                return;
+            }
+
+            // Normal owner
+            currentTurnIndex = idx;
+            currentTurnNetId = ps.netId;
+            RpcTurnChanged(currentTurnIndex);
+            TargetYourTurn(ps.connectionToClient);
+            return;
+        }
+
+        // Failsafe: lock anyway
+        currentTurnIndex = idx;
+        var owner = turnOrder[idx];
+        currentTurnNetId = owner ? owner.netId : 0;
+        RpcTurnChanged(currentTurnIndex);
+        if (owner) TargetYourTurn(owner.connectionToClient);
+    }
+
+    [ClientRpc] private void RpcTurnChanged(int index) { }
+    [TargetRpc] private void TargetYourTurn(NetworkConnection target) { }
+
+    private int NextIndex(int i) => (turnOrder.Count == 0) ? 0 : (i + 1) % turnOrder.Count;
+
+    // Works on BOTH server and client
+    public bool IsPlayersTurn(PlayerState ps)
+    {
+        if (!gameStarted || ps == null) return false;
+        if (isServer) return turnOrder.Count > 0 && turnOrder[currentTurnIndex] == ps;
+        return ps.netId == currentTurnNetId;
+    }
+
+    // ---------------- Upgrades ----------------
+
     [Server]
     public void Server_UpgradeCard(PlayerState ps, int handIndex)
     {
         if (!gameStarted || ps == null) return;
-        if (IsPlayersTurn(ps)) { TargetUpgradeDenied(ps.connectionToClient, handIndex, "TURN"); return; }  // must be off-turn
+        if (ps.isDead) { TargetUpgradeDenied(ps.connectionToClient, handIndex, "DEAD"); return; }
+        if (IsPlayersTurn(ps)) { TargetUpgradeDenied(ps.connectionToClient, handIndex, "TURN"); return; }
         if (handIndex < 0 || handIndex >= ps.handIds.Count) return;
 
         int cardId = ps.handIds[handIndex];
@@ -139,18 +224,83 @@ public class TurnManager : NetworkBehaviour
         if (reason == "GOLD") Debug.LogWarning("[Upgrade] Not enough gold to upgrade hand[" + handIndex + "]");
         else if (reason == "MAX") Debug.LogWarning("[Upgrade] Already at max level for hand[" + handIndex + "]");
         else if (reason == "TURN") Debug.LogWarning("[Upgrade] You can only upgrade OFF-turn.");
+        else if (reason == "DEAD") Debug.LogWarning("[Upgrade] You are dead and cannot upgrade.");
         else Debug.LogWarning("[Upgrade] Denied for hand[" + handIndex + "]: " + reason);
     }
 
-    // Works on BOTH server and client
-    public bool IsPlayersTurn(PlayerState ps)
+    // ---------------- Turtle pass ----------------
+
+    [Server]
+    PlayerState PickRandomOther(PlayerState exclude)
     {
-        if (!gameStarted || ps == null) return false;
-        if (isServer) return turnOrder.Count > 0 && turnOrder[currentTurnIndex] == ps;
-        return ps.netId == currentTurnNetId;
+        if (turnOrder.Count <= 1) return null;
+        List<int> candidates = new List<int>();
+        for (int i = 0; i < turnOrder.Count; i++)
+        {
+            var p = turnOrder[i];
+            if (p != null && p != exclude) candidates.Add(i);
+        }
+        if (candidates.Count == 0) return null;
+        int pick = candidates[Random.Range(0, candidates.Count)];
+        return turnOrder[pick];
     }
 
-    // helpers for effect resolver (unchanged)
-    [Server] public void Server_HealAll(int amount) { /* ... */ }
-    [Server] public void Server_ChainArc(PlayerState caster, PlayerState startTarget, int amount, int arcs) { /* ... */ }
+    [Server]
+    void Server_PassTurtleFrom(PlayerState from)
+    {
+        var to = PickRandomOther(from);
+        if (to != null)
+            to.Server_AddStatus_TurtleSkipNext();
+    }
+
+    // ---------------- End game ----------------
+
+    [Server]
+    public int CountAlivePlayers()
+    {
+        int alive = 0;
+        foreach (var p in turnOrder)
+            if (p != null && !p.isDead) alive++;
+        return alive;
+    }
+
+    [Server]
+    public PlayerState GetLastAlivePlayer()
+    {
+        PlayerState last = null;
+        foreach (var p in turnOrder)
+            if (p != null && !p.isDead) last = p;
+        return last;
+    }
+
+    [Server]
+    public void Server_CheckForEndGame()
+    {
+        if (!gameStarted) return;
+        int alive = CountAlivePlayers();
+        if (alive <= 1)
+        {
+            var winner = GetLastAlivePlayer();
+            int winnerSeat = winner ? winner.seatIndex : -1;
+            RpcMatchEnded(winnerSeat);
+
+            // Stop game; wait for user to press "3" to start again
+            gameStarted = false;
+            currentTurnIndex = -1;
+            currentTurnNetId = 0;
+        }
+    }
+
+    [ClientRpc]
+    void RpcMatchEnded(int winnerSeat)
+    {
+        if (winnerSeat >= 0)
+            Debug.Log("[Match] Winner: seat " + winnerSeat + ". Press 3 to start a new game.");
+        else
+            Debug.Log("[Match] No winner (all dead?). Press 3 to start a new game.");
+    }
+
+    // Optional stubs
+    [Server] public void Server_HealAll(int amount) { }
+    [Server] public void Server_ChainArc(PlayerState caster, PlayerState startTarget, int amount, int arcs) { }
 }

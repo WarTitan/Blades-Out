@@ -10,21 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: af3bee6771e75d84386be6a5ef61e2f8, type: 3}
-  m_Name: CardDatabase
+  m_Name: 11CardDatabase
   m_EditorClassIdentifier: Assembly-CSharp::CardDatabase
   cards:
+  - {fileID: 11400000, guid: 92f831a58d44109408ae94986b4cf251, type: 2}
   - {fileID: 11400000, guid: 576068f0646e5f84287642332394e395, type: 2}
   - {fileID: 11400000, guid: c33a0dd8a392c084281e162fd60f1cac, type: 2}
   - {fileID: 11400000, guid: 5b9f29d99afc88d4a9d8b5b6b39b069c, type: 2}
-  - {fileID: 11400000, guid: 420c7284948e2ea4badfcda1e7ef7f2f, type: 2}
   - {fileID: 11400000, guid: 569d245a82dbf1548835e2bce775e061, type: 2}
-  - {fileID: 11400000, guid: ae8685056bb098b458df7599d8aad8ee, type: 2}
-  - {fileID: 11400000, guid: 8b385374401b270469971b585be6bdcc, type: 2}
-  - {fileID: 11400000, guid: 3e6e25d1bc7f905439694bbeb3e22c54, type: 2}
-  - {fileID: 11400000, guid: 48835679b6afe1e42a2b4d0b833584c6, type: 2}
-  - {fileID: 11400000, guid: 94e8e1aae22b8b34d87a0326cce6561b, type: 2}
-  - {fileID: 11400000, guid: 92f831a58d44109408ae94986b4cf251, type: 2}
-  - {fileID: 11400000, guid: 1ad4bc146c8876f449ee11183c769e67, type: 2}
   - {fileID: 11400000, guid: eab0e8860fd9a6348b4ce486917b85e2, type: 2}
+  - {fileID: 11400000, guid: 1ad4bc146c8876f449ee11183c769e67, type: 2}
+  - {fileID: 11400000, guid: 3e6e25d1bc7f905439694bbeb3e22c54, type: 2}
+  - {fileID: 11400000, guid: c33a0dd8a392c084281e162fd60f1cac, type: 2}
+  - {fileID: 11400000, guid: 48835679b6afe1e42a2b4d0b833584c6, type: 2}
   - {fileID: 11400000, guid: d85b86ce67660f64595289032e2ea249, type: 2}
-  - {fileID: 11400000, guid: b9847e4890d96d347bbdb4abaf4bbd88, type: 2}
+  - {fileID: 11400000, guid: ae8685056bb098b458df7599d8aad8ee, type: 2}
+  - {fileID: 11400000, guid: 420c7284948e2ea4badfcda1e7ef7f2f, type: 2}
