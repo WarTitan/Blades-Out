@@ -3,29 +3,51 @@ using Mirror;
 
 public class LocalCameraController : NetworkBehaviour
 {
-    [SerializeField] private float mouseSensitivity = 2f;
-    [SerializeField] private Transform playerBody;
+    [Header("References")]
+    [Tooltip("Yaw pivot. If null, will use transform.parent or this transform.")]
+    public Transform playerBody;
 
-    private float xRotation;
+    [Header("Look (no smoothing)")]
+    [Tooltip("Mouse delta multiplier. Try 2.0–6.0 depending on your DPI.")]
+    public float sensitivity = 3.0f;
+    public bool invertY = false;
+    public float pitchMin = -85f;
+    public float pitchMax = 85f;
 
-    void Start()
+    // runtime
+    private float yaw;
+    private float pitch;
+
+    void Awake()
     {
-        if (!isLocalPlayer) { enabled = false; return; }
-        Cursor.lockState = CursorLockMode.Locked;
-
         if (playerBody == null)
-            playerBody = transform.root; // fallback to player root
+            playerBody = transform.parent != null ? transform.parent : transform;
+    }
+
+    public override void OnStartLocalPlayer()
+    {
+        // initialize from current transforms
+        if (playerBody) yaw = playerBody.localEulerAngles.y;
+
+        pitch = transform.localEulerAngles.x;
+        if (pitch > 180f) pitch -= 360f; // unwrap to [-180, 180]
+        pitch = Mathf.Clamp(pitch, pitchMin, pitchMax);
     }
 
     void Update()
     {
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
+        if (!isLocalPlayer) return;
+        // Only rotate when the cursor is locked (gameplay)
+        if (Cursor.lockState != CursorLockMode.Locked) return;
 
-        xRotation -= mouseY;
-        xRotation = Mathf.Clamp(xRotation, -90f, 90f);
+        float mx = Input.GetAxisRaw("Mouse X"); // raw mouse delta (no smoothing)
+        float my = Input.GetAxisRaw("Mouse Y");
 
-        transform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
-        if (playerBody) playerBody.Rotate(Vector3.up * mouseX);
+        yaw += mx * sensitivity;
+        pitch += (invertY ? my : -my) * sensitivity;
+        pitch = Mathf.Clamp(pitch, pitchMin, pitchMax);
+
+        if (playerBody) playerBody.localRotation = Quaternion.Euler(0f, yaw, 0f);
+        transform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
     }
 }

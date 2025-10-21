@@ -2,31 +2,29 @@
 using Mirror;
 
 // Keyboard hotkeys for the local player.
-// 1  : End Turn
-// 2  : Upgrade selected hand card (OFF-turn only; server checks gold & max)
-// 3  : Request Start Game
-// 4  : Set selected hand card (must be SetReaction, only during YOUR turn, max 1 set)
-// Q/Esc : Deselect
-//
-// Attach to the same GameObject as PlayerState. It auto-finds CardRaycasterOnRoot in children.
+// Lobby: 3 toggles READY (handled via LobbyReady on this player).
+// Gameplay: 1 End Turn, 2 Upgrade (off-turn), 4 Set selected card, Q/Esc Deselect.
+// NOTE: We intentionally do NOT call CmdRequestStartGame here.
+//       The match starts automatically when LobbyStage reaches the min ready players.
 public class PlayerHotkeys : NetworkBehaviour
 {
     [Header("Refs (auto)")]
     public PlayerState localPlayer;
     public CardRaycasterOnRoot raycaster;
+    public LobbyReady lobbyReady;
 
-    // Primary number-row keys
+    // Primary number-row keys (gameplay only)
     [Header("Key Bindings (number row)")]
     public KeyCode endTurnKey = KeyCode.Alpha1;
     public KeyCode upgradeKey = KeyCode.Alpha2;
-    public KeyCode startGameKey = KeyCode.Alpha3;
+    // 3 is RESERVED for LobbyReady (do not bind here)
     public KeyCode setKey = KeyCode.Alpha4;
 
-    // Numpad alternates
+    // Numpad alternates (gameplay only)
     [Header("Key Bindings (numpad)")]
     public KeyCode endTurnKeypad = KeyCode.Keypad1;
     public KeyCode upgradeKeypad = KeyCode.Keypad2;
-    public KeyCode startGameKeypad = KeyCode.Keypad3;
+    // Keypad3 reserved for LobbyReady
     public KeyCode setKeypad = KeyCode.Keypad4;
 
     [Header("Other")]
@@ -36,6 +34,7 @@ public class PlayerHotkeys : NetworkBehaviour
     {
         if (!localPlayer) localPlayer = GetComponent<PlayerState>();
         if (!raycaster) raycaster = GetComponentInChildren<CardRaycasterOnRoot>(true);
+        if (!lobbyReady) lobbyReady = GetComponent<LobbyReady>();
     }
 
     public override void OnStartLocalPlayer()
@@ -43,23 +42,49 @@ public class PlayerHotkeys : NetworkBehaviour
         base.OnStartLocalPlayer();
         if (!localPlayer) localPlayer = GetComponent<PlayerState>();
         if (!raycaster) raycaster = GetComponentInChildren<CardRaycasterOnRoot>(true);
+        if (!lobbyReady) lobbyReady = GetComponent<LobbyReady>();
     }
 
     void Update()
     {
         if (!isLocalPlayer) return;
+
         if (!localPlayer) localPlayer = GetComponent<PlayerState>();
         if (!raycaster) raycaster = GetComponentInChildren<CardRaycasterOnRoot>(true);
-        if (!localPlayer || !raycaster) return;
+        if (!lobbyReady) lobbyReady = GetComponent<LobbyReady>();
+        if (!localPlayer) return;
 
-        // 3 -> Start Game
-        if (Pressed(startGameKey, startGameKeypad))
+        bool inLobby = LobbyStage.Instance ? LobbyStage.Instance.lobbyActive : false;
+
+        // ---------------- LOBBY HOTKEYS ----------------
+        if (inLobby)
         {
-            Debug.Log("[Hotkeys] Start Game requested.");
-            localPlayer.CmdRequestStartGame();
+            // 3 -> Toggle READY (owned by LobbyReady)
+            if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3))
+            {
+                if (lobbyReady)
+                {
+                    bool next = !lobbyReady.isReady;
+                    lobbyReady.CmdSetReady(next);
+                    Debug.Log("[Hotkeys] Lobby Ready toggled -> " + (next ? "ON" : "OFF"));
+                }
+                else
+                {
+                    Debug.LogWarning("[Hotkeys] LobbyReady component missing on player.");
+                }
+            }
+
+            // Allow deselect to clear any UI/card selection even in lobby
+            if (Input.GetKeyDown(deselectKey) || Input.GetKeyDown(KeyCode.Escape))
+                raycaster?.DeselectPublic();
+
+            // Block gameplay hotkeys while in lobby
+            return;
         }
 
-        // 1 -> End Turn
+        // ---------------- GAMEPLAY HOTKEYS ----------------
+
+        // 1 -> End Turn (only on your turn)
         if (Pressed(endTurnKey, endTurnKeypad))
         {
             var tm = TurnManager.Instance;
@@ -77,7 +102,7 @@ public class PlayerHotkeys : NetworkBehaviour
         // 4 -> Set selected hand card (SetReaction only, YOUR turn, max 1 set)
         if (Pressed(setKey, setKeypad))
         {
-            int handIndex = raycaster.SelectedHandIndex;
+            int handIndex = raycaster != null ? raycaster.SelectedHandIndex : -1;
             if (handIndex < 0)
             {
                 Debug.Log("[Hotkeys] No HAND card selected. Click a card in your hand first.");
@@ -111,7 +136,7 @@ public class PlayerHotkeys : NetworkBehaviour
             }
             else
             {
-                int hi = raycaster.SelectedHandIndex;
+                int hi = raycaster != null ? raycaster.SelectedHandIndex : -1;
                 if (hi < 0) Debug.Log("[Hotkeys] Select a HAND card to upgrade.");
                 else localPlayer.CmdUpgradeCard(hi);
             }
@@ -120,7 +145,7 @@ public class PlayerHotkeys : NetworkBehaviour
         // Q or Esc -> Deselect
         if (Input.GetKeyDown(deselectKey) || Input.GetKeyDown(KeyCode.Escape))
         {
-            raycaster.DeselectPublic();
+            raycaster?.DeselectPublic();
         }
     }
 
