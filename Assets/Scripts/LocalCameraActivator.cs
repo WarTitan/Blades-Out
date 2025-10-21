@@ -11,7 +11,7 @@ public class LocalCameraActivator : NetworkBehaviour
     public bool periodicallyEnforce = true;
     public float enforceInterval = 0.25f;
 
-    bool forceGameplay = false;
+    private bool forceGameplay = false;
 
     void Awake()
     {
@@ -21,6 +21,16 @@ public class LocalCameraActivator : NetworkBehaviour
 
     void OnEnable() { LobbyStage.OnLobbyStateChanged += OnLobbyStateChanged; }
     void OnDisable() { LobbyStage.OnLobbyStateChanged -= OnLobbyStateChanged; }
+
+    public override void OnStartClient()
+    {
+        // Remote players' cameras/listeners must be OFF on this client
+        if (!isLocalPlayer)
+        {
+            if (playerCamera) playerCamera.enabled = false;
+            if (playerAudioListener) playerAudioListener.enabled = false;
+        }
+    }
 
     public override void OnStartLocalPlayer()
     {
@@ -63,19 +73,7 @@ public class LocalCameraActivator : NetworkBehaviour
         if (playerCamera) playerCamera.enabled = enablePlayerCam;
         if (playerAudioListener) playerAudioListener.enabled = enablePlayerCam;
 
-        // Cursor policy per state
-        if (enablePlayerCam)
-        {
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
-        }
-        else
-        {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-        }
-
-        // Safety: shut off lobby camera when entering gameplay
+        // Ensure lobby camera off when entering gameplay (local safety)
         if (!lobbyActive && LobbyStage.Instance && LobbyStage.Instance.lobbyCamera)
             LobbyStage.Instance.lobbyCamera.enabled = false;
     }

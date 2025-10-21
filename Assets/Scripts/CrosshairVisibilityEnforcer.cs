@@ -1,22 +1,20 @@
 using UnityEngine;
 using Mirror;
 
-/// Enforces crosshair visibility: OFF while in lobby, ON in gameplay.
-/// Runs late every frame so it wins over anything that toggles it on join.
+/// Enforces crosshair visibility: OFF in lobby, ON in gameplay.
+/// Attach to player prefab root (local player).
 [DefaultExecutionOrder(30000)]
 [AddComponentMenu("Net/Crosshair Visibility Enforcer")]
 public class CrosshairVisibilityEnforcer : NetworkBehaviour
 {
-    [Header("Optional explicit refs (leave empty to auto-find)")]
-    public MonoBehaviour crosshairBehaviour;   // e.g., CrosshairDot
-    public GameObject crosshairRoot;           // or a GameObject to toggle
-
-    [Header("Auto-find under the local player's camera")]
+    [Header("Assign either component or root (auto-find if empty)")]
+    public MonoBehaviour crosshairBehaviour; // e.g., CrosshairDot
+    public GameObject crosshairRoot;
     public bool autoFindUnderPlayerCamera = true;
     public string crosshairObjectName = "Crosshair";
 
     LocalCameraActivator lca;
-    float _nextResolveTime;
+    float nextResolve;
 
     void Awake()
     {
@@ -25,18 +23,17 @@ public class CrosshairVisibilityEnforcer : NetworkBehaviour
 
     public override void OnStartLocalPlayer()
     {
-        ResolveCrosshairIfNeeded(force: true);
+        ResolveCrosshair(true);
     }
 
     void LateUpdate()
     {
         if (!isLocalPlayer) return;
 
-        // Resolve again occasionally (handles late-spawned UI)
-        if (Time.time >= _nextResolveTime)
+        if (Time.time >= nextResolve)
         {
-            ResolveCrosshairIfNeeded(force: false);
-            _nextResolveTime = Time.time + 0.5f;
+            ResolveCrosshair(false);
+            nextResolve = Time.time + 0.5f;
         }
 
         bool inLobby = LobbyStage.Instance ? LobbyStage.Instance.lobbyActive : true;
@@ -46,7 +43,7 @@ public class CrosshairVisibilityEnforcer : NetworkBehaviour
         if (crosshairRoot) crosshairRoot.SetActive(shouldBeActive);
     }
 
-    void ResolveCrosshairIfNeeded(bool force)
+    void ResolveCrosshair(bool force)
     {
         if (!autoFindUnderPlayerCamera) return;
         if (!force && (crosshairBehaviour || crosshairRoot)) return;
@@ -59,7 +56,6 @@ public class CrosshairVisibilityEnforcer : NetworkBehaviour
             var ch = cam.GetComponentInChildren<CrosshairDot>(true);
             if (ch) crosshairBehaviour = ch;
         }
-
         if (!crosshairBehaviour && !crosshairRoot && !string.IsNullOrEmpty(crosshairObjectName))
         {
             var t = FindDeepChild(cam.transform, crosshairObjectName);

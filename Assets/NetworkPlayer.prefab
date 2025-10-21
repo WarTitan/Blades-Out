@@ -308,9 +308,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 86f7d19ab6ec1584ca6f1ff9daf57e83, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CrosshairDot
-  lengthPx: 20
+  lengthPx: 18
   thicknessPx: 4
-  gapPx: 18
+  gapPx: 22
   alpha: 0.9
   color: {r: 1, g: 1, b: 1, a: 1}
   hideCursor: 1
@@ -5033,13 +5033,9 @@ MonoBehaviour:
   syncInterval: 0
   playerLook: {fileID: -1469299680671201489}
   cameraController: {fileID: 7060263134974425683}
-  crosshairBehaviour: {fileID: 7060263134974425683}
-  crosshairRoot: {fileID: 3490693020670742134}
-  autoFindUnderPlayerCamera: 1
-  crosshairObjectName: Crosshair
+  preferLocalCameraController: 1
   periodicallyEnforce: 1
   enforceInterval: 0.25
-  preferLocalCameraController: 1
 --- !u!114 &2979854329001126795
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5104,7 +5100,7 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   crosshairBehaviour: {fileID: 0}
-  crosshairRoot: {fileID: 0}
+  crosshairRoot: {fileID: 3490693020670742134}
   autoFindUnderPlayerCamera: 1
   crosshairObjectName: Crosshair
 --- !u!4 &4597333103463066336 stripped

@@ -42,21 +42,19 @@ public class LobbyStage : NetworkBehaviour
 
     void Update()
     {
-        // While in lobby: keep local client in lobby state (no input/crosshair)
         if (!isClient || !lobbyActive) return;
 
         if (NetworkClient.localPlayer != null)
         {
             var go = NetworkClient.localPlayer.gameObject;
-
             var lca = go.GetComponent<LocalCameraActivator>();
             if (lca) lca.ForceEnterLobby();
 
             var lld = go.GetComponent<LobbyLocalDisabler>();
             if (lld) lld.ForceLobby();
-
-            if (lobbyCamera) lobbyCamera.enabled = true;
         }
+
+        if (lobbyCamera) lobbyCamera.enabled = true;
     }
 
     [Server]
@@ -67,8 +65,12 @@ public class LobbyStage : NetworkBehaviour
         var mgr = NetworkManager.singleton as PlayerSpawnManager;
         if (mgr != null) mgr.Server_TeleportAllPlayersToGameSpawns();
 
-        lobbyActive = false; // syncvar flips clients
+        lobbyActive = false;
         RpcLobbyEnded();
+
+        var tm = TurnManager.Instance;
+        if (tm != null)
+            tm.Server_AttemptStartGame();
     }
 
     [ClientRpc]
@@ -95,12 +97,6 @@ public class LobbyStage : NetworkBehaviour
         }
 
         if (autoStartWhenMinReady && players >= minPlayersToStart && ready >= minPlayersToStart)
-        {
             Server_ExitLobbyAndTeleport();
-
-            var tm = TurnManager.Instance;
-            if (tm != null)
-                tm.Server_AttemptStartGame();
-        }
     }
 }

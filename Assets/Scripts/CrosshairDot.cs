@@ -1,11 +1,12 @@
 using UnityEngine;
 using UnityEngine.UI;
+using Mirror;
 
 [AddComponentMenu("UI/Crosshair X (Rounded)")]
 public class CrosshairDot : MonoBehaviour
 {
     [Header("Arms")]
-    // 5x smaller than before: 180 -> 36, 12 -> 3, 90 -> 18
+    // 5x smaller than an earlier version: 180 -> 36, 12 -> 3, 90 -> 18
     public float lengthPx = 36f;
     public float thicknessPx = 3f;
     public float gapPx = 18f;
@@ -13,23 +14,41 @@ public class CrosshairDot : MonoBehaviour
     [Header("Style")]
     public float alpha = 1f;
     public Color color = Color.black;
-    public bool hideCursor = true;
     public bool roundOuterCaps = true;   // rounded only at the far end of each arm
 
+    [Header("Visibility Rules")]
+    public bool hideInLobby = true;      // <- key: don't show when LobbyStage is active
+    public bool onlyForLocalPlayer = true; // <- crosshair renders only for the local player
+
+    // runtime
     private Canvas _canvas;
     private Image[] _rects = new Image[4];
     private Image[] _caps = new Image[4];
     private static Sprite _circleSprite;
 
+    private NetworkIdentity _ownerNI;
+    private bool _isLocalOwner = true; // default assume true if no NI found
+
+    void Awake()
+    {
+        // Cache owner info if available (so we can show only for the local player)
+        _ownerNI = GetComponentInParent<NetworkIdentity>();
+        if (_ownerNI != null)
+            _isLocalOwner = _ownerNI.isLocalPlayer;
+        else
+            _isLocalOwner = true; // single-player / no NI case
+    }
+
     void Start()
     {
-        // Canvas
-        GameObject go = new GameObject("CrosshairCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-        _canvas = go.GetComponent<Canvas>();
+        // Create a Canvas UNDER this object so disabling the object disables the UI
+        GameObject canvasGO = new GameObject("CrosshairCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        canvasGO.transform.SetParent(transform, false);
+        _canvas = canvasGO.GetComponent<Canvas>();
         _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        go.layer = LayerMask.NameToLayer("UI");
+        canvasGO.layer = LayerMask.NameToLayer("UI");
 
-        var scaler = go.GetComponent<CanvasScaler>();
+        var scaler = canvasGO.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920, 1080);
 
@@ -38,7 +57,7 @@ public class CrosshairDot : MonoBehaviour
         {
             // rectangle part
             var rectGO = new GameObject("ArmRect_" + i, typeof(RectTransform), typeof(Image));
-            rectGO.transform.SetParent(go.transform, false);
+            rectGO.transform.SetParent(canvasGO.transform, false);
             var rectImg = rectGO.GetComponent<Image>();
             rectImg.sprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f));
             rectImg.type = Image.Type.Simple;
@@ -50,7 +69,7 @@ public class CrosshairDot : MonoBehaviour
 
             // cap part (circle)
             var capGO = new GameObject("ArmCap_" + i, typeof(RectTransform), typeof(Image));
-            capGO.transform.SetParent(go.transform, false);
+            capGO.transform.SetParent(canvasGO.transform, false);
             var capImg = capGO.GetComponent<Image>();
             _caps[i] = capImg;
 
@@ -61,8 +80,31 @@ public class CrosshairDot : MonoBehaviour
 
         ApplyStyle();
         LayoutArms();
+        UpdateVisibility(); // respect lobby/local on startup
+    }
 
-        if (hideCursor) Cursor.visible = false;
+    void OnEnable()
+    {
+        LobbyStage.OnLobbyStateChanged += OnLobbyStateChanged;
+        UpdateVisibility();
+    }
+
+    void OnDisable()
+    {
+        LobbyStage.OnLobbyStateChanged -= OnLobbyStateChanged;
+        // Hide when disabled to be safe
+        SetCanvasActive(false);
+    }
+
+    void LateUpdate()
+    {
+        // In case something else toggles it this frame, we enforce at the end
+        UpdateVisibility();
+    }
+
+    void OnLobbyStateChanged(bool lobbyActive)
+    {
+        UpdateVisibility();
     }
 
     // Optional runtime spread change
@@ -80,6 +122,7 @@ public class CrosshairDot : MonoBehaviour
             ApplyStyle();
             LayoutArms();
         }
+        UpdateVisibility();
     }
 #endif
 
@@ -115,15 +158,18 @@ public class CrosshairDot : MonoBehaviour
 
             // cap
             var c = _caps[i];
-            c.enabled = roundOuterCaps;
-            if (roundOuterCaps)
+            if (c != null)
             {
-                c.sprite = _circleSprite;
-                c.type = Image.Type.Simple;
-                var crt = c.rectTransform;
-                crt.sizeDelta = new Vector2(thicknessPx, thicknessPx);
-                crt.localRotation = Quaternion.identity;
-                crt.anchoredPosition = dir * (gapPx * 0.5f + lengthPx);
+                c.enabled = roundOuterCaps;
+                if (roundOuterCaps)
+                {
+                    c.sprite = _circleSprite;
+                    c.type = Image.Type.Simple;
+                    var crt = c.rectTransform;
+                    crt.sizeDelta = new Vector2(thicknessPx, thicknessPx);
+                    crt.localRotation = Quaternion.identity;
+                    crt.anchoredPosition = dir * (gapPx * 0.5f + lengthPx);
+                }
             }
         }
     }
@@ -137,7 +183,6 @@ public class CrosshairDot : MonoBehaviour
     // Creates a white circle sprite of given diameter (in pixels)
     private static void EnsureCircleSprite(int diameter)
     {
-        // reuse if already created with this size
         if (_circleSprite != null && Mathf.Abs(_circleSprite.rect.width - diameter) < 0.5f) return;
 
         var tex = new Texture2D(diameter, diameter, TextureFormat.ARGB32, false);
@@ -160,5 +205,39 @@ public class CrosshairDot : MonoBehaviour
         }
         tex.Apply(false, false);
         _circleSprite = Sprite.Create(tex, new Rect(0, 0, diameter, diameter), new Vector2(0.5f, 0.5f), 1f);
+    }
+
+    // ===== Visibility core =====
+    void UpdateVisibility()
+    {
+        // local-owner check (if requested)
+        if (onlyForLocalPlayer)
+        {
+            if (_ownerNI == null)
+                _ownerNI = GetComponentInParent<NetworkIdentity>();
+
+            _isLocalOwner = (_ownerNI == null) ? true : _ownerNI.isLocalPlayer;
+        }
+
+        if (!_isLocalOwner)
+        {
+            SetCanvasActive(false);
+            return;
+        }
+
+        bool inLobby = (LobbyStage.Instance != null) ? LobbyStage.Instance.lobbyActive : false;
+        bool shouldShow = !(hideInLobby && inLobby);
+
+        SetCanvasActive(shouldShow);
+    }
+
+    void SetCanvasActive(bool active)
+    {
+        if (_canvas != null)
+        {
+            // Enable/disable the whole canvas so nothing renders
+            if (_canvas.gameObject.activeSelf != active)
+                _canvas.gameObject.SetActive(active);
+        }
     }
 }
