@@ -313,8 +313,9 @@ MonoBehaviour:
   gapPx: 22
   alpha: 0.9
   color: {r: 1, g: 1, b: 1, a: 1}
-  hideCursor: 1
   roundOuterCaps: 1
+  hideInLobby: 1
+  onlyForLocalPlayer: 1
 --- !u!1 &5318265040148999614
 GameObject:
   m_ObjectHideFlags: 0
@@ -4110,6 +4111,14 @@ PrefabInstance:
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: b1e15ee6ae671f64e93734c50f6a9d38, type: 2}
+    - target: {fileID: 5866666021909216657, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: 0218fd3505adbe64b897338e7dac2a60, type: 2}
     - target: {fileID: 5905301682132913236, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
       propertyPath: m_Layer
       value: 7
@@ -4590,9 +4599,29 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 7
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 5866666021909216657, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
     m_RemovedGameObjects:
     - {fileID: 5332809968238436118, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+    - {fileID: -6617500332700902312, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+    - {fileID: -2174625696751411482, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+    - {fileID: 2177025119315357706, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+    - {fileID: 3933076884550084571, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+    - {fileID: -1021658180060721111, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+    - {fileID: -7288559543564255601, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+    - {fileID: 1731348984381880614, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+    - {fileID: -4832052742494056098, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+    - {fileID: -7640069181446684861, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+    - {fileID: 2015475603608224979, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+    - {fileID: -6925685357595405327, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+    - {fileID: -4927500523583525342, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+    - {fileID: -905205316543076548, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+    - {fileID: -1278373934930643502, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+    - {fileID: 2613661052893273132, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+    - {fileID: 7956947499588865195, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+    - {fileID: 276204724065346555, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+    - {fileID: 5905301682132913236, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+    - {fileID: 7117839475369254733, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
       insertIndex: -1
@@ -4673,6 +4702,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3439840233668314032}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7611691601451606183}
   m_SourcePrefab: {fileID: 100100000, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
 --- !u!1 &3784944211829141594 stripped
 GameObject:
@@ -5103,6 +5135,31 @@ MonoBehaviour:
   crosshairRoot: {fileID: 3490693020670742134}
   autoFindUnderPlayerCamera: 1
   crosshairObjectName: Crosshair
+--- !u!114 &7611691601451606183
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3784944211829141594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39b007d86cf2f4647be75acfbdf7660c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LobbyIdleAnimator
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  animator: {fileID: 0}
+  baseIdleStateName: Idle
+  baseIdleClip: {fileID: -203655887218126122, guid: e26e5ed40d8e4f24899562a75ef82c65, type: 3}
+  lobbyIdleClips:
+  - {fileID: -203655887218126122, guid: e26e5ed40d8e4f24899562a75ef82c65, type: 3}
+  baseLayerIndex: 0
+  crossfade: 0.2
+  speedRange: {x: 0.95, y: 1.05}
+  forceIdleWhileLobby: 1
+  verboseLogs: 1
 --- !u!4 &4597333103463066336 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
