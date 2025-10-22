@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4acf1391760cecd4dad51fe600af9a76, type: 3}
+  m_Name: 1Love Potion
+  m_EditorClassIdentifier: Assembly-CSharp::CardDefinition
+  id: 4
+  cardName: Love Potion
+  description: Heal 1 HP
+  image: {fileID: 1817068260, guid: 4d6b54469207fc748b6ee7dec477f317, type: 3}
+  playStyle: 0
+  effect: 16
+  amount: 1
+  durationTurns: 0
+  arcs: 0
+  chipCost: 1
+  setShowcasePrefab: {fileID: 0}
+  setShowcaseLocalOffset: {x: 0, y: 0, z: 0}
+  setShowcaseLocalEuler: {x: 0, y: 0, z: 0}
+  setShowcaseLocalScale: {x: 1, y: 1, z: 1}
+  tiers:
+  - attack: 1
+    defense: 0
+    costGold: 0
+    effectText: Heal 1 HP
+    castChipCost: 0
+  - attack: 2
+    defense: 0
+    costGold: 0
+    effectText: Heal 2 HP
+    castChipCost: 0
+  - attack: 3
+    defense: 0
+    costGold: 0
+    effectText: Heal 3 HP
+    castChipCost: 0
+  - attack: 4
+    defense: 0
+    costGold: 0
+    effectText: Heal 4 HP
+    castChipCost: 0
+  - attack: 5
+    defense: 0
+    costGold: 0
+    effectText: Heal 5 HP
+    castChipCost: 0
+  - attack: 6
+    defense: 0
+    costGold: 0
+    effectText: Heal 6 HP
+    castChipCost: 0
+  - attack: 7
+    defense: 0
+    costGold: 0
+    effectText: Heal 7 HP
+    castChipCost: 0
+  - attack: 8
+    defense: 0
+    costGold: 0
+    effectText: Heal 8 HP
+    castChipCost: 0
+  - attack: 9
+    defense: 0
+    costGold: 0
+    effectText: Heal 9 HP
+    castChipCost: 0
+  - attack: 10
+    defense: 0
+    costGold: 0
+    effectText: Heal 10 HP
+    castChipCost: 0

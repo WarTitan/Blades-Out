@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4acf1391760cecd4dad51fe600af9a76, type: 3}
+  m_Name: 1Bomb
+  m_EditorClassIdentifier: Assembly-CSharp::CardDefinition
+  id: 0
+  cardName: Bomb
+  description: Evrey player takes 1 DMG
+  image: {fileID: 2076744250, guid: 03f555c09f4b78247a6536a015c8f7ad, type: 3}
+  playStyle: 0
+  effect: 10
+  amount: 1
+  durationTurns: 0
+  arcs: 0
+  chipCost: 1
+  setShowcasePrefab: {fileID: 0}
+  setShowcaseLocalOffset: {x: 0, y: 0, z: 0}
+  setShowcaseLocalEuler: {x: 0, y: 0, z: 0}
+  setShowcaseLocalScale: {x: 1, y: 1, z: 1}
+  tiers:
+  - attack: 1
+    defense: 0
+    costGold: 0
+    effectText: Evrey player takes 1 DMG
+    castChipCost: 2
+  - attack: 2
+    defense: 0
+    costGold: 2
+    effectText: Evrey player takes 2 DMG
+    castChipCost: 2
+  - attack: 3
+    defense: 0
+    costGold: 3
+    effectText: Evrey player takes 3 DMG
+    castChipCost: 2
+  - attack: 4
+    defense: 0
+    costGold: 4
+    effectText: Evrey player takes 4 DMG
+    castChipCost: 2
+  - attack: 5
+    defense: 0
+    costGold: 5
+    effectText: Evrey player takes 5 DMG
+    castChipCost: 2
+  - attack: 6
+    defense: 0
+    costGold: 6
+    effectText: Evrey player takes 6 DMG
+    castChipCost: 2
+  - attack: 7
+    defense: 0
+    costGold: 7
+    effectText: Evrey player takes 7 DMG
+    castChipCost: 2
+  - attack: 8
+    defense: 0
+    costGold: 8
+    effectText: Evrey player takes 8 DMG
+    castChipCost: 2
+  - attack: 9
+    defense: 0
+    costGold: 9
+    effectText: Evrey player takes 9 DMG
+    castChipCost: 2
+  - attack: 9
+    defense: 0
+    costGold: 0
+    effectText: Evrey player takes 10 DMG
+    castChipCost: 2

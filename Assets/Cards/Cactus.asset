@@ -1,0 +1,81 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4acf1391760cecd4dad51fe600af9a76, type: 3}
+  m_Name: Cactus
+  m_EditorClassIdentifier: Assembly-CSharp::CardDefinition
+  id: 6
+  cardName: Cactus
+  description: 'Reflect 1 DMG, lasts 3 turns
+
+'
+  image: {fileID: 591096369, guid: 1073b574bfb86a547a7e64d405890c07, type: 3}
+  playStyle: 2
+  effect: 12
+  amount: 1
+  durationTurns: 0
+  arcs: 0
+  chipCost: 1
+  setShowcasePrefab: {fileID: 919132149155446097, guid: 5eaf4e40f083e864a8071d77b83f3938, type: 3}
+  setShowcaseLocalOffset: {x: 0, y: 0, z: 0}
+  setShowcaseLocalEuler: {x: 0, y: 0, z: 0}
+  setShowcaseLocalScale: {x: 0.2, y: 0.2, z: 0.2}
+  tiers:
+  - attack: 1
+    defense: 0
+    costGold: 2
+    effectText: Reflect 1 DMG, lasts 3 turns
+    castChipCost: 3
+  - attack: 2
+    defense: 0
+    costGold: 2
+    effectText: Reflect 2 DMG, lasts 3 turns
+    castChipCost: 3
+  - attack: 3
+    defense: 0
+    costGold: 2
+    effectText: Reflect 3 DMG, lasts 3 turns
+    castChipCost: 3
+  - attack: 4
+    defense: 0
+    costGold: 2
+    effectText: Reflect 4 DMG, lasts 3 turns
+    castChipCost: 3
+  - attack: 5
+    defense: 0
+    costGold: 2
+    effectText: Reflect 5 DMG, lasts 3 turns
+    castChipCost: 3
+  - attack: 6
+    defense: 0
+    costGold: 2
+    effectText: Reflect 6 DMG, lasts 3 turns
+    castChipCost: 3
+  - attack: 7
+    defense: 0
+    costGold: 2
+    effectText: Reflect 7 DMG, lasts 3 turns
+    castChipCost: 3
+  - attack: 8
+    defense: 0
+    costGold: 2
+    effectText: Reflect 8 DMG, lasts 3 turns
+    castChipCost: 3
+  - attack: 9
+    defense: 0
+    costGold: 2
+    effectText: Reflect 9 DMG, lasts 3 turns
+    castChipCost: 3
+  - attack: 10
+    defense: 0
+    costGold: 2
+    effectText: Reflect 10 DMG, lasts 3 turns
+    castChipCost: 3
