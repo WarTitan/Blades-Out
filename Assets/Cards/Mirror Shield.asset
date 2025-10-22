@@ -31,4 +31,4 @@ MonoBehaviour:
     defense: 0
     costGold: 0
     effectText: Reflect first attack back to attacker.
-    castChipCost: 2
+    castChipCost: 4

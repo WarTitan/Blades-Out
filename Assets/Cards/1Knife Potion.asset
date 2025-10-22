@@ -36,44 +36,44 @@ MonoBehaviour:
     defense: 0
     costGold: 4
     effectText: Deal 2 DMG, heal 2 HP
-    castChipCost: 0
+    castChipCost: 2
   - attack: 3
     defense: 0
     costGold: 4
     effectText: Deal 3 DMG, heal 3 HP
-    castChipCost: 0
+    castChipCost: 2
   - attack: 4
     defense: 0
     costGold: 4
     effectText: Deal 4 DMG, heal 4 HP
-    castChipCost: 0
+    castChipCost: 2
   - attack: 5
     defense: 0
     costGold: 4
     effectText: Deal 5 DMG, heal 5 HP
-    castChipCost: 0
+    castChipCost: 2
   - attack: 6
     defense: 0
     costGold: 4
     effectText: Deal 6 DMG, heal 6 HP
-    castChipCost: 0
+    castChipCost: 2
   - attack: 7
     defense: 0
     costGold: 4
     effectText: Deal 7 DMG, heal 7 HP
-    castChipCost: 0
+    castChipCost: 2
   - attack: 8
     defense: 0
     costGold: 4
     effectText: Deal 8 DMG, heal 8 HP
-    castChipCost: 0
+    castChipCost: 2
   - attack: 9
     defense: 0
     costGold: 4
     effectText: Deal 9 DMG, heal 9 HP
-    castChipCost: 0
+    castChipCost: 2
   - attack: 10
     defense: 0
     costGold: 4
     effectText: Deal 10 DMG, heal 10 HP
-    castChipCost: 0
+    castChipCost: 2

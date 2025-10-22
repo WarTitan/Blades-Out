@@ -11,7 +11,7 @@ public class TurnManager : NetworkBehaviour
     [SerializeField] private int startingGold = 5;
     [SerializeField] private int startingHandSize = 3;
     [SerializeField] private int cardsPerTurn = 1;
-    [SerializeField] private int goldPerTurn = 1;
+    [SerializeField] private int goldPerTurn = 2;                   // was 1 -> now 2 per your request
     [SerializeField] private int defaultDeckSize = 12;
     [SerializeField] private CardDatabase database;
 
@@ -21,6 +21,14 @@ public class TurnManager : NetworkBehaviour
 
     [Header("Chips")]
     [SerializeField] private int chipCap = 10;
+
+    [Header("Hand Cap")]
+    [SerializeField] private int maxHandSize = 5;                   // hard cap for hand size
+    [SerializeField] private int fullHandGoldInsteadOfDraw = 2;     // when hand is full at end turn
+
+    // expose read-only for other scripts
+    public int MaxHandSize => maxHandSize;
+    public int FullHandGoldInsteadOfDraw => fullHandGoldInsteadOfDraw;
 
     [SyncVar] private int currentTurnIndex = -1;
     [SyncVar] private bool gameStarted = false;
@@ -77,18 +85,25 @@ public class TurnManager : NetworkBehaviour
         if (!gameStarted || turnOrder.Count == 0) return;
         if (turnOrder[currentTurnIndex] != requester) return;
 
-        // Rewards for the player who ended their turn (applies to their next turn)
-        // Rewards for the player who ended their turn (applies to their next turn)
+        // end-of-turn economy: chips ramp and base gold
         requester.Server_IncreaseMaxChipsAndRefill(chipCap, 1);
         requester.gold += goldPerTurn;
 
-        // start a draft instead of auto draw
-        var draft = requester.GetComponent<DraftDrawNet>();
-        if (draft != null)
-            draft.Server_StartDraft(cardsPerTurn); // usually 1
+        // if hand is full, do NOT draft/draw; award gold instead
+        bool handFull = requester != null && requester.handIds != null && requester.handIds.Count >= maxHandSize;
+        if (handFull)
+        {
+            requester.gold += fullHandGoldInsteadOfDraw;
+        }
         else
-            requester.Server_Draw(cardsPerTurn);   // fallback if the component is missing
-
+        {
+            // start a draft instead of direct draw (fallback to draw if component missing)
+            var draft = requester.GetComponent<DraftDrawNet>();
+            if (draft != null)
+                draft.Server_StartDraft(cardsPerTurn);
+            else
+                requester.Server_Draw(cardsPerTurn);
+        }
 
         int next = NextIndex(currentTurnIndex);
         Server_StartTurnFrom(next);
@@ -126,7 +141,6 @@ public class TurnManager : NetworkBehaviour
 
             if (directive == PlayerState.TurnStartDirective.SkipNoRewards)
             {
-                // still dead or instructed to skip w/o rewards
                 idx = NextIndex(idx);
                 continue;
             }
@@ -139,10 +153,8 @@ public class TurnManager : NetworkBehaviour
                 RpcTurnChanged(currentTurnIndex);
                 TargetYourTurn(ps.connectionToClient);
 
-                // Pass turtle to a random other player
+                // pass turtle and immediately auto-end WITH rewards
                 Server_PassTurtleFrom(ps);
-
-                // Immediately auto-end WITH rewards
                 Server_EndTurn(ps);
                 return;
             }
@@ -155,7 +167,7 @@ public class TurnManager : NetworkBehaviour
             return;
         }
 
-        // Failsafe: lock anyway
+        // Failsafe
         currentTurnIndex = idx;
         var owner = turnOrder[idx];
         currentTurnNetId = owner ? owner.netId : 0;
@@ -187,7 +199,7 @@ public class TurnManager : NetworkBehaviour
         if (handIndex < 0 || handIndex >= ps.handIds.Count) return;
 
         int cardId = ps.handIds[handIndex];
-        var def = database?.Get(cardId);
+        var def = database != null ? database.Get(cardId) : null;
         if (def == null) return;
 
         int currentLvl = ps.Server_GetEffectiveLevelForHandIndex(handIndex);
@@ -300,7 +312,7 @@ public class TurnManager : NetworkBehaviour
             Debug.Log("[Match] No winner (all dead?). Press 3 to start a new game.");
     }
 
-    // Optional stubs
+    // Optional stubs for future effects
     [Server] public void Server_HealAll(int amount) { }
     [Server] public void Server_ChainArc(PlayerState caster, PlayerState startTarget, int amount, int arcs) { }
 }

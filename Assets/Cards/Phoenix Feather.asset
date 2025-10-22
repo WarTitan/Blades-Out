@@ -21,7 +21,7 @@ MonoBehaviour:
   amount: 1
   durationTurns: 0
   arcs: 0
-  chipCost: 1
+  chipCost: 3
   setShowcasePrefab: {fileID: 0}
   setShowcaseLocalOffset: {x: 0, y: 0, z: 0}
   setShowcaseLocalEuler: {x: 0, y: 0, z: 0}
@@ -29,46 +29,46 @@ MonoBehaviour:
   tiers:
   - attack: 2
     defense: 0
-    costGold: 0
+    costGold: 2
     effectText: Heal 2 HP + revive if at 0 HP
     castChipCost: 0
   - attack: 3
     defense: 0
-    costGold: 0
+    costGold: 2
     effectText: Heal 3 HP + revive if at 0 HP
-    castChipCost: 0
+    castChipCost: 3
   - attack: 4
     defense: 0
-    costGold: 0
+    costGold: 2
     effectText: Heal 4 HP + revive if at 0 HP
-    castChipCost: 0
+    castChipCost: 3
   - attack: 5
     defense: 0
-    costGold: 0
+    costGold: 2
     effectText: Heal 5 HP + revive if at 0 HP
-    castChipCost: 0
+    castChipCost: 3
   - attack: 6
     defense: 0
-    costGold: 0
+    costGold: 2
     effectText: Heal 6 HP + revive if at 0 HP
-    castChipCost: 0
+    castChipCost: 3
   - attack: 7
     defense: 0
-    costGold: 0
+    costGold: 2
     effectText: Heal 7 HP + revive if at 0 HP
-    castChipCost: 0
+    castChipCost: 3
   - attack: 8
     defense: 0
-    costGold: 0
+    costGold: 2
     effectText: Heal 8 HP + revive if at 0 HP
-    castChipCost: 0
+    castChipCost: 3
   - attack: 9
     defense: 0
-    costGold: 0
+    costGold: 2
     effectText: Heal 9 HP + revive if at 0 HP
-    castChipCost: 0
+    castChipCost: 3
   - attack: 10
     defense: 0
-    costGold: 0
+    costGold: 2
     effectText: Heal 10 HP + revive if at 0 HP
-    castChipCost: 0
+    castChipCost: 3

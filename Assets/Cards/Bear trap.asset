@@ -29,51 +29,51 @@ MonoBehaviour:
   tiers:
   - attack: 1
     defense: 0
-    costGold: 1
+    costGold: 2
     effectText: 1st attacker takes 1 DMG
     castChipCost: 1
   - attack: 2
     defense: 0
-    costGold: 1
+    costGold: 2
     effectText: 1st attacker takes 2 DMG
     castChipCost: 1
   - attack: 3
     defense: 0
-    costGold: 1
+    costGold: 2
     effectText: 1st attacker takes 3 DMG
     castChipCost: 1
   - attack: 4
     defense: 0
-    costGold: 1
+    costGold: 2
     effectText: 1st attacker takes 4 DMG
     castChipCost: 1
   - attack: 5
     defense: 0
-    costGold: 1
+    costGold: 2
     effectText: 1st attacker takes 5 DMG
     castChipCost: 1
   - attack: 6
     defense: 0
-    costGold: 1
+    costGold: 2
     effectText: 1st attacker takes 6 DMG
     castChipCost: 1
   - attack: 7
     defense: 0
-    costGold: 1
+    costGold: 2
     effectText: 1st attacker takes 7 DMG
     castChipCost: 1
   - attack: 8
     defense: 0
-    costGold: 1
+    costGold: 2
     effectText: 1st attacker takes 8 DMG
     castChipCost: 1
   - attack: 9
     defense: 0
-    costGold: 1
+    costGold: 2
     effectText: 1st attacker takes 9 DMG
     castChipCost: 1
   - attack: 10
     defense: 0
-    costGold: 1
+    costGold: 2
     effectText: 1st attacker takes 10 DMG
     castChipCost: 1

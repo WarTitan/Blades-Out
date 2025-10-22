@@ -31,4 +31,4 @@ MonoBehaviour:
     defense: 0
     costGold: 0
     effectText: Steal 1 random card from an opponent
-    castChipCost: 2
+    castChipCost: 3

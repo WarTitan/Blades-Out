@@ -30,5 +30,5 @@ MonoBehaviour:
   - attack: 0
     defense: 0
     costGold: 2
-    effectText: Move 1 item
-    castChipCost: 2
+    effectText: Move 1 item to a random player
+    castChipCost: 1

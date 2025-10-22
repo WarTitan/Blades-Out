@@ -29,51 +29,51 @@ MonoBehaviour:
   tiers:
   - attack: 1
     defense: 0
-    costGold: 0
+    costGold: 3
     effectText: Deal 1 DMG
     castChipCost: 0
   - attack: 2
     defense: 0
-    costGold: 2
+    costGold: 3
     effectText: Deal 2 DMG
-    castChipCost: 0
+    castChipCost: 1
   - attack: 3
     defense: 0
-    costGold: 2
+    costGold: 3
     effectText: Deal 3 DMG
-    castChipCost: 0
+    castChipCost: 1
   - attack: 4
     defense: 0
-    costGold: 2
+    costGold: 3
     effectText: Deal 4 DMG
-    castChipCost: 0
+    castChipCost: 1
   - attack: 5
     defense: 0
-    costGold: 2
+    costGold: 3
     effectText: Deal 5 DMG
-    castChipCost: 0
+    castChipCost: 1
   - attack: 6
     defense: 0
-    costGold: 2
+    costGold: 3
     effectText: Deal 6 DMG
-    castChipCost: 0
+    castChipCost: 1
   - attack: 7
     defense: 0
-    costGold: 2
+    costGold: 3
     effectText: Deal 7 DMG
-    castChipCost: 0
+    castChipCost: 1
   - attack: 8
     defense: 0
-    costGold: 2
+    costGold: 3
     effectText: Deal 8 DMG
-    castChipCost: 0
+    castChipCost: 1
   - attack: 9
     defense: 0
-    costGold: 2
+    costGold: 3
     effectText: Deal 9 DMG
-    castChipCost: 0
+    castChipCost: 1
   - attack: 10
     defense: 0
-    costGold: 2
+    costGold: 3
     effectText: Deal 10 DMG
-    castChipCost: 0
+    castChipCost: 1

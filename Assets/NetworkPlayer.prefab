@@ -308,9 +308,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 86f7d19ab6ec1584ca6f1ff9daf57e83, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CrosshairDot
-  lengthPx: 18
-  thicknessPx: 4
-  gapPx: 22
+  lengthPx: 9
+  thicknessPx: 2
+  gapPx: 15
   alpha: 0.9
   color: {r: 1, g: 1, b: 1, a: 1}
   roundOuterCaps: 1
@@ -364,6 +364,9 @@ MonoBehaviour:
   offset: {x: 0, y: 2, z: 0}
   billboard: 1
   billboardLerp: 20
+  useCustomText: 0
+  customText: 
+  uppercase: 0
   fontAsset: {fileID: 11400000, guid: b6347723fb9b45544a66817390c552e8, type: 2}
   fontSize: 1.2
   color: {r: 1, g: 1, b: 1, a: 1}
@@ -4112,13 +4115,25 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 2100000, guid: b1e15ee6ae671f64e93734c50f6a9d38, type: 2}
     - target: {fileID: 5866666021909216657, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      propertyPath: m_Avatar
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
       propertyPath: m_Enabled
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5866666021909216657, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
       propertyPath: m_Controller
       value: 
-      objectReference: {fileID: 9100000, guid: 0218fd3505adbe64b897338e7dac2a60, type: 2}
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      propertyPath: m_CullingMode
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      propertyPath: m_ApplyRootMotion
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5905301682132913236, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
       propertyPath: m_Layer
       value: 7
@@ -4599,8 +4614,7 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 7
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 5866666021909216657, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 5332809968238436118, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
     - {fileID: -6617500332700902312, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
@@ -4705,6 +4719,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7611691601451606183}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -4608503588717806687}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7379752632256554169}
   m_SourcePrefab: {fileID: 100100000, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
 --- !u!1 &3784944211829141594 stripped
 GameObject:
@@ -4845,7 +4865,7 @@ MonoBehaviour:
   gapX: 0.18
   raiseY: 0
   layFlatOnTable: 0
-  tiltXDegrees: 40
+  tiltXDegrees: 30
   frontFacingYawOffset: 180
   rowYawNudge: 0
   cardLocalScale: {x: 0.07, y: 0.07, z: 0.07}
@@ -5159,7 +5179,49 @@ MonoBehaviour:
   crossfade: 0.2
   speedRange: {x: 0.95, y: 1.05}
   forceIdleWhileLobby: 1
-  verboseLogs: 1
+  onSwitchUseCrossfade: 0
+  useUnscaledTimeInLobby: 1
+  forceAlwaysAnimateCullingInLobby: 1
+  enforcePositiveSpeedInLobby: 1
+  minLobbySpeed: 0.1
+  watchdogInterval: 1
+  watchdogNudge: 0.02
+  preferDeepestChildAnimator: 1
+  verbose: 0
+--- !u!114 &-4608503588717806687
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3784944211829141594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57ddf16b48e879c45b9197ea4536d823, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ChestInteractor
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  dealerMask:
+    serializedVersion: 2
+    m_Bits: 256
+  interactRange: 20
+--- !u!114 &7379752632256554169
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3784944211829141594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4d76e11e17f7014283633127a3f75be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerChestUpgrades
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
 --- !u!4 &4597333103463066336 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}

@@ -33,49 +33,49 @@ MonoBehaviour:
     defense: 0
     costGold: 2
     effectText: Reflect 1 DMG, lasts 3 turns
-    castChipCost: 0
+    castChipCost: 3
   - attack: 2
     defense: 0
     costGold: 2
     effectText: Reflect 2 DMG, lasts 3 turns
-    castChipCost: 0
+    castChipCost: 3
   - attack: 3
     defense: 0
     costGold: 2
     effectText: Reflect 3 DMG, lasts 3 turns
-    castChipCost: 0
+    castChipCost: 3
   - attack: 4
     defense: 0
     costGold: 2
     effectText: Reflect 4 DMG, lasts 3 turns
-    castChipCost: 0
+    castChipCost: 3
   - attack: 5
     defense: 0
     costGold: 2
     effectText: Reflect 5 DMG, lasts 3 turns
-    castChipCost: 0
+    castChipCost: 3
   - attack: 6
     defense: 0
     costGold: 2
     effectText: Reflect 6 DMG, lasts 3 turns
-    castChipCost: 0
+    castChipCost: 3
   - attack: 7
     defense: 0
     costGold: 2
     effectText: Reflect 7 DMG, lasts 3 turns
-    castChipCost: 0
+    castChipCost: 3
   - attack: 8
     defense: 0
     costGold: 2
     effectText: Reflect 8 DMG, lasts 3 turns
-    castChipCost: 0
+    castChipCost: 3
   - attack: 9
     defense: 0
     costGold: 2
     effectText: Reflect 9 DMG, lasts 3 turns
-    castChipCost: 0
+    castChipCost: 3
   - attack: 10
     defense: 0
     costGold: 2
     effectText: Reflect 10 DMG, lasts 3 turns
-    castChipCost: 0
+    castChipCost: 3

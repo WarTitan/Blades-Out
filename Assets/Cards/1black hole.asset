@@ -31,4 +31,4 @@ MonoBehaviour:
     defense: 0
     costGold: 0
     effectText: All players discard hand, redraw same amount
-    castChipCost: 2
+    castChipCost: 4
