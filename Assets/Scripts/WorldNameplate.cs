@@ -30,7 +30,9 @@ public class WorldNameplate : MonoBehaviour
     // Internals
     private Transform holder;          // this is what we actually move/rotate
     private TextMeshPro tmp;
+#pragma warning disable 0414
     private bool autoCreatedHolder = false;
+#pragma warning restore 0414
 
     void Awake()
     {

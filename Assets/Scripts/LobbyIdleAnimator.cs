@@ -64,7 +64,7 @@ public class LobbyIdleAnimator : NetworkBehaviour
 
     void OnEnable()
     {
-        LobbyStage.OnLobbyStateChanged += OnLobbyChanged;
+        LobbyStage.OnLobbyStateChanged += OnLobbyChanged; // matches Action<bool>
     }
 
     void OnDisable()
@@ -174,6 +174,7 @@ public class LobbyIdleAnimator : NetworkBehaviour
         }
     }
 
+    // Event handler: single bool from LobbyStage.OnLobbyStateChanged
     void OnLobbyChanged(bool lobbyActive)
     {
         if (verbose) Debug.Log("[LobbyIdle] LobbyActive -> " + lobbyActive);
@@ -320,8 +321,7 @@ public class LobbyIdleAnimator : NetworkBehaviour
                 changed = true;
             }
         }
-        if (changed)
-            oc.ApplyOverrides((IList<KeyValuePair<AnimationClip, AnimationClip>>)list);
+        if (changed) oc.ApplyOverrides(list);
         return changed;
     }
 

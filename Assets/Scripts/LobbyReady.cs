@@ -22,6 +22,15 @@ public class LobbyReady : NetworkBehaviour
     public void CmdSetReady(bool value)
     {
         isReady = value;
+
+        // Keep your original notification (don’t remove)
         if (LobbyStage.Instance) LobbyStage.Instance.Server_NotifyReadyChanged();
+
+        // NEW: also teleport this one player immediately (even if lobby stays open)
+        var spm = NetworkManager.singleton as PlayerSpawnManager;
+        if (value && spm != null)
+        {
+            spm.Server_TeleportOne(connectionToClient);
+        }
     }
 }

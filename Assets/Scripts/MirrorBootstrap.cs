@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using Mirror;
+#pragma warning disable 0618
 
 [DefaultExecutionOrder(-10000)] // run very early so transport is set before any HUD/UI calls
 [AddComponentMenu("Networking/Mirror Bootstrap (Editor=Telepathy, Build=Fizzy)")]
@@ -186,3 +187,5 @@ public class MirrorBootstrap : MonoBehaviour
         return (TransportMode)(-1);
     }
 }
+
+#pragma warning restore 0618

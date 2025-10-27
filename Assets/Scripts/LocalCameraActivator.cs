@@ -1,9 +1,12 @@
+// FILE: LocalCameraActivator.cs
 using UnityEngine;
 using Mirror;
 using System.Collections;
 
+[AddComponentMenu("Net/Local Camera Activator")]
 public class LocalCameraActivator : NetworkBehaviour
 {
+    [Header("Refs")]
     public Camera playerCamera;
     public AudioListener playerAudioListener;
 
@@ -11,73 +14,85 @@ public class LocalCameraActivator : NetworkBehaviour
     public bool periodicallyEnforce = true;
     public float enforceInterval = 0.25f;
 
-    private bool forceGameplay = false;
+    private bool forceGameplay;
 
     void Awake()
     {
-        if (!playerCamera) playerCamera = GetComponentInChildren<Camera>(true);
-        if (!playerAudioListener && playerCamera) playerAudioListener = playerCamera.GetComponent<AudioListener>();
+        if (playerCamera == null) playerCamera = GetComponentInChildren<Camera>(true);
+        if (playerAudioListener == null && playerCamera != null) playerAudioListener = playerCamera.GetComponent<AudioListener>();
     }
 
-    void OnEnable() { LobbyStage.OnLobbyStateChanged += OnLobbyStateChanged; }
-    void OnDisable() { LobbyStage.OnLobbyStateChanged -= OnLobbyStateChanged; }
+    void OnEnable()
+    {
+        LobbyStage.OnLobbyStateChanged += OnLobbyStateChanged; // Action<bool>
+    }
+
+    void OnDisable()
+    {
+        LobbyStage.OnLobbyStateChanged -= OnLobbyStateChanged;
+    }
 
     public override void OnStartClient()
     {
-        // Remote players' cameras/listeners must be OFF on this client
-        if (!isLocalPlayer)
-        {
-            if (playerCamera) playerCamera.enabled = false;
-            if (playerAudioListener) playerAudioListener.enabled = false;
-        }
+        base.OnStartClient();
+        if (!isLocalPlayer) SafeSet(false); // remote players never render locally
     }
 
     public override void OnStartLocalPlayer()
     {
+        base.OnStartLocalPlayer();
         ApplyState(IsLobby());
         if (periodicallyEnforce) StartCoroutine(EnforceLoop());
     }
 
     public override void OnStopClient()
     {
+        base.OnStopClient();
         if (isLocalPlayer) ApplyState(true);
     }
 
-    void OnLobbyStateChanged(bool lobbyActive)
+    private void OnLobbyStateChanged(bool lobbyActive)
     {
-        if (isLocalPlayer && !forceGameplay) ApplyState(lobbyActive);
+        if (isLocalPlayer && !forceGameplay)
+            ApplyState(lobbyActive);
     }
 
-    bool IsLobby()
+    private bool IsLobby()
     {
         if (forceGameplay) return false;
         var inst = LobbyStage.Instance;
         return inst ? inst.lobbyActive : true;
     }
 
-    IEnumerator EnforceLoop()
+    private IEnumerator EnforceLoop()
     {
+        var wait = new WaitForSeconds(enforceInterval);
         while (isLocalPlayer)
         {
             ApplyState(IsLobby());
-            yield return new WaitForSeconds(enforceInterval);
+            yield return wait;
         }
     }
 
-    void ApplyState(bool lobbyActive)
+    private void ApplyState(bool lobbyActive)
     {
         if (!isLocalPlayer) return;
 
-        bool enablePlayerCam = !lobbyActive;
+        bool enablePlayerCam = !lobbyActive || forceGameplay;
+        SafeSet(enablePlayerCam);
 
-        if (playerCamera) playerCamera.enabled = enablePlayerCam;
-        if (playerAudioListener) playerAudioListener.enabled = enablePlayerCam;
-
-        // Ensure lobby camera off when entering gameplay (local safety)
-        if (!lobbyActive && LobbyStage.Instance && LobbyStage.Instance.lobbyCamera)
-            LobbyStage.Instance.lobbyCamera.enabled = false;
+        // Safety: when entering gameplay, locally turn off lobby camera
+        if (!lobbyActive && LobbyStage.Instance != null)
+            LobbyStage.Instance.Client_DisableLobbyCameraLocal();
     }
 
+    private void SafeSet(bool on)
+    {
+        if (playerCamera != null) playerCamera.enabled = on;
+        if (playerAudioListener != null) playerAudioListener.enabled = on;
+    }
+
+    // Called by TeleportHelper after teleport
     public void ForceEnterGameplay()
     {
         forceGameplay = true;

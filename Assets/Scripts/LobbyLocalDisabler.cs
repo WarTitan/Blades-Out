@@ -73,6 +73,7 @@ public class LobbyLocalDisabler : NetworkBehaviour
         }
     }
 
+    // Called by TeleportHelper on the owner after teleport
     public void ForceEnableGameplay()
     {
         forceGameplay = true;

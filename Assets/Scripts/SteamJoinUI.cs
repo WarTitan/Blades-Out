@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using Mirror;
 using TMPro;
 using Steamworks;
+#pragma warning disable 0618
 
 [AddComponentMenu("Networking/Steam Join UI (Fizzy, Auto Wire)")]
 public class SteamJoinUI : MonoBehaviour
@@ -112,3 +113,5 @@ public class SteamJoinUI : MonoBehaviour
         if (logText != null) logText.text = msg;
     }
 }
+
+#pragma warning disable 0618
