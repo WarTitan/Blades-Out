@@ -1,36 +1,33 @@
+// FILE: LobbyReady.cs
 using UnityEngine;
 using Mirror;
 
-[AddComponentMenu("Net/Lobby Ready")]
 public class LobbyReady : NetworkBehaviour
 {
     [SyncVar] public bool isReady;
-    public KeyCode readyKey = KeyCode.Alpha3; // press 3 to toggle ready
 
     void Update()
     {
         if (!isLocalPlayer) return;
-        if (LobbyStage.Instance == null || !LobbyStage.Instance.lobbyActive) return;
+        if (LobbyStage.Instance == null) return;
+        if (!LobbyStage.Instance.lobbyActive) return;
 
-        if (Input.GetKeyDown(readyKey))
+        if (Input.GetKeyDown(KeyCode.Alpha3))
         {
-            CmdSetReady(!isReady);
+            CmdToggleReady();
         }
     }
 
-    [Command(requiresAuthority = true)]
-    public void CmdSetReady(bool value)
+    [Command]
+    void CmdToggleReady()
     {
-        isReady = value;
+        isReady = !isReady;
 
-        // Keep your original notification (don’t remove)
-        if (LobbyStage.Instance) LobbyStage.Instance.Server_NotifyReadyChanged();
-
-        // NEW: also teleport this one player immediately (even if lobby stays open)
-        var spm = NetworkManager.singleton as PlayerSpawnManager;
-        if (value && spm != null)
+        // Tell the stage to re-evaluate readiness. The stage will decide if/when to start for everyone.
+        var stage = LobbyStage.Instance;
+        if (stage != null)
         {
-            spm.Server_TeleportOne(connectionToClient);
+            stage.Server_NotifyReadyChanged();
         }
     }
 }

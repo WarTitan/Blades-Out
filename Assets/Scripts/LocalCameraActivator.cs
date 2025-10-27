@@ -1,107 +1,169 @@
 // FILE: LocalCameraActivator.cs
+// Exposes IsGameplayForced so other scripts can treat the local player as in-game
+// even while the global lobby remains active.
+
 using UnityEngine;
 using Mirror;
 using System.Collections;
+using System.Collections.Generic;
 
 [AddComponentMenu("Net/Local Camera Activator")]
+[DefaultExecutionOrder(47000)]
 public class LocalCameraActivator : NetworkBehaviour
 {
-    [Header("Refs")]
+    [Header("References")]
     public Camera playerCamera;
     public AudioListener playerAudioListener;
 
-    [Header("Robustness")]
+    [Header("Behavior")]
     public bool periodicallyEnforce = true;
-    public float enforceInterval = 0.25f;
+    public float enforceDuration = 1.25f;
+    public float enforceInterval = 0.15f;
 
-    private bool forceGameplay;
+    [Header("Debug")]
+    public bool verboseLogs = false;
 
-    void Awake()
+    [SerializeField] private bool forceGameplay = false;
+    public bool IsGameplayForced { get { return forceGameplay; } }
+
+    private Coroutine enforceRoutine;
+
+    private void Awake()
     {
-        if (playerCamera == null) playerCamera = GetComponentInChildren<Camera>(true);
-        if (playerAudioListener == null && playerCamera != null) playerAudioListener = playerCamera.GetComponent<AudioListener>();
-    }
-
-    void OnEnable()
-    {
-        LobbyStage.OnLobbyStateChanged += OnLobbyStateChanged; // Action<bool>
-    }
-
-    void OnDisable()
-    {
-        LobbyStage.OnLobbyStateChanged -= OnLobbyStateChanged;
+        AutoFindRefs();
     }
 
     public override void OnStartClient()
     {
         base.OnStartClient();
-        if (!isLocalPlayer) SafeSet(false); // remote players never render locally
+        if (!isLocalPlayer)
+        {
+            SafeSetListener(false);
+            SafeSetCamera(false);
+        }
     }
 
     public override void OnStartLocalPlayer()
     {
-        base.OnStartLocalPlayer();
-        ApplyState(IsLobby());
-        if (periodicallyEnforce) StartCoroutine(EnforceLoop());
+        if (verboseLogs) Debug.Log("[LocalCameraActivator] OnStartLocalPlayer");
+        ApplyState();
     }
 
-    public override void OnStopClient()
+    private void OnEnable()
     {
-        base.OnStopClient();
-        if (isLocalPlayer) ApplyState(true);
+        AutoFindRefs();
+        ApplyState();
     }
 
-    private void OnLobbyStateChanged(bool lobbyActive)
+    private void OnDisable()
     {
-        if (isLocalPlayer && !forceGameplay)
-            ApplyState(lobbyActive);
-    }
-
-    private bool IsLobby()
-    {
-        if (forceGameplay) return false;
-        var inst = LobbyStage.Instance;
-        return inst ? inst.lobbyActive : true;
-    }
-
-    private IEnumerator EnforceLoop()
-    {
-        var wait = new WaitForSeconds(enforceInterval);
-        while (isLocalPlayer)
+        if (isLocalPlayer)
         {
-            ApplyState(IsLobby());
-            yield return wait;
+            SafeSetListener(false);
+            SafeSetCamera(false);
         }
     }
 
-    private void ApplyState(bool lobbyActive)
+    // Called by TeleportHelper on the owner client after teleport
+    public void ForceEnterGameplay()
     {
         if (!isLocalPlayer) return;
 
-        bool enablePlayerCam = !lobbyActive || forceGameplay;
-        SafeSet(enablePlayerCam);
+        forceGameplay = true; // IMPORTANT: stays true; we do NOT auto-clear this.
 
-        // Safety: when entering gameplay, locally turn off lobby camera
-        if (!lobbyActive && LobbyStage.Instance != null)
-            LobbyStage.Instance.Client_DisableLobbyCameraLocal();
+        ApplyState();
+        StartEnforceWindow();
     }
 
-    private void SafeSet(bool on)
+    private void StartEnforceWindow()
     {
-        if (playerCamera != null) playerCamera.enabled = on;
-        if (playerAudioListener != null) playerAudioListener.enabled = on;
+        if (!periodicallyEnforce) return;
+        if (enforceRoutine != null) StopCoroutine(enforceRoutine);
+        enforceRoutine = StartCoroutine(EnforceForSeconds(enforceDuration, enforceInterval));
     }
 
-    // Called by TeleportHelper after teleport
-    public void ForceEnterGameplay()
+    private IEnumerator EnforceForSeconds(float duration, float interval)
     {
-        forceGameplay = true;
-        ApplyState(false);
+        float end = Time.unscaledTime + Mathf.Max(0.05f, duration);
+        float step = Mathf.Max(0.02f, interval);
+
+        while (Time.unscaledTime < end)
+        {
+            ApplyState();
+            yield return new WaitForSecondsRealtime(step);
+        }
+        enforceRoutine = null;
     }
 
-    public void ForceEnterLobby()
+    private void ApplyState()
     {
-        if (forceGameplay) return;
-        ApplyState(true);
+        if (!isClient) return;
+
+        bool lobbyActive = LobbyStage.Instance != null && LobbyStage.Instance.lobbyActive;
+        bool shouldEnableLocalView = isLocalPlayer && (!lobbyActive || forceGameplay);
+
+        if (shouldEnableLocalView)
+        {
+            if (playerCamera != null) ActivateAncestorsAndSelf(playerCamera.transform);
+            if (playerAudioListener != null) ActivateAncestorsAndSelf(playerAudioListener.transform);
+
+            SafeSetCamera(true);
+            SafeSetListener(true);
+
+            if (LobbyStage.Instance != null)
+                LobbyStage.Instance.Client_DisableLobbyCameraLocal();
+
+            NormalizeCameraOutput(playerCamera);
+        }
+        else
+        {
+            SafeSetListener(false);
+            SafeSetCamera(false);
+        }
+    }
+
+    private void SafeSetCamera(bool on)
+    {
+        if (playerCamera == null) playerCamera = GetComponentInChildren<Camera>(true);
+        if (playerCamera == null) return;
+        if (on) ActivateAncestorsAndSelf(playerCamera.transform);
+        if (playerCamera.enabled != on) playerCamera.enabled = on;
+    }
+
+    private void SafeSetListener(bool on)
+    {
+        if (playerAudioListener == null) playerAudioListener = GetComponentInChildren<AudioListener>(true);
+        if (playerAudioListener == null) return;
+        if (on) ActivateAncestorsAndSelf(playerAudioListener.transform);
+        if (playerAudioListener.enabled != on) playerAudioListener.enabled = on;
+    }
+
+    private void AutoFindRefs()
+    {
+        if (playerCamera == null) playerCamera = GetComponentInChildren<Camera>(true);
+        if (playerAudioListener == null) playerAudioListener = GetComponentInChildren<AudioListener>(true);
+    }
+
+    private static void ActivateAncestorsAndSelf(Transform leaf)
+    {
+        if (leaf == null) return;
+        List<Transform> chain = new List<Transform>();
+        Transform t = leaf;
+        while (t != null) { chain.Add(t); t = t.parent; }
+        for (int i = chain.Count - 1; i >= 0; i--)
+            if (!chain[i].gameObject.activeSelf) chain[i].gameObject.SetActive(true);
+    }
+
+    private static void NormalizeCameraOutput(Camera cam)
+    {
+        if (cam == null) return;
+        cam.targetDisplay = 0;
+        cam.rect = new Rect(0f, 0f, 1f, 1f);
+        cam.stereoTargetEye = StereoTargetEyeMask.None;
+#if UNITY_RENDER_PIPELINE_UNIVERSAL
+        var acd = cam.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
+        if (acd != null && acd.renderType != UnityEngine.Rendering.Universal.CameraRenderType.Base)
+            acd.renderType = UnityEngine.Rendering.Universal.CameraRenderType.Base;
+#endif
     }
 }

@@ -1,88 +1,94 @@
+// FILE: LobbyLocalDisabler.cs
+// The enforcer that was flipping you back to lobby every 0.5s.
+// Now it treats IsGameplayForced as gameplay, so it will KEEP your look script enabled.
+
 using UnityEngine;
 using Mirror;
-using System.Collections;
 
 [AddComponentMenu("Net/Lobby Local Disabler")]
 public class LobbyLocalDisabler : NetworkBehaviour
 {
-    [Header("Look drivers")]
-    public PlayerLook playerLook;                  // legacy look (optional)
-    public LocalCameraController cameraController; // preferred look
+    public bool verboseLogs = false;
 
-    [Header("Which look driver to use in gameplay")]
-    public bool preferLocalCameraController = true;
+    private LocalCameraController lookFP;
+    private PlayerLook lookSimple;
+    private LocalCameraActivator lca;
 
-    [Header("Robustness")]
-    public bool periodicallyEnforce = true;
-    public float enforceInterval = 0.25f;
-
-    private bool forceGameplay = false;
+    private float nextEnforceTime;
 
     void Awake()
     {
-        if (!playerLook) playerLook = GetComponentInChildren<PlayerLook>(true);
-        if (!cameraController) cameraController = GetComponentInChildren<LocalCameraController>(true);
+        lookFP = GetComponent<LocalCameraController>();
+        lookSimple = GetComponent<PlayerLook>();
+        lca = GetComponent<LocalCameraActivator>();
     }
 
-    public override void OnStartLocalPlayer()
+    void OnEnable()
     {
-        Apply(IsLobby());
-        if (periodicallyEnforce) StartCoroutine(EnforceLoop());
+        LobbyStage.OnLobbyStateChanged += OnLobbyStateChanged;
+        EnforceNow();
     }
 
-    void OnEnable() { LobbyStage.OnLobbyStateChanged += OnLobbyChanged; }
-    void OnDisable() { LobbyStage.OnLobbyStateChanged -= OnLobbyChanged; }
-
-    void OnLobbyChanged(bool lobbyActive)
+    void OnDisable()
     {
-        if (isLocalPlayer && !forceGameplay) Apply(lobbyActive);
+        LobbyStage.OnLobbyStateChanged -= OnLobbyStateChanged;
     }
 
-    bool IsLobby()
+    void Update()
     {
-        if (forceGameplay) return false;
-        var inst = LobbyStage.Instance;
-        return inst ? inst.lobbyActive : true;
-    }
-
-    IEnumerator EnforceLoop()
-    {
-        while (isLocalPlayer)
+        if (!isLocalPlayer) return;
+        if (Time.unscaledTime >= nextEnforceTime)
         {
-            Apply(IsLobby());
-            yield return new WaitForSeconds(enforceInterval);
+            EnforceNow();
+            nextEnforceTime = Time.unscaledTime + 0.5f; // this tick was the thing undoing your control
         }
     }
 
-    void Apply(bool lobbyActive)
+    private void OnLobbyStateChanged(bool lobbyActive)
+    {
+        if (!isLocalPlayer) return;
+        EnforceNow();
+    }
+
+    private bool IsGameplayNow()
+    {
+        bool lobbyActive = LobbyStage.Instance != null && LobbyStage.Instance.lobbyActive;
+        bool forced = (lca != null && lca.IsGameplayForced);
+        // KEY RULE: if forced, treat as gameplay even if lobby is still active
+        return forced || !lobbyActive;
+    }
+
+    private void EnforceNow()
     {
         if (!isLocalPlayer) return;
 
-        bool enableGameplay = !lobbyActive;
+        bool gameplay = IsGameplayNow();
 
-        // Exactly one look driver in gameplay, none in lobby
-        if (preferLocalCameraController)
+        if (gameplay)
         {
-            if (cameraController) cameraController.enabled = enableGameplay;
-            if (playerLook) playerLook.enabled = false;
+            if (lookFP != null && !lookFP.enabled) lookFP.enabled = true;
+            if (lookSimple != null && lookSimple.enabled) lookSimple.enabled = false;
         }
         else
         {
-            if (playerLook) playerLook.enabled = enableGameplay;
-            if (cameraController) cameraController.enabled = false;
+            if (lookFP != null && lookFP.enabled) lookFP.enabled = false;
+            if (lookSimple != null && lookSimple.enabled) lookSimple.enabled = false;
+        }
+
+        if (verboseLogs)
+        {
+            Debug.Log("[LobbyLocalDisabler] gameplay=" + gameplay
+                + " forced=" + (lca != null && lca.IsGameplayForced)
+                + " LCC=" + (lookFP != null && lookFP.enabled)
+                + " Simple=" + (lookSimple != null && lookSimple.enabled));
         }
     }
 
-    // Called by TeleportHelper on the owner after teleport
+    // Optional: called by TeleportHelper immediately after teleport
     public void ForceEnableGameplay()
     {
-        forceGameplay = true;
-        Apply(false);
-    }
-
-    public void ForceLobby()
-    {
-        if (forceGameplay) return;
-        Apply(true);
+        if (!isLocalPlayer) return;
+        if (lookFP != null) lookFP.enabled = true;
+        if (lookSimple != null) lookSimple.enabled = false;
     }
 }

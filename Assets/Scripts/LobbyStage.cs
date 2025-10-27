@@ -1,3 +1,4 @@
+// FILE: LobbyStage.cs
 using UnityEngine;
 using Mirror;
 
@@ -9,20 +10,23 @@ public class LobbyStage : NetworkBehaviour
     [Header("Lobby Camera")]
     public Camera lobbyCamera;
 
+    [Header("Start Conditions")]
+    [Tooltip("If true, every player must press 3 to be ready.")]
+    public bool requireAllReady = false;
+
+    [Tooltip("When RequireAllReady is false, start when at least this many players are ready.")]
+    public int minPlayersToStart = 1; // start when at least one player is ready
+
     [SyncVar(hook = nameof(OnLobbyActiveChanged))]
     public bool lobbyActive = true;
 
-    [Header("Start Conditions (legacy)")]
-    public int minPlayersToStart = 2;
-    public bool autoStartWhenMinReady = true;
-
-    // Single-bool event: true when lobby is active.
+    // Other scripts subscribe to this (true = lobby, false = gameplay)
     public static System.Action<bool> OnLobbyStateChanged;
 
     void Awake()
     {
         Instance = this;
-        ApplyCameraState();
+        ApplyLobbyCameraState();
     }
 
     void OnDestroy()
@@ -34,78 +38,76 @@ public class LobbyStage : NetworkBehaviour
     {
         base.OnStartClient();
         OnLobbyStateChanged?.Invoke(lobbyActive);
+        ApplyLobbyCameraState();
     }
 
-    void OnLobbyActiveChanged(bool oldVal, bool newVal)
+    void OnLobbyActiveChanged(bool oldValue, bool newValue)
     {
-        ApplyCameraState();
-        OnLobbyStateChanged?.Invoke(newVal);
+        ApplyLobbyCameraState();
+        OnLobbyStateChanged?.Invoke(newValue);
     }
 
-    // Apply only when state actually changes. Do NOT toggle every frame.
-    void ApplyCameraState()
+    void ApplyLobbyCameraState()
     {
         if (lobbyCamera != null)
             lobbyCamera.enabled = lobbyActive;
     }
 
-    // NEW: Teleport any player who toggled ready ON. Lobby stays active for others.
+    // Called by LobbyReady on the server when a player toggles ready
     [Server]
     public void Server_NotifyReadyChanged()
     {
-        if (!lobbyActive) return;
-
-        var mgr = NetworkManager.singleton as PlayerSpawnManager;
-
-        foreach (var kv in NetworkServer.connections)
-        {
-            var conn = kv.Value;
-            if (conn == null || conn.identity == null) continue;
-
-            var go = conn.identity.gameObject;
-            var lr = go.GetComponent<LobbyReady>();
-            if (lr == null || !lr.isReady) continue;
-
-            var ps = go.GetComponent<PlayerState>();
-            if (ps == null) continue;
-
-            // Pick a game/table spawn for this seat; fallback to current pos if none
-            int seat = ps.seatIndex >= 0 ? ps.seatIndex : 0;
-
-            Vector3 dstPos = go.transform.position;
-            Quaternion dstRot = go.transform.rotation;
-
-            if (mgr != null && mgr.spawnPoints != null && mgr.spawnPoints.Count > 0)
-            {
-                var sp = mgr.spawnPoints[seat % mgr.spawnPoints.Count];
-                if (sp != null)
-                {
-                    dstPos = sp.position;
-                    dstRot = sp.rotation;
-                }
-            }
-
-            // Server authoritative snap (handles CharacterController safely)
-            var cc = go.GetComponent<CharacterController>();
-            bool hadCC = (cc != null && cc.enabled);
-            if (hadCC) cc.enabled = false;
-            go.transform.SetPositionAndRotation(dstPos, dstRot);
-            if (hadCC) cc.enabled = true;
-
-            // Owner local snap + force gameplay camera/controls
-            var tp = go.GetComponent<TeleportHelper>();
-            if (tp != null && ps.connectionToClient != null)
-                tp.TargetSnapAndEnterGameplay(ps.connectionToClient, dstPos, dstRot);
-
-            // Clear ready so it doesn't retrigger next tick
-            lr.isReady = false;
-        }
-
-        // State didn't change; notify listeners anyway
-        OnLobbyStateChanged?.Invoke(lobbyActive);
+        EvaluateAndMaybeStart();
     }
 
-    // Optional helper for any client to hard-disable the lobby camera locally if needed
+    [Server]
+    void EvaluateAndMaybeStart()
+    {
+        int total = 0;
+        int ready = 0;
+
+        var readies = FindObjectsOfType<LobbyReady>();
+        for (int i = 0; i < readies.Length; i++)
+        {
+            var lr = readies[i];
+            var id = lr.GetComponent<NetworkIdentity>();
+            if (id == null || !id.isServer) continue;
+            total++;
+            if (lr.isReady) ready++;
+        }
+
+        if (requireAllReady)
+        {
+            if (total > 0 && ready == total)
+                Server_StartMatch();
+        }
+        else
+        {
+            int needed = Mathf.Max(1, minPlayersToStart);
+            if (ready >= needed)
+                Server_StartMatch();
+        }
+    }
+
+    [Server]
+    public void Server_StartMatch()
+    {
+        if (!lobbyActive) return;
+
+        lobbyActive = false; // disables lobby cam via hook and notifies listeners
+
+        var mgr = NetworkManager.singleton as PlayerSpawnManager;
+        if (mgr != null)
+        {
+            mgr.Server_TeleportAllPlayersToGameSpawns();
+        }
+        else
+        {
+            Debug.LogWarning("[LobbyStage] PlayerSpawnManager not found.");
+        }
+    }
+
+    // Client helper so local scripts can turn off lobby cam ASAP
     [Client]
     public void Client_DisableLobbyCameraLocal()
     {

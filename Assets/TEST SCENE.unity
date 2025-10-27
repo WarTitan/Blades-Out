@@ -496,7 +496,7 @@ AudioListener:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 94020670}
-  m_Enabled: 1
+  m_Enabled: 0
 --- !u!4 &94020673
 Transform:
   m_ObjectHideFlags: 0
@@ -1049,6 +1049,7 @@ GameObject:
   - component: {fileID: 243980608}
   - component: {fileID: 243980609}
   - component: {fileID: 243980610}
+  - component: {fileID: 243980611}
   m_Layer: 0
   m_Name: LobbyStage
   m_TagString: Untagged
@@ -1072,6 +1073,8 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   lobbyCamera: {fileID: 94020671}
+  requireAllReady: 0
+  minPlayersToStart: 1
   lobbyActive: 1
 --- !u!4 &243980607
 Transform:
@@ -1124,12 +1127,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6c1ecfa990f0f284fb4252a2bfa72790, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CursorAndAudioManager
-  lobbyLock: 1
-  lobbyVisible: 0
-  gameplayLock: 1
-  gameplayVisible: 0
-  enforceCursorEveryFrame: 1
-  enforceAudioEveryFrame: 1
+  verboseLogs: 0
 --- !u!114 &243980610
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1142,9 +1140,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 84c1b79845493d3459e37d60d2f2b835, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraSafetyNet
-  checkInterval: 0.15
-  enforceWhenNoCamera: 1
-  preferLocalPlayerCamera: 1
+  verboseLogs: 1
+--- !u!114 &243980611
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 243980605}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c1ecfa990f0f284fb4252a2bfa72790, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CursorAndAudioManager
+  verboseLogs: 0
 --- !u!1 &274568238
 GameObject:
   m_ObjectHideFlags: 0
