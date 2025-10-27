@@ -4,8 +4,7 @@ using System.Linq;
 
 public static class CardEffectResolver
 {
-    // ---------- compat helper for Unity 2023+ ----------
-    // Use FindObjectsByType on 2023+, fall back to FindObjectsOfType on older versions.
+    // Helper for Unity 2023+: use FindObjectsByType; older Unity uses FindObjectsOfType.
     static T[] FindAll<T>(bool sorted = false) where T : UnityEngine.Object
     {
 #if UNITY_2023_1_OR_NEWER
@@ -17,20 +16,55 @@ public static class CardEffectResolver
 #endif
     }
 
-    // ===== INSTANTS & SETUP =====
+    // INSTANTS & SETUP
     [Server]
     public static void PlayInstant(CardDefinition def, int level, PlayerState caster, PlayerState target)
     {
         if (def == null || caster == null) return;
 
         var tier = def.GetTier(Mathf.Max(1, level));
-        int X = (tier.attack > 0 ? tier.attack : def.amount);  // level-scaled amount
+        int X = (tier.attack > 0 ? tier.attack : def.amount);
         int dur = def.durationTurns;
         int arcs = def.arcs;
 
         switch (def.effect)
         {
-            // ───────── Named instants (no target) ─────────
+            // NEW: Shotgun -> deal X to two random other alive players (not the caster)
+            case CardDefinition.EffectType.Shotgun_DealX_TwoRandomOthers:
+                {
+                    var all = FindAll<PlayerState>();
+                    // collect candidates
+                    int n = (all != null ? all.Length : 0);
+                    PlayerState[] cands = new PlayerState[n];
+                    int c = 0;
+                    for (int i = 0; i < n; i++)
+                    {
+                        var p = all[i];
+                        if (p != null && p != caster && !p.isDead)
+                            cands[c++] = p;
+                    }
+                    if (c == 0) break;
+
+                    // shuffle first c entries (Fisher-Yates)
+                    for (int i = 0; i < c; i++)
+                    {
+                        int j = Random.Range(i, c);
+                        var tmp = cands[i];
+                        cands[i] = cands[j];
+                        cands[j] = tmp;
+                    }
+
+                    int hits = (c >= 2 ? 2 : 1);
+                    for (int i = 0; i < hits; i++)
+                    {
+                        var t = cands[i];
+                        if (t != null)
+                            t.Server_ApplyDamage(caster, X);
+                    }
+                    break;
+                }
+
+            // Named instants (no target)
             case CardDefinition.EffectType.LovePotion_HealXSelf:
                 caster.Server_Heal(X);
                 break;
@@ -41,7 +75,7 @@ public static class CardEffectResolver
                 break;
 
             case CardDefinition.EffectType.PhoenixFeather_HealX_ReviveTo2IfDead:
-                // Proactive cast: just heal now (auto-revive is handled in lethal damage path).
+                // proactive heal; revive is handled in lethal flow
                 caster.Server_Heal(X);
                 break;
 
@@ -59,7 +93,7 @@ public static class CardEffectResolver
                 caster.Server_AddArmor(X);
                 break;
 
-            // ───────── Named instants with target ─────────
+            // Named instants with target
             case CardDefinition.EffectType.Knife_DealX:
                 if (target != null) target.Server_ApplyDamage(caster, X);
                 break;
@@ -70,16 +104,14 @@ public static class CardEffectResolver
                 break;
 
             case CardDefinition.EffectType.C4_ExplodeOnTargetAfter3Turns:
-                // Place a C4 "item" on TARGET's set row and arm a 3-turn fuse on them.
                 if (target != null)
                 {
                     target.Server_AddToSet(def.id, (byte)level);
-                    target.Server_AddStatus_C4Fuse(level, /*turns*/3, X);
+                    target.Server_AddStatus_C4Fuse(level, 3, X);
                 }
                 break;
 
             case CardDefinition.EffectType.GoblinHands_MoveOneSetItemToCaster:
-                // Move the first set item from TARGET to a RANDOM OTHER PLAYER (not the target).
                 if (target != null && target.setIds.Count > 0)
                 {
                     int idx = FindFirstMovableSetIndex(target);
@@ -89,7 +121,6 @@ public static class CardEffectResolver
                         byte movedLvl = target.setLvls[idx];
                         target.Server_ConsumeSetAt(idx);
 
-                        // Pick a random player that's NOT the original target. If none, fall back to caster.
                         var allPlayers = FindAll<PlayerState>();
                         var candidates = allPlayers.Where(p => p != null && p != target).ToArray();
                         PlayerState destination = null;
@@ -130,18 +161,16 @@ public static class CardEffectResolver
                 break;
 
             case CardDefinition.EffectType.Mirror_CopyLastPlayedByYou:
-                // Mirror stays in hand; fire stored effect.
                 caster.Server_PlayLastStoredCardCopy(target);
                 break;
 
-            // ───────── Set reactions (placed via CmdSetCard; triggered on attack) ─────────
+            // Set reactions (placed via CmdSetCard; triggered on attack) - no instant action here
             case CardDefinition.EffectType.Cactus_ReflectUpToX_For3Turns:
             case CardDefinition.EffectType.BearTrap_FirstAttackerTakesX:
             case CardDefinition.EffectType.MirrorShield_ReflectFirstAttackFull:
-                // No direct instant effect here; handled as set/status.
                 break;
 
-            // ───────── Legacy (kept for compatibility) ─────────
+            // Legacy
             case CardDefinition.EffectType.DealDamage:
                 if (target != null) target.Server_ApplyDamage(caster, X);
                 break;
@@ -168,7 +197,7 @@ public static class CardEffectResolver
                 break;
         }
 
-        // Store "last played" so Mirror can copy it later (ignore Mirror itself).
+        // Store "last played" (Mirror can copy it later)
         if (def.effect != CardDefinition.EffectType.Mirror_CopyLastPlayedByYou)
             caster.Server_RecordLastPlayed(def.id, level);
     }
@@ -185,19 +214,19 @@ public static class CardEffectResolver
         return -1;
     }
 
-    // ===== REACTIONS / SET CARDS =====
+    // REACTIONS / SET CARDS
     // Invoked by defender when damage comes in; can modify damage and counter-hit
     [Server]
     public static void TryReactOnIncomingHit(PlayerState defender, PlayerState attacker, ref int incomingDamage)
     {
         if (defender == null) return;
 
-        // 1) First, check durable statuses (e.g., Cactus reflect across turns)
+        // 1) durable statuses (e.g., cactus reflect)
         int incomingBefore = incomingDamage;
         defender.Server_TryApplyCactusStatusReflect(attacker, ref incomingBefore);
         incomingDamage = incomingBefore;
 
-        // 2) Then scan defender's set row for one-shot reactions
+        // 2) scan set row for one-shot reactions
         for (int i = 0; i < defender.setIds.Count; i++)
         {
             var def = defender.database?.Get(defender.setIds[i]);
@@ -227,8 +256,6 @@ public static class CardEffectResolver
                         return;
                     }
                     break;
-
-                    // (Cactus is status-driven; the set card persists as a visual until duration ends.)
             }
         }
     }

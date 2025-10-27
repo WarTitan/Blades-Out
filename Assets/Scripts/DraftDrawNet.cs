@@ -47,6 +47,33 @@ public class DraftDrawNet : NetworkBehaviour
         Target_BeginDraft(connectionToClient, serverChoices);
     }
 
+    // ---- NEW: server-side helpers used by TurnManager for auto-pick ----
+
+    [Server]
+    public bool Server_HasPendingDraft()
+    {
+        return serverChoices != null && serverChoices.Length > 0;
+    }
+
+    [Server]
+    public void Server_AutoPickRandom()
+    {
+        if (!Server_HasPendingDraft()) return;
+
+        int pick = serverChoices[Random.Range(0, serverChoices.Length)];
+
+        // Same effect as a valid client Cmd_ChooseDraftCard
+        ps.Server_AddToHand(pick, 1);
+
+        // clear server stash
+        serverChoices = null;
+
+        // Tell client to hide the visual choices
+        Target_EndDraft(connectionToClient, pick);
+    }
+
+    // -------------------------------------------------------------------
+
     // Client: show the 3 floating choices
     [TargetRpc]
     private void Target_BeginDraft(NetworkConnection target, int[] choiceIds)

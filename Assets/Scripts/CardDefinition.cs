@@ -3,14 +3,14 @@
 [CreateAssetMenu(menuName = "BladesOut/Card Definition", fileName = "CardDefinition")]
 public class CardDefinition : ScriptableObject
 {
-    // ───────── Identity ─────────
+    // Identity
     [Header("Identity")]
     public int id; // unique across all cards
     public string cardName;
     [TextArea] public string description;
     public Sprite image;
 
-    // ───────── Play meta ─────────
+    // Play meta
     public enum PlayStyle
     {
         Instant,            // plays immediately, no target
@@ -18,7 +18,7 @@ public class CardDefinition : ScriptableObject
         SetReaction         // placed on set anchor; triggers on attack (Cactus applies immediately & lasts 3 turns)
     }
 
-    // Keep legacy first for compat, then alphabetically your new effects
+    // Keep legacy first for compat, then alphabetical new effects
     public enum EffectType
     {
         // legacy
@@ -46,7 +46,8 @@ public class CardDefinition : ScriptableObject
         PhoenixFeather_HealX_ReviveTo2IfDead,
         Pickpocket_StealOneRandomHandCard,
         Shield_GainXArmor,
-        Turtle_TargetSkipsNextTurn
+        Turtle_TargetSkipsNextTurn,
+        Shotgun_DealX_TwoRandomOthers
     }
 
     [Header("Gameplay")]
@@ -62,12 +63,12 @@ public class CardDefinition : ScriptableObject
     [Tooltip("For ChainArc-style effects (extra jumps after the first target).")]
     public int arcs = 0;
 
-    // ───────── Costs ─────────
+    // Costs
     [Header("Costs")]
     [Tooltip("Base poker chip cost to CAST/SET this card (tiers can override).")]
     public int chipCost = 0;
 
-    // ───────── 3D Showcase for Set cards ─────────
+    // 3D Showcase for Set cards
     [Header("3D Showcase (for Set cards)")]
     [Tooltip("Optional: 3D model to spawn on the Set Anchor when this card is set.")]
     public GameObject setShowcasePrefab;
@@ -75,7 +76,7 @@ public class CardDefinition : ScriptableObject
     public Vector3 setShowcaseLocalEuler = Vector3.zero;
     public Vector3 setShowcaseLocalScale = Vector3.one;
 
-    // ───────── Tiers ─────────
+    // Tiers
     [System.Serializable]
     public struct UpgradeTier
     {

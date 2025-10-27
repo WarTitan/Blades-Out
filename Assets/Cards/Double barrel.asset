@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4acf1391760cecd4dad51fe600af9a76, type: 3}
+  m_Name: Double barrel
+  m_EditorClassIdentifier: Assembly-CSharp::CardDefinition
+  id: 0
+  cardName: Double barrel
+  description: Deal 4 dmg to 2 random players
+  image: {fileID: -1367980480, guid: 31cc4fa7fd5e321448d675a0f1646684, type: 3}
+  playStyle: 0
+  effect: 23
+  amount: 1
+  durationTurns: 0
+  arcs: 0
+  chipCost: 4
+  setShowcasePrefab: {fileID: 0}
+  setShowcaseLocalOffset: {x: 0, y: 0, z: 0}
+  setShowcaseLocalEuler: {x: 0, y: 0, z: 0}
+  setShowcaseLocalScale: {x: 1, y: 1, z: 1}
+  tiers:
+  - attack: 4
+    defense: 0
+    costGold: 0
+    effectText: Deal 4 dmg to 2 random players
+    castChipCost: 4

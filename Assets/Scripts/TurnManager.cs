@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using Mirror;
 using System.Collections.Generic;
+using System.Reflection; // for chest reflection
 
 public class TurnManager : NetworkBehaviour
 {
@@ -11,7 +12,7 @@ public class TurnManager : NetworkBehaviour
     [SerializeField] private int startingGold = 5;
     [SerializeField] private int startingHandSize = 3;
     [SerializeField] private int cardsPerTurn = 1;
-    [SerializeField] private int goldPerTurn = 2;                   // was 1 -> now 2 per your request
+    [SerializeField] private int goldPerTurn = 1;
     [SerializeField] private int defaultDeckSize = 12;
     [SerializeField] private CardDatabase database;
 
@@ -21,14 +22,6 @@ public class TurnManager : NetworkBehaviour
 
     [Header("Chips")]
     [SerializeField] private int chipCap = 10;
-
-    [Header("Hand Cap")]
-    [SerializeField] private int maxHandSize = 5;                   // hard cap for hand size
-    [SerializeField] private int fullHandGoldInsteadOfDraw = 2;     // when hand is full at end turn
-
-    // expose read-only for other scripts
-    public int MaxHandSize => maxHandSize;
-    public int FullHandGoldInsteadOfDraw => fullHandGoldInsteadOfDraw;
 
     [SyncVar] private int currentTurnIndex = -1;
     [SyncVar] private bool gameStarted = false;
@@ -85,25 +78,16 @@ public class TurnManager : NetworkBehaviour
         if (!gameStarted || turnOrder.Count == 0) return;
         if (turnOrder[currentTurnIndex] != requester) return;
 
-        // end-of-turn economy: chips ramp and base gold
+        // Rewards for the player who ended their turn (applies to their next turn)
         requester.Server_IncreaseMaxChipsAndRefill(chipCap, 1);
         requester.gold += goldPerTurn;
 
-        // if hand is full, do NOT draft/draw; award gold instead
-        bool handFull = requester != null && requester.handIds != null && requester.handIds.Count >= maxHandSize;
-        if (handFull)
-        {
-            requester.gold += fullHandGoldInsteadOfDraw;
-        }
+        // start a draft instead of auto draw
+        var draft = requester.GetComponent<DraftDrawNet>();
+        if (draft != null)
+            draft.Server_StartDraft(cardsPerTurn); // usually 1
         else
-        {
-            // start a draft instead of direct draw (fallback to draw if component missing)
-            var draft = requester.GetComponent<DraftDrawNet>();
-            if (draft != null)
-                draft.Server_StartDraft(cardsPerTurn);
-            else
-                requester.Server_Draw(cardsPerTurn);
-        }
+            requester.Server_Draw(cardsPerTurn);   // fallback if the component is missing
 
         int next = NextIndex(currentTurnIndex);
         Server_StartTurnFrom(next);
@@ -153,8 +137,10 @@ public class TurnManager : NetworkBehaviour
                 RpcTurnChanged(currentTurnIndex);
                 TargetYourTurn(ps.connectionToClient);
 
-                // pass turtle and immediately auto-end WITH rewards
+                // Pass turtle to a random other player
                 Server_PassTurtleFrom(ps);
+
+                // Immediately auto-end WITH rewards
                 Server_EndTurn(ps);
                 return;
             }
@@ -164,15 +150,53 @@ public class TurnManager : NetworkBehaviour
             currentTurnNetId = ps.netId;
             RpcTurnChanged(currentTurnIndex);
             TargetYourTurn(ps.connectionToClient);
+
+            // ---- NEW: try to auto-resolve any pending "pick 1 of 3" when your turn begins ----
+            TryAutoResolvePendingChoices(ps);
+
             return;
         }
 
-        // Failsafe
+        // Failsafe: lock anyway
         currentTurnIndex = idx;
         var owner = turnOrder[idx];
         currentTurnNetId = owner ? owner.netId : 0;
         RpcTurnChanged(currentTurnIndex);
         if (owner) TargetYourTurn(owner.connectionToClient);
+    }
+
+    // NEW: Called at the very start of a player's turn.
+    [Server]
+    private void TryAutoResolvePendingChoices(PlayerState ps)
+    {
+        if (ps == null) return;
+
+        // 1) End-of-turn draft: if still pending, pick a random one
+        var draft = ps.GetComponent<DraftDrawNet>();
+        if (draft != null && draft.Server_HasPendingDraft())
+        {
+            draft.Server_AutoPickRandom();
+        }
+
+        // 2) Dealer chest: if your existing chest script exposes a server method
+        //    called "Server_AutoPickRandomIfPending", we invoke it via reflection.
+        var monos = ps.GetComponents<MonoBehaviour>();
+        for (int i = 0; i < monos.Length; i++)
+        {
+            var mb = monos[i];
+            if (mb == null) continue;
+            var t = mb.GetType();
+            // be generous with the name to match your chest script
+            if (t.Name.Contains("ChestUpgrade"))
+            {
+                var m = t.GetMethod("Server_AutoPickRandomIfPending", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (m != null)
+                {
+                    m.Invoke(mb, null);
+                }
+                break;
+            }
+        }
     }
 
     [ClientRpc] private void RpcTurnChanged(int index) { }
@@ -199,7 +223,7 @@ public class TurnManager : NetworkBehaviour
         if (handIndex < 0 || handIndex >= ps.handIds.Count) return;
 
         int cardId = ps.handIds[handIndex];
-        var def = database != null ? database.Get(cardId) : null;
+        var def = database?.Get(cardId);
         if (def == null) return;
 
         int currentLvl = ps.Server_GetEffectiveLevelForHandIndex(handIndex);
@@ -312,7 +336,7 @@ public class TurnManager : NetworkBehaviour
             Debug.Log("[Match] No winner (all dead?). Press 3 to start a new game.");
     }
 
-    // Optional stubs for future effects
+    // Optional stubs
     [Server] public void Server_HealAll(int amount) { }
     [Server] public void Server_ChainArc(PlayerState caster, PlayerState startTarget, int amount, int arcs) { }
 }
