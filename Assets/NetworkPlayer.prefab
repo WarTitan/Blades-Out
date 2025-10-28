@@ -98,6 +98,7 @@ GameObject:
   - component: {fileID: 5127393552435462056}
   - component: {fileID: 294449105464193021}
   - component: {fileID: 7534591615195073895}
+  - component: {fileID: 2633181136839612329}
   m_Layer: 7
   m_Name: PlayerCamera
   m_TagString: Untagged
@@ -199,6 +200,21 @@ MonoBehaviour:
   roundOuterCaps: 1
   hideInLobby: 1
   onlyForLocalPlayer: 1
+--- !u!114 &2633181136839612329
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3490693020670742134}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03cedf5aa5b446943936b79e80948eff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EffectFovMixer
+  clampFov: 1
+  minFov: 40
+  maxFov: 150
 --- !u!1 &5318265040148999614
 GameObject:
   m_ObjectHideFlags: 0
@@ -4574,6 +4590,12 @@ PrefabInstance:
       addedObject: {fileID: 8027732371095978563}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
       insertIndex: -1
+      addedObject: {fileID: 9128577008693587491}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -5974264118103359087}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      insertIndex: -1
       addedObject: {fileID: 241873791727944675}
   m_SourcePrefab: {fileID: 100100000, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
 --- !u!1 &3784944211829141594 stripped
@@ -4856,6 +4878,52 @@ MonoBehaviour:
   maxPitch: 80
   invertY: 0
   verboseLogs: 0
+--- !u!114 &9128577008693587491
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3784944211829141594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2389d5c24ef60040a668fdb11d3d27b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PsychoactiveHUD
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  listRoot: {fileID: 0}
+  rowPrefab: {fileID: 554958550652514105, guid: 58957a8bf945fab418dd49ee80dc3e57, type: 3}
+  forceTopRightAnchor: 1
+  topRightOffset: {x: -12, y: -12}
+  detachToRootCanvas: 1
+  addIgnoreLayout: 1
+  enforceVerticalLayout: 1
+  enforceGridLayout: 1
+  appendNewAtBottom: 1
+  refreshInterval: 0.1
+  fallbackTopRightOffset: {x: -12, y: -12}
+  fallbackFontSize: 16
+--- !u!114 &-5974264118103359087
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3784944211829141594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a9a58ac020e937b409749595db65c2a9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PsychoactiveHUDAutoBind
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  listRootObjectName: EffectsPanel
+  listRootTag: 
+  hud: {fileID: 0}
+  rowPrefab: {fileID: 554958550652514105, guid: 58957a8bf945fab418dd49ee80dc3e57, type: 3}
 --- !u!114 &241873791727944675
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4876,8 +4944,18 @@ MonoBehaviour:
     description: 
     previewPrefab: {fileID: 0}
     effectPrefab: {fileID: 8592099208058942138, guid: 9ae91ec52406859408ebe416130d17f3, type: 3}
-    durationSeconds: 0
-    intensity: 0
+    durationSeconds: 10
+    intensity: 1
+  - itemName: Speed
+    description: 
+    previewPrefab: {fileID: 0}
+    effectPrefab: {fileID: 803944652759227712, guid: 6bc219c16e15cae409c409a11b7935da, type: 3}
+    durationSeconds: 9
+    intensity: 1
+  blockWhileLobbyActive: 1
+  allowWhenForcedGameplay: 1
+  enableHotkeys: 1
+  alsoUseNumpad: 1
   verboseLogs: 0
 --- !u!4 &4597333103463066336 stripped
 Transform:
