@@ -45,10 +45,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpeedEffect
   itemName: Speed
-  description: No description
-  previewPrefab: {fileID: 0}
-  defaultDurationSeconds: 10
-  defaultIntensity: 0.75
   speedMaterialTemplate: {fileID: 2100000, guid: 60134a441dba1984fbef8c26e281967d, type: 2}
   baseFovBoost: 20
   crazySpike: 28
@@ -66,7 +62,7 @@ MonoBehaviour:
   tintColor: {r: 1, g: 0.95, b: 0.85, a: 1}
   tintStrength: 0.25
   tintPulseAmplitude: 0.15
-  saturationBoost: 0.1
-  contrastBoost: -0.25
+  saturationBoost: 0
+  contrastBoost: 0.2
   sharpenAmount: 0.7
   verboseLogs: 0

@@ -1,10 +1,9 @@
 // FILE: PsychoactiveEffectsManager.cs
 // FULL REPLACEMENT (ASCII only)
-// - Hotkeys 1..9 (and numpad 1..9) trigger items[0..8].
-// - Exposes events OnEffectStarted / OnEffectEnded used by PsychoactiveHUD.
-// - Provides GetActiveEffectsSnapshot() used by PsychoactiveHUD to pre-populate.
-// - Stacks with other effects (FOV mixing is handled by EffectFovMixer on the camera).
-// - Blocks in lobby unless LocalCameraActivator forces gameplay.
+// - One active effect per TYPE. Retrigger extends remaining time instead of spawning a duplicate.
+// - Hotkeys: 1..9 and Keypad 1..9 map to items[0..8].
+// - Events used by HUD: OnEffectStarted (also fired on extend), OnEffectEnded.
+// - GetActiveEffectsSnapshot() for HUD initial population.
 
 using UnityEngine;
 using Mirror;
@@ -20,8 +19,8 @@ public class PsychoactiveEffectsManager : NetworkBehaviour
         public string itemName;
         [TextArea(2, 4)]
         public string description;
-        public GameObject previewPrefab;            // optional, not used by manager logic
-        public PsychoactiveEffectBase effectPrefab; // e.g., VodkaEffect, SpeedEffect
+        public GameObject previewPrefab;            // optional
+        public PsychoactiveEffectBase effectPrefab; // concrete effect component on a prefab
         public float durationSeconds = 10f;
         [Range(0f, 1f)] public float intensity = 0.75f;
     }
@@ -31,14 +30,15 @@ public class PsychoactiveEffectsManager : NetworkBehaviour
         public PsychoactiveEffectBase effect;
         public string name;
         public float endTime;
-        public float duration;
+        public float totalPlannedSeconds; // grows when extended
+        public System.Type effectType;
     }
 
     public struct ActiveSnapshot
     {
         public string name;
         public float endTime;
-        public float duration;
+        public float duration; // total planned seconds
         public PsychoactiveEffectBase effect;
     }
 
@@ -50,11 +50,11 @@ public class PsychoactiveEffectsManager : NetworkBehaviour
     public ItemEntry[] items;
 
     [Header("Rules")]
-    public bool blockWhileLobbyActive = true;   // block in lobby
-    public bool allowWhenForcedGameplay = true; // allow if LocalCameraActivator.IsGameplayForced
+    public bool blockWhileLobbyActive = true;
+    public bool allowWhenForcedGameplay = true;
 
     [Header("Hotkeys")]
-    public bool enableHotkeys = true;           // enable 1..9 and keypad 1..9
+    public bool enableHotkeys = true;
     public bool alsoUseNumpad = true;
 
     [Header("Debug")]
@@ -107,17 +107,20 @@ public class PsychoactiveEffectsManager : NetworkBehaviour
                 if (pressed)
                 {
                     TriggerByIndex(i);
-                    break; // one trigger per frame
+                    break;
                 }
             }
         }
 
-        // auto-cancel when duration elapses
+        // cleanup finished
         for (int i = active.Count - 1; i >= 0; i--)
         {
-            if (Time.time >= active[i].endTime && active[i].effect != null)
+            var rec = active[i];
+            if (rec.effect == null) { active.RemoveAt(i); continue; }
+            if (Time.time >= rec.endTime)
             {
-                active[i].effect.Cancel();
+                // effect should self-end and call OnEffectFinished; this is just a safety net:
+                rec.effect.Cancel();
             }
         }
     }
@@ -155,30 +158,53 @@ public class PsychoactiveEffectsManager : NetworkBehaviour
             return;
         }
 
+        System.Type t = entry.effectPrefab.GetType();
+        float addSeconds = Mathf.Max(0.01f, entry.durationSeconds);
+
+        // Check if an effect of the same TYPE is already active. If so, extend it.
+        for (int i = 0; i < active.Count; i++)
+        {
+            var rec = active[i];
+            if (rec.effect != null && rec.effectType == t)
+            {
+                // Extend this running effect
+                rec.effect.ExtendDuration(addSeconds);
+                rec.endTime = Time.time + rec.effect.GetRemainingTime(); // recompute from effect
+                rec.totalPlannedSeconds += addSeconds;
+                active[i] = rec;
+
+                // Reuse OnEffectStarted to update HUD's remaining time
+                var started = OnEffectStarted;
+                if (started != null) started(rec.name, rec.effect, rec.endTime, rec.totalPlannedSeconds);
+
+                if (verboseLogs) Debug.Log("[PsychoactiveEffectsManager] Extended effect " + rec.name + " by +" + addSeconds + "s. New remaining ~ " + rec.effect.GetRemainingTime().ToString("0.00") + "s");
+                return;
+            }
+        }
+
+        // Not running yet: spawn new instance
         var inst = Instantiate(entry.effectPrefab, targetCam.transform, false);
         if (!inst.gameObject.activeSelf) inst.gameObject.SetActive(true);
 
         inst.OnFinished += OnEffectFinished;
 
-        float d = Mathf.Max(0.01f, entry.durationSeconds);
-        float end = Time.time + d;
-
         string shownName = string.IsNullOrEmpty(entry.itemName) ? inst.itemName : entry.itemName;
-        inst.Begin(targetCam, d, Mathf.Clamp01(entry.intensity));
+        inst.Begin(targetCam, addSeconds, Mathf.Clamp01(entry.intensity));
 
-        var rec = new ActiveEffectRecord
+        var newRec = new ActiveEffectRecord
         {
             effect = inst,
             name = shownName,
-            endTime = end,
-            duration = d
+            endTime = Time.time + inst.GetRemainingTime(),
+            totalPlannedSeconds = addSeconds,
+            effectType = t
         };
-        active.Add(rec);
+        active.Add(newRec);
 
-        var started = OnEffectStarted;
-        if (started != null) started(shownName, inst, end, d);
+        var startedNew = OnEffectStarted;
+        if (startedNew != null) startedNew(shownName, inst, newRec.endTime, newRec.totalPlannedSeconds);
 
-        if (verboseLogs) Debug.Log("[PsychoactiveEffectsManager] Started effect: " + shownName + " for " + d + "s (index " + index + ")");
+        if (verboseLogs) Debug.Log("[PsychoactiveEffectsManager] Started effect: " + shownName + " for " + addSeconds + "s (type " + t.Name + ")");
     }
 
     public void CancelAllEffects()
@@ -207,7 +233,7 @@ public class PsychoactiveEffectsManager : NetworkBehaviour
             {
                 name = r.name,
                 endTime = r.endTime,
-                duration = r.duration,
+                duration = r.totalPlannedSeconds,
                 effect = r.effect
             });
         }

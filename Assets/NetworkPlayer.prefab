@@ -4867,17 +4867,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 058f6f7cda70e214b9691ead11acdc4c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalCameraController
-  syncDirection: 0
-  syncMode: 0
-  syncInterval: 0
   playerBody: {fileID: 4597333103463066336}
   playerCamera: {fileID: 5127393552435462056}
-  sensitivityX: 140
-  sensitivityY: 140
+  sensitivityX: 6
+  sensitivityY: 6
+  invertY: 0
   minPitch: -80
   maxPitch: 80
-  invertY: 0
-  verboseLogs: 0
+  requireCursorLocked: 1
+  requireCameraEnabled: 1
+  onlyWhenFocused: 1
+  smooth: 1
+  smoothTime: 0.02
+  rotateInputWithRoll: 1
+  rollInputFactor: 0.197
 --- !u!114 &9128577008693587491
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4951,6 +4954,18 @@ MonoBehaviour:
     previewPrefab: {fileID: 0}
     effectPrefab: {fileID: 803944652759227712, guid: 6bc219c16e15cae409c409a11b7935da, type: 3}
     durationSeconds: 9
+    intensity: 1
+  - itemName: Ketamine
+    description: 
+    previewPrefab: {fileID: 0}
+    effectPrefab: {fileID: 5627519088009419456, guid: 694d22c95cdbabe48a6ee3ef90df8cdc, type: 3}
+    durationSeconds: 11
+    intensity: 1
+  - itemName: Lsd
+    description: 
+    previewPrefab: {fileID: 0}
+    effectPrefab: {fileID: 1174183902846764924, guid: f902d7b1997db0345b09b38127e5cdb5, type: 3}
+    durationSeconds: 11
     intensity: 1
   blockWhileLobbyActive: 1
   allowWhenForcedGameplay: 1

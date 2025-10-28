@@ -1,8 +1,6 @@
 // FILE: SpeedEffect.cs
 // FULL REPLACEMENT (ASCII only)
-// - Uses EffectFovMixer so FOV stacks with other effects.
-// - Adds color controls (tint, saturation, contrast, sharpen) for the Speed blit.
-// - Color tint can also pulse subtly with the FOV pulse.
+// Only change vs your last version: preserve existing Z roll so it does NOT wipe the roll mixer.
 
 using UnityEngine;
 using System.Collections;
@@ -12,7 +10,7 @@ using System.Collections;
 public class SpeedEffect : PsychoactiveEffectBase
 {
     [Header("Optional Blit (Built-in RP)")]
-    public Material speedMaterialTemplate;  // shader "Hidden/SpeedEffect" (optional)
+    public Material speedMaterialTemplate;
 
     [Header("FOV Core")]
     public float baseFovBoost = 14f;
@@ -40,7 +38,7 @@ public class SpeedEffect : PsychoactiveEffectBase
     [Header("Color Grade")]
     public Color tintColor = new Color(1f, 0.95f, 0.85f, 1f);
     [Range(0f, 1f)] public float tintStrength = 0.25f;
-    [Range(0f, 1f)] public float tintPulseAmplitude = 0.15f;  // extra tint on pulse
+    [Range(0f, 1f)] public float tintPulseAmplitude = 0.15f;
     public float saturationBoost = 0.25f;
     public float contrastBoost = 0.25f;
     public float sharpenAmount = 0.70f;
@@ -48,7 +46,6 @@ public class SpeedEffect : PsychoactiveEffectBase
     [Header("Debug")]
     public bool verboseLogs = false;
 
-    // Runtime
     private Coroutine routine;
     private Material runtimeMat;
     private SpeedBlit blit;
@@ -61,7 +58,6 @@ public class SpeedEffect : PsychoactiveEffectBase
     {
         if (targetCam == null || !targetCam.gameObject.activeInHierarchy)
         {
-            if (verboseLogs) Debug.LogWarning("[SpeedEffect] Camera missing/inactive. Aborting.");
             End();
             return;
         }
@@ -69,20 +65,15 @@ public class SpeedEffect : PsychoactiveEffectBase
         if (!gameObject.activeSelf) gameObject.SetActive(true);
         if (!enabled) enabled = true;
 
-        // Ensure mixer
         mixer = targetCam.GetComponent<EffectFovMixer>();
         if (mixer == null) mixer = targetCam.gameObject.AddComponent<EffectFovMixer>();
         mixer.SetBaseFov(baseFov);
         fovHandle = mixer.Register(this, 0);
 
-        // Optional blit
         blit = targetCam.GetComponent<SpeedBlit>();
         if (blit == null) blit = targetCam.gameObject.AddComponent<SpeedBlit>();
 
-        if (speedMaterialTemplate != null)
-        {
-            runtimeMat = new Material(speedMaterialTemplate);
-        }
+        if (speedMaterialTemplate != null) runtimeMat = new Material(speedMaterialTemplate);
         else
         {
             var sh = Shader.Find("Hidden/SpeedEffect");
@@ -106,7 +97,7 @@ public class SpeedEffect : PsychoactiveEffectBase
         }
 
         seed = Random.value * 1000f;
-        routine = StartCoroutine(Run(duration, Mathf.Clamp01(intensity)));
+        routine = StartCoroutine(Run(Mathf.Clamp01(intensity)));
     }
 
     protected override void OnEnd()
@@ -136,25 +127,21 @@ public class SpeedEffect : PsychoactiveEffectBase
         }
     }
 
-    private IEnumerator Run(float duration, float strength)
+    private IEnumerator Run(float strength)
     {
-        float t0 = Time.time;
-        float tEnd = t0 + Mathf.Max(0.1f, duration);
-
         float fin = Mathf.Max(0f, fadeInSeconds);
         float fout = Mathf.Max(0f, fadeOutSeconds);
-
         float spikeDecay = Mathf.Max(0.0001f, spikeDecaySeconds);
         float pulseRise = Mathf.Max(0.0001f, pulseRiseSeconds);
 
-        while (Time.time < tEnd && targetCam != null)
+        while (Time.time < endTime && targetCam != null)
         {
-            float t = Time.time - t0;
-            float timeLeft = Mathf.Max(0f, tEnd - Time.time);
+            float t = Time.time - startTime;
+            float timeLeft = Mathf.Max(0f, endTime - Time.time);
 
             float in01 = (fin > 0f) ? Mathf.Clamp01(t / fin) : 1f;
             float out01 = (fout > 0f) ? Mathf.Clamp01(timeLeft / fout) : 1f;
-            float env = Mathf.Clamp01(Mathf.Min(in01, out01) * strength);
+            float env = Mathf.Clamp01(Mathf.Min(in01, out01) * Mathf.Clamp01(strength));
 
             float spike = crazySpike * Mathf.Exp(-t / spikeDecay);
 
@@ -170,18 +157,20 @@ public class SpeedEffect : PsychoactiveEffectBase
 
             if (enableMicroJitter && camTransform != null)
             {
-                float jx = (Mathf.PerlinNoise(seed + t * jitterHz, 0f) * 2f - 1f) * pitchJitterDeg * env;
-                float jy = (Mathf.PerlinNoise(0f, seed + t * jitterHz) * 2f - 1f) * yawJitterDeg * env;
-
+                // Preserve existing Z (roll) so the roll mixer can work.
                 Vector3 e = camTransform.localEulerAngles;
                 float ex = e.x; if (ex > 180f) ex -= 360f;
                 float ey = e.y; if (ey > 180f) ey -= 360f;
-                camTransform.localRotation = Quaternion.Euler(ex + jx, ey + jy, 0f);
+                float ez = e.z; if (ez > 180f) ez -= 360f;
+
+                float jx = (Mathf.PerlinNoise(seed + t * jitterHz, 0f) * 2f - 1f) * pitchJitterDeg * env;
+                float jy = (Mathf.PerlinNoise(0f, seed + t * jitterHz) * 2f - 1f) * yawJitterDeg * env;
+
+                camTransform.localRotation = Quaternion.Euler(ex + jx, ey + jy, ez);
             }
 
             if (runtimeMat != null)
             {
-                // Drive color grade
                 float tintNow = Mathf.Clamp01(tintStrength + Mathf.Abs(pulse) * tintPulseAmplitude) * env;
                 runtimeMat.SetFloat("_Intensity", env);
                 runtimeMat.SetFloat("_Pulse", pulse);

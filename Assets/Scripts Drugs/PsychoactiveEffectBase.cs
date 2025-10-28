@@ -1,68 +1,84 @@
 // FILE: PsychoactiveEffectBase.cs
-// Base class for all drug/dream effects. Each effect gets its own script by inheriting this.
-// Manager will instantiate the prefab that has a concrete effect component and call Begin(...).
+// FULL REPLACEMENT (ASCII only)
+// Base class for all psychoactive effects.
+// Provides Begin(...), ExtendDuration(...), Cancel(), and End().
+// Derived effects must read 'endTime' to allow runtime extension.
 
 using UnityEngine;
 using System;
 
 public abstract class PsychoactiveEffectBase : MonoBehaviour
 {
-    public string itemName = "Unnamed";
-    [TextArea(2, 4)]
-    public string description = "No description";
-    public GameObject previewPrefab;
-    public float defaultDurationSeconds = 10f;
-    [Range(0f, 1f)] public float defaultIntensity = 0.75f;
+    [Header("Common")]
+    public string itemName = "";
 
     protected Camera targetCam;
     protected Transform camTransform;
+
+    // Store the camera FOV at begin for reference (mixer may override application)
     protected float baseFov;
 
-    public bool IsRunning { get; private set; }
+    // Timing state (shared so manager can extend duration)
+    protected float startTime;
+    protected float endTime;          // absolute game time when effect ends
+    protected float durationSeconds;  // initial requested duration
+    protected float intensity01;      // 0..1
 
     public event Action<PsychoactiveEffectBase> OnFinished;
 
-    // Called by manager right after instantiate
     public void Begin(Camera cam, float duration, float intensity)
     {
-        targetCam = cam;
-        camTransform = cam != null ? cam.transform : null;
-        baseFov = cam != null ? cam.fieldOfView : 60f;
+        if (cam == null)
+        {
+            Debug.LogWarning("[PsychoactiveEffectBase] Begin called with null camera.");
+        }
 
-        if (!gameObject.activeSelf) gameObject.SetActive(true);
-        IsRunning = true;
-        OnBegin(Mathf.Max(0.01f, duration), Mathf.Clamp01(intensity));
+        targetCam = cam;
+        camTransform = (cam != null ? cam.transform : null);
+        baseFov = (cam != null ? cam.fieldOfView : 60f);
+
+        durationSeconds = Mathf.Max(0.01f, duration);
+        intensity01 = Mathf.Clamp01(intensity);
+
+        startTime = Time.time;
+        endTime = startTime + durationSeconds;
+
+        OnBegin(durationSeconds, intensity01);
     }
 
-    // Effect-specific start
-    protected abstract void OnBegin(float duration, float intensity);
+    // Adds seconds to the current endTime. Derived effects should read 'endTime' in their loops.
+    public void ExtendDuration(float addSeconds)
+    {
+        float add = Mathf.Max(0f, addSeconds);
+        endTime += add;
+        OnExtended(add);
+    }
 
-    // Manager or effect can cancel/finish
+    // Remaining time in seconds (never negative)
+    public float GetRemainingTime()
+    {
+        return Mathf.Max(0f, endTime - Time.time);
+    }
+
     public void Cancel()
     {
-        if (!IsRunning) return;
-        OnCancel();
-        IsRunning = false;
-        SafeFinishCallback();
+        OnEnd();
+        var h = OnFinished;
+        if (h != null) h(this);
         Destroy(gameObject);
     }
 
-    // Call this when the effect naturally ends
+    // Call from derived effect when finished naturally
     protected void End()
     {
-        if (!IsRunning) return;
         OnEnd();
-        IsRunning = false;
-        SafeFinishCallback();
+        var h = OnFinished;
+        if (h != null) h(this);
         Destroy(gameObject);
     }
 
-    protected virtual void OnCancel() { OnEnd(); }
+    // ---- Hooks for derived classes ----
+    protected abstract void OnBegin(float duration, float intensity);
     protected virtual void OnEnd() { }
-
-    private void SafeFinishCallback()
-    {
-        var cb = OnFinished;
-        if (cb != null) cb(this);
-    }
+    protected virtual void OnExtended(float addSeconds) { }
 }

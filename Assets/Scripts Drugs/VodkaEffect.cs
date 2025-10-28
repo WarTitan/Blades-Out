@@ -1,8 +1,8 @@
 // FILE: VodkaEffect.cs
-// FULL REPLACEMENT
-// Drunk warp stays purely as a blit so it does NOT fight FOV.
-// If you want subtle FOV wobble, set fovWobbleAmplitude > 0 and it will
-// contribute via EffectFovMixer (not touch camera.fieldOfView directly).
+// FULL REPLACEMENT (ASCII only)
+// Drunk warp via blit (Built-in RP). Optional tiny FOV wobble via EffectFovMixer.
+// Uses base.startTime / base.endTime so ExtendDuration() works.
+// Adds safe tear-down to avoid end-of-effect hitching.
 
 using UnityEngine;
 using System.Collections;
@@ -25,11 +25,13 @@ public class VodkaEffect : PsychoactiveEffectBase
     [Header("Debug")]
     public bool verboseLogs = false;
 
+    // Runtime
     private Coroutine routine;
     private Material runtimeMat;
     private DrunkBlit drunk;
     private EffectFovMixer mixer;
     private int fovHandle = -1;
+    private bool isEnding;
 
     protected override void OnBegin(float duration, float intensity)
     {
@@ -42,6 +44,7 @@ public class VodkaEffect : PsychoactiveEffectBase
 
         if (!gameObject.activeSelf) gameObject.SetActive(true);
         if (!enabled) enabled = true;
+        isEnding = false;
 
         // Ensure mixer only if we actually use FOV wobble
         if (fovWobbleAmplitude > 0f)
@@ -62,13 +65,15 @@ public class VodkaEffect : PsychoactiveEffectBase
         }
         else
         {
-            // fallback: try find by name if user created shader named "Drunk"
+            // Fallback: try find by name if user created shader named "Drunk"
             var sh = Shader.Find("Drunk");
             if (sh != null) runtimeMat = new Material(sh);
         }
 
         if (runtimeMat != null)
         {
+            // If your shader exposes _Intensity, we will drive it for fade in/out.
+            runtimeMat.SetFloat("_Intensity", 0f);
             drunk.SetMaterial(runtimeMat);
         }
         else
@@ -76,11 +81,15 @@ public class VodkaEffect : PsychoactiveEffectBase
             drunk.SetMaterial(null);
         }
 
-        routine = StartCoroutine(Run(duration, Mathf.Clamp01(intensity)));
+        // IMPORTANT: use shared endTime from base so ExtendDuration() works.
+        routine = StartCoroutine(Run(Mathf.Clamp01(intensity)));
     }
 
     protected override void OnEnd()
     {
+        if (isEnding) return;
+        isEnding = true;
+
         if (routine != null)
         {
             StopCoroutine(routine);
@@ -93,46 +102,57 @@ public class VodkaEffect : PsychoactiveEffectBase
             fovHandle = -1;
         }
 
-        if (drunk != null) drunk.SetMaterial(null);
+        // Disable the blit first so OnRenderImage stops running this frame.
+        if (drunk != null)
+        {
+            drunk.SetMaterial(null);
+            drunk.enabled = false;
+        }
 
+        // Defer material destruction to the next frame to avoid a stall while the camera is rendering.
         if (runtimeMat != null)
         {
-#if UNITY_EDITOR
-            Object.DestroyImmediate(runtimeMat);
-#else
-            Object.Destroy(runtimeMat);
-#endif
+            StartCoroutine(DestroyMatNextFrame(runtimeMat));
             runtimeMat = null;
         }
     }
 
-    private IEnumerator Run(float duration, float strength)
+    private IEnumerator DestroyMatNextFrame(Material m)
     {
-        float t0 = Time.time;
-        float tEnd = t0 + Mathf.Max(0.1f, duration);
+        // Wait until end of frame to ensure no camera is mid-blit.
+        yield return null;
+#if UNITY_EDITOR
+        // In Play Mode, prefer Destroy; DestroyImmediate can stall the editor.
+        if (Application.isPlaying) Object.Destroy(m);
+        else Object.DestroyImmediate(m);
+#else
+        Object.Destroy(m);
+#endif
+    }
 
+    private IEnumerator Run(float strength)
+    {
         float fin = Mathf.Max(0f, fadeInSeconds);
         float fout = Mathf.Max(0f, fadeOutSeconds);
 
-        while (Time.time < tEnd && targetCam != null)
+        while (Time.time < endTime && targetCam != null)
         {
-            float t = Time.time - t0;
-            float timeLeft = Mathf.Max(0f, tEnd - Time.time);
+            float t = Time.time - startTime;
+            float timeLeft = Mathf.Max(0f, endTime - Time.time);
 
+            // Smooth fade in/out envelope
             float in01 = (fin > 0f) ? Mathf.Clamp01(t / fin) : 1f;
             float out01 = (fout > 0f) ? Mathf.Clamp01(timeLeft / fout) : 1f;
-            float env = Mathf.Clamp01(Mathf.Min(in01, out01) * strength);
+            float env = Mathf.Clamp01(Mathf.Min(in01, out01) * Mathf.Clamp01(strength));
 
-            // Drive drunk material intensity smoothly
+            // Drive drunk material intensity if supported by the shader
             if (runtimeMat != null)
             {
-                // Example: fade in/out by multiplying distort strength
+                // If your shader does not have _Intensity, this is harmless.
                 runtimeMat.SetFloat("_Intensity", env);
-                // If your drunk shader uses different params (e.g., _Time based),
-                // you can still pass env for amplitude scaling.
             }
 
-            // Optional FOV wobble via mixer (tiny)
+            // Optional tiny FOV wobble via mixer (never writes camera.fieldOfView directly)
             if (mixer != null && fovHandle != -1)
             {
                 float wobble = Mathf.Sin(t * fovWobbleHz * 2f * Mathf.PI) * fovWobbleAmplitude;
