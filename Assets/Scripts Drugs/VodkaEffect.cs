@@ -1,55 +1,82 @@
 // FILE: VodkaEffect.cs
-// Concrete effect: "Vodka" wobble + FOV pulse (+ optional URP post-effects).
-// Attach this script to a prefab, then assign that prefab into the manager's item list.
+// FULL REPLACEMENT
+// Drunk warp stays purely as a blit so it does NOT fight FOV.
+// If you want subtle FOV wobble, set fovWobbleAmplitude > 0 and it will
+// contribute via EffectFovMixer (not touch camera.fieldOfView directly).
 
 using UnityEngine;
 using System.Collections;
 
-#if UNITY_RENDER_PIPELINE_UNIVERSAL
-using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
-#endif
-
 [AddComponentMenu("Gameplay/Effects/Vodka Effect")]
-[DefaultExecutionOrder(50500)]
+[DefaultExecutionOrder(50510)]
 public class VodkaEffect : PsychoactiveEffectBase
 {
-    [Header("Vodka Tuning")]
-    public float maxRollDegrees = 8f;
-    public float maxYawJitterDegrees = 4f;
-    public float maxPitchJitterDegrees = 2f;
-    public float fovPulse = 8f;
-    public float wobbleFreq = 0.6f;   // Hz
-    public float jitterFreq = 1.3f;   // Hz
-    public AnimationCurve envelope = AnimationCurve.EaseInOut(0f, 0f, 0.2f, 1f);
+    [Header("Drunk Blit (Built-in RP)")]
+    public Material drunkMaterialTemplate;  // your drunk shader material (optional)
 
-#if UNITY_RENDER_PIPELINE_UNIVERSAL
-    private Volume runtimeVol;
-    private VolumeProfile runtimeProfile;
-    private ChromaticAberration ca;
-    private LensDistortion ld;
-    private Vignette vg;
-    private MotionBlur mb;
-    private Bloom bm;
-#endif
+    [Header("Optional FOV Wobble (via mixer)")]
+    public float fovWobbleAmplitude = 0f;   // set > 0 for tiny breathing of FOV
+    public float fovWobbleHz = 0.35f;
+
+    [Header("Fade")]
+    public float fadeInSeconds = 0.35f;
+    public float fadeOutSeconds = 0.6f;
+
+    [Header("Debug")]
+    public bool verboseLogs = false;
 
     private Coroutine routine;
-    private float wobbleRoll, wobbleYaw, wobblePitch;
-    private bool pendingWobble;
+    private Material runtimeMat;
+    private DrunkBlit drunk;
+    private EffectFovMixer mixer;
+    private int fovHandle = -1;
 
     protected override void OnBegin(float duration, float intensity)
     {
-        if (targetCam == null)
+        if (targetCam == null || !targetCam.gameObject.activeInHierarchy)
         {
-            Debug.LogWarning("[VodkaEffect] No camera. Aborting.");
+            if (verboseLogs) Debug.LogWarning("[VodkaEffect] Camera missing/inactive. Aborting.");
             End();
             return;
         }
 
-#if UNITY_RENDER_PIPELINE_UNIVERSAL
-        SetupRuntimeVolume();
-#endif
-        routine = StartCoroutine(Run(duration, intensity));
+        if (!gameObject.activeSelf) gameObject.SetActive(true);
+        if (!enabled) enabled = true;
+
+        // Ensure mixer only if we actually use FOV wobble
+        if (fovWobbleAmplitude > 0f)
+        {
+            mixer = targetCam.GetComponent<EffectFovMixer>();
+            if (mixer == null) mixer = targetCam.gameObject.AddComponent<EffectFovMixer>();
+            mixer.SetBaseFov(baseFov);
+            fovHandle = mixer.Register(this, 0);
+        }
+
+        // Drunk blit
+        drunk = targetCam.GetComponent<DrunkBlit>();
+        if (drunk == null) drunk = targetCam.gameObject.AddComponent<DrunkBlit>();
+
+        if (drunkMaterialTemplate != null)
+        {
+            runtimeMat = new Material(drunkMaterialTemplate);
+        }
+        else
+        {
+            // fallback: try find by name if user created shader named "Drunk"
+            var sh = Shader.Find("Drunk");
+            if (sh != null) runtimeMat = new Material(sh);
+        }
+
+        if (runtimeMat != null)
+        {
+            drunk.SetMaterial(runtimeMat);
+        }
+        else
+        {
+            drunk.SetMaterial(null);
+        }
+
+        routine = StartCoroutine(Run(duration, Mathf.Clamp01(intensity)));
     }
 
     protected override void OnEnd()
@@ -60,145 +87,90 @@ public class VodkaEffect : PsychoactiveEffectBase
             routine = null;
         }
 
-        if (targetCam != null)
-            targetCam.fieldOfView = baseFov;
+        if (mixer != null && fovHandle != -1)
+        {
+            mixer.Unregister(fovHandle);
+            fovHandle = -1;
+        }
 
-        pendingWobble = false;
+        if (drunk != null) drunk.SetMaterial(null);
 
-#if UNITY_RENDER_PIPELINE_UNIVERSAL
-        if (runtimeVol != null) runtimeVol.weight = 0f;
-        CleanupVolume();
+        if (runtimeMat != null)
+        {
+#if UNITY_EDITOR
+            Object.DestroyImmediate(runtimeMat);
+#else
+            Object.Destroy(runtimeMat);
 #endif
+            runtimeMat = null;
+        }
     }
 
     private IEnumerator Run(float duration, float strength)
     {
         float t0 = Time.time;
-        float tEnd = t0 + Mathf.Max(0.5f, duration);
-        float seed = Random.value * 1000f;
+        float tEnd = t0 + Mathf.Max(0.1f, duration);
 
-#if UNITY_RENDER_PIPELINE_UNIVERSAL
-        float ca0 = ca != null ? ca.intensity.value : 0f;
-        float ld0 = ld != null ? ld.intensity.value : 0f;
-        float vg0 = vg != null ? vg.intensity.value : 0f;
-        float mb0 = mb != null ? mb.intensity.value : 0f;
-        float bm0 = bm != null ? bm.intensity.value : 0f;
-#endif
+        float fin = Mathf.Max(0f, fadeInSeconds);
+        float fout = Mathf.Max(0f, fadeOutSeconds);
 
         while (Time.time < tEnd && targetCam != null)
         {
             float t = Time.time - t0;
+            float timeLeft = Mathf.Max(0f, tEnd - Time.time);
 
-            float ramp = Mathf.Clamp01(envelope.Evaluate(Mathf.Clamp01(t / (duration * 0.25f)))) * strength;
-            float decay = Mathf.Clamp01(1f - ((Time.time - (t0 + duration * 0.5f)) / (duration * 0.5f)));
-            float env = Mathf.Min(ramp, Mathf.Max(0.2f, decay));
+            float in01 = (fin > 0f) ? Mathf.Clamp01(t / fin) : 1f;
+            float out01 = (fout > 0f) ? Mathf.Clamp01(timeLeft / fout) : 1f;
+            float env = Mathf.Clamp01(Mathf.Min(in01, out01) * strength);
 
-            pendingWobble = true;
-            wobbleRoll = Mathf.Sin(t * wobbleFreq * 2f * Mathf.PI) * maxRollDegrees * env;
+            // Drive drunk material intensity smoothly
+            if (runtimeMat != null)
+            {
+                // Example: fade in/out by multiplying distort strength
+                runtimeMat.SetFloat("_Intensity", env);
+                // If your drunk shader uses different params (e.g., _Time based),
+                // you can still pass env for amplitude scaling.
+            }
 
-            float nX = Mathf.PerlinNoise(seed + t * jitterFreq, 0f) * 2f - 1f;
-            float nY = Mathf.PerlinNoise(0f, seed + t * jitterFreq) * 2f - 1f;
-            wobbleYaw = nX * maxYawJitterDegrees * env * 0.6f;
-            wobblePitch = nY * maxPitchJitterDegrees * env * 0.6f;
+            // Optional FOV wobble via mixer (tiny)
+            if (mixer != null && fovHandle != -1)
+            {
+                float wobble = Mathf.Sin(t * fovWobbleHz * 2f * Mathf.PI) * fovWobbleAmplitude;
+                mixer.SetDelta(fovHandle, wobble * env);
+            }
 
-            targetCam.fieldOfView = baseFov + Mathf.Sin(t * 1.2f) * fovPulse * env;
-
-#if UNITY_RENDER_PIPELINE_UNIVERSAL
-            float pp = env;
-            if (runtimeVol != null) runtimeVol.weight = Mathf.Clamp01(pp);
-            if (ca != null) ca.intensity.value = Mathf.Lerp(ca0, 0.9f, pp);
-            if (ld != null) ld.intensity.value = Mathf.Lerp(ld0, -0.3f, pp);
-            if (vg != null) vg.intensity.value = Mathf.Lerp(vg0, 0.35f, pp);
-            if (mb != null) mb.intensity.value = Mathf.Lerp(mb0, 0.6f, pp);
-            if (bm != null) bm.intensity.value = Mathf.Lerp(bm0, 0.6f, pp);
-#endif
             yield return null;
         }
 
         End();
     }
+}
 
-    private void LateUpdate()
+[AddComponentMenu("Rendering/Drunk Blit (Built-in RP)")]
+[RequireComponent(typeof(Camera))]
+public class DrunkBlit : MonoBehaviour
+{
+    [SerializeField] private Material material;
+
+    public void SetMaterial(Material m)
     {
-        if (!IsRunning || targetCam == null || camTransform == null) return;
-        if (!pendingWobble) return;
-
-        Vector3 e = camTransform.localEulerAngles;
-        float bx = e.x; if (bx > 180f) bx -= 360f;
-        float by = e.y; if (by > 180f) by -= 360f;
-        float bz = e.z; if (bz > 180f) bz -= 360f;
-
-        float x = bx + wobblePitch;
-        float y = by + wobbleYaw;
-        float z = bz + wobbleRoll;
-
-        camTransform.localRotation = Quaternion.Euler(x, y, z);
+        material = m;
+        enabled = (material != null && material.shader != null);
     }
 
-#if UNITY_RENDER_PIPELINE_UNIVERSAL
-    private void SetupRuntimeVolume()
+    private void OnEnable()
     {
-        if (targetCam == null || runtimeVol != null) return;
-
-        var go = new GameObject("VodkaPostFX");
-        go.transform.SetParent(targetCam.transform, false);
-        runtimeVol = go.AddComponent<Volume>();
-        runtimeVol.isGlobal = true;
-        runtimeVol.priority = 100f;
-        runtimeVol.weight = 0f;
-
-        runtimeProfile = ScriptableObject.CreateInstance<VolumeProfile>();
-
-        ca = runtimeProfile.Add<ChromaticAberration>(true);
-        if (ca != null) { ca.active = true; ca.intensity.value = 0f; }
-
-        ld = runtimeProfile.Add<LensDistortion>(true);
-        if (ld != null)
-        {
-            ld.active = true;
-            ld.center.value = new Vector2(0.5f, 0.5f);
-            ld.intensity.value = 0f;
-            ld.scale.value = 1f;
-        }
-
-        vg = runtimeProfile.Add<Vignette>(true);
-        if (vg != null)
-        {
-            vg.active = true;
-            vg.intensity.value = 0f;
-            vg.smoothness.value = 0.4f;
-        }
-
-        mb = runtimeProfile.Add<MotionBlur>(true);
-        if (mb != null)
-        {
-            mb.active = true;
-            mb.intensity.value = 0f;
-            mb.clamp.value = 0.3f;
-        }
-
-        bm = runtimeProfile.Add<Bloom>(true);
-        if (bm != null)
-        {
-            bm.active = true;
-            bm.intensity.value = 0f;
-            bm.threshold.value = 1f;
-        }
-
-        runtimeVol.profile = runtimeProfile;
+        if (material == null || material.shader == null)
+            enabled = false;
     }
 
-    private void CleanupVolume()
+    private void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
-        if (runtimeVol != null)
+        if (material == null || material.shader == null)
         {
-            if (runtimeVol.gameObject != null) Destroy(runtimeVol.gameObject);
+            Graphics.Blit(source, destination);
+            return;
         }
-        runtimeVol = null;
-        runtimeProfile = null;
-        ca = null; ld = null; vg = null; mb = null; bm = null;
+        Graphics.Blit(source, destination, material);
     }
-#else
-    private void CleanupVolume() { }
-#endif
 }

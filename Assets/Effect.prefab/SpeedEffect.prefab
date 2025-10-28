@@ -57,13 +57,16 @@ MonoBehaviour:
   slowPulseHz: 0.65
   pulseRiseSeconds: 0.8
   pulseStartDelay: 0.2
-  clampFov: 1
-  minFov: 55
-  maxFov: 150
   enableMicroJitter: 1
   yawJitterDeg: 0.3
   pitchJitterDeg: 0.2
   jitterHz: 7
   fadeInSeconds: 0.25
   fadeOutSeconds: 0.4
+  tintColor: {r: 1, g: 0.95, b: 0.85, a: 1}
+  tintStrength: 0.25
+  tintPulseAmplitude: 0.15
+  saturationBoost: 0.1
+  contrastBoost: -0.25
+  sharpenAmount: 0.7
   verboseLogs: 0
