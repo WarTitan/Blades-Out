@@ -2,9 +2,11 @@
 using UnityEngine;
 using Mirror;
 
+[AddComponentMenu("Net/Lobby Ready")]
 public class LobbyReady : NetworkBehaviour
 {
     [SyncVar] public bool isReady;
+    public KeyCode readyKey = KeyCode.Alpha3;
 
     void Update()
     {
@@ -12,22 +14,19 @@ public class LobbyReady : NetworkBehaviour
         if (LobbyStage.Instance == null) return;
         if (!LobbyStage.Instance.lobbyActive) return;
 
-        if (Input.GetKeyDown(KeyCode.Alpha3))
+        if (Input.GetKeyDown(readyKey))
         {
-            CmdToggleReady();
+            CmdSetReady(!isReady);
         }
     }
 
-    [Command]
-    void CmdToggleReady()
+    [Command(requiresAuthority = true)]
+    public void CmdSetReady(bool value)
     {
-        isReady = !isReady;
-
-        // Tell the stage to re-evaluate readiness. The stage will decide if/when to start for everyone.
-        var stage = LobbyStage.Instance;
-        if (stage != null)
+        isReady = value;
+        if (LobbyStage.Instance != null)
         {
-            stage.Server_NotifyReadyChanged();
+            LobbyStage.Instance.Server_NotifyReadyChanged();
         }
     }
 }

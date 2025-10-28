@@ -1,4 +1,7 @@
 // FILE: LobbyStage.cs
+// Starts match when the readiness threshold is met and teleports EVERYONE (not just the host).
+// Keeps lobby camera enabled only while the lobby is active.
+
 using UnityEngine;
 using Mirror;
 
@@ -11,22 +14,21 @@ public class LobbyStage : NetworkBehaviour
     public Camera lobbyCamera;
 
     [Header("Start Conditions")]
-    [Tooltip("If true, every player must press 3 to be ready.")]
+    [Tooltip("If true, all connected players must be ready to start.")]
     public bool requireAllReady = false;
 
-    [Tooltip("When RequireAllReady is false, start when at least this many players are ready.")]
-    public int minPlayersToStart = 1; // start when at least one player is ready
+    [Tooltip("If RequireAllReady is false, start when at least this many players are ready.")]
+    public int minPlayersToStart = 1;
 
     [SyncVar(hook = nameof(OnLobbyActiveChanged))]
     public bool lobbyActive = true;
 
-    // Other scripts subscribe to this (true = lobby, false = gameplay)
     public static System.Action<bool> OnLobbyStateChanged;
 
     void Awake()
     {
         Instance = this;
-        ApplyLobbyCameraState();
+        ApplyCameraState();
     }
 
     void OnDestroy()
@@ -38,38 +40,38 @@ public class LobbyStage : NetworkBehaviour
     {
         base.OnStartClient();
         OnLobbyStateChanged?.Invoke(lobbyActive);
-        ApplyLobbyCameraState();
+        ApplyCameraState();
     }
 
     void OnLobbyActiveChanged(bool oldValue, bool newValue)
     {
-        ApplyLobbyCameraState();
+        ApplyCameraState();
         OnLobbyStateChanged?.Invoke(newValue);
     }
 
-    void ApplyLobbyCameraState()
+    void ApplyCameraState()
     {
         if (lobbyCamera != null)
             lobbyCamera.enabled = lobbyActive;
     }
 
-    // Called by LobbyReady on the server when a player toggles ready
     [Server]
     public void Server_NotifyReadyChanged()
     {
-        EvaluateAndMaybeStart();
-    }
+        if (!lobbyActive) return;
 
-    [Server]
-    void EvaluateAndMaybeStart()
-    {
         int total = 0;
         int ready = 0;
 
-        var readies = FindObjectsOfType<LobbyReady>();
-        for (int i = 0; i < readies.Length; i++)
+#if UNITY_2023_1_OR_NEWER
+        var all = Object.FindObjectsByType<LobbyReady>(FindObjectsSortMode.None);
+#else
+        var all = Object.FindObjectsOfType<LobbyReady>();
+#endif
+        for (int i = 0; i < all.Length; i++)
         {
-            var lr = readies[i];
+            var lr = all[i];
+            if (lr == null) continue;
             var id = lr.GetComponent<NetworkIdentity>();
             if (id == null || !id.isServer) continue;
             total++;
@@ -99,6 +101,7 @@ public class LobbyStage : NetworkBehaviour
         var mgr = NetworkManager.singleton as PlayerSpawnManager;
         if (mgr != null)
         {
+            // TELEPORT EVERYONE, not just the host
             mgr.Server_TeleportAllPlayersToGameSpawns();
         }
         else
@@ -107,7 +110,6 @@ public class LobbyStage : NetworkBehaviour
         }
     }
 
-    // Client helper so local scripts can turn off lobby cam ASAP
     [Client]
     public void Client_DisableLobbyCameraLocal()
     {

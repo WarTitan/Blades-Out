@@ -1,5 +1,7 @@
 // FILE: TeleportHelper.cs
-// Tells LocalCameraActivator to force gameplay (flag stays true) and keeps look enabled.
+// Owner-side snap + camera/controls handoff.
+// Ensures the client (including a ParrelSync clone) actually moves to the table
+// even if NetworkTransform replication is delayed or disabled.
 
 using UnityEngine;
 using Mirror;
@@ -14,21 +16,33 @@ public class TeleportHelper : NetworkBehaviour
     [TargetRpc]
     public void TargetSnapAndEnterGameplay(NetworkConnectionToClient conn, Vector3 position, Quaternion rotation)
     {
-        // Flag the local player as "in gameplay" even if global lobby remains active
+        // 1) OWNER-SIDE SNAP: move the local object right now.
+        var cc = GetComponent<CharacterController>();
+        bool hadCC = (cc != null && cc.enabled);
+        if (hadCC) cc.enabled = false;
+
+        // Ensure whole hierarchy is active (camera included)
+        ActivateAncestorsAndSelf(transform);
+
+        transform.SetPositionAndRotation(position, rotation);
+
+        if (hadCC) cc.enabled = true;
+
+        // 2) Force gameplay camera/controls
         var lca = GetComponent<LocalCameraActivator>();
         if (lca != null) lca.ForceEnterGameplay();
 
-        // Make sure the look driver stays ON
         var lld = GetComponent<LobbyLocalDisabler>();
         if (lld != null) lld.ForceEnableGameplay();
 
+        // Prefer LocalCameraController; disable legacy PlayerLook
         var lcc = GetComponent<LocalCameraController>();
         var legacy = GetComponent<PlayerLook>();
 
         if (lcc != null)
         {
-            if (!lcc.enabled) lcc.enabled = true;
-            if (legacy != null && legacy.enabled) legacy.enabled = false;
+            lcc.enabled = true;
+            if (legacy != null) legacy.enabled = false;
             lcc.SeedFromCurrentPose();
         }
         else if (legacy != null)
@@ -36,10 +50,10 @@ public class TeleportHelper : NetworkBehaviour
             legacy.enabled = true;
         }
 
-        // Keep cursor locked briefly so input flows immediately
+        // 3) Briefly enforce locked cursor so look gets input immediately
         StartCoroutine(EnforceLockedCursor(cursorEnforceSeconds, cursorEnforceInterval));
 
-        // Turn off lobby cam locally as safety
+        // 4) Turn off lobby camera locally as extra safety
         if (LobbyStage.Instance != null)
             LobbyStage.Instance.Client_DisableLobbyCameraLocal();
     }
@@ -54,6 +68,19 @@ public class TeleportHelper : NetworkBehaviour
             if (Cursor.lockState != CursorLockMode.Locked) Cursor.lockState = CursorLockMode.Locked;
             if (Cursor.visible) Cursor.visible = false;
             yield return new WaitForSecondsRealtime(step);
+        }
+    }
+
+    private static void ActivateAncestorsAndSelf(Transform leaf)
+    {
+        Transform t = leaf;
+        // Walk up and activate parents so cameras/listeners are not under inactive parents
+        System.Collections.Generic.List<Transform> chain = new System.Collections.Generic.List<Transform>();
+        while (t != null) { chain.Add(t); t = t.parent; }
+        for (int i = chain.Count - 1; i >= 0; i--)
+        {
+            if (!chain[i].gameObject.activeSelf)
+                chain[i].gameObject.SetActive(true);
         }
     }
 }

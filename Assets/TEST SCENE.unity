@@ -2682,10 +2682,10 @@ MonoBehaviour:
   - {fileID: 1347886090}
   - {fileID: 501755548}
   spawnPoints:
-  - {fileID: 945981542}
-  - {fileID: 1873155903}
   - {fileID: 1368818572}
+  - {fileID: 1873155903}
   - {fileID: 820280585}
+  - {fileID: 945981542}
   - {fileID: 464824151}
   maxPlayers: 5
 --- !u!114 &651592311

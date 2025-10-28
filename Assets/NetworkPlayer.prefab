@@ -4572,6 +4572,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8027732371095978563}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 241873791727944675}
   m_SourcePrefab: {fileID: 100100000, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
 --- !u!1 &3784944211829141594 stripped
 GameObject:
@@ -4744,6 +4747,7 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   isReady: 0
+  readyKey: 51
 --- !u!114 &5455328992729327169
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4851,6 +4855,29 @@ MonoBehaviour:
   minPitch: -80
   maxPitch: 80
   invertY: 0
+  verboseLogs: 0
+--- !u!114 &241873791727944675
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3784944211829141594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f25c2910be03a6c44a653a4b569be8ac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PsychoactiveEffectsManager
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  items:
+  - itemName: Vodka
+    description: 
+    previewPrefab: {fileID: 0}
+    effectPrefab: {fileID: 8592099208058942138, guid: 9ae91ec52406859408ebe416130d17f3, type: 3}
+    durationSeconds: 0
+    intensity: 0
   verboseLogs: 0
 --- !u!4 &4597333103463066336 stripped
 Transform:
