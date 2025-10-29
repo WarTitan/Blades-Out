@@ -1,7 +1,8 @@
 // FILE: PlayerItemTrays.cs
 // FULL REPLACEMENT (ASCII)
-// Fixes: clearer logs on missing anchors; robust visual resync after consume;
-// no functional change to trading (still only current-turn player can give).
+// - On consume, broadcast RpcClearConsumeVisuals() so ALL clients immediately delete models,
+//   avoiding SyncList update ordering races.
+// - Keeps duplicate-merge (sum durations) when applying effects.
 
 using UnityEngine;
 using Mirror;
@@ -16,7 +17,9 @@ public class PlayerItemTrays : NetworkBehaviour
     public class SyncListIntLite : SyncList<int> { }
 
     [Header("Seat Auto-Assign")]
-    public float seatAssignMaxDistance = 6f;
+    public float seatAssignMaxDistance = 6f; // soft radius
+    public float softAssignSeconds = 2f;     // after this, ignore distance
+    public float hardAssignSeconds = 10f;    // hard fallback
 
     [SyncVar(hook = nameof(OnSeatChanged))]
     public int seatIndex1Based = 0;
@@ -62,33 +65,44 @@ public class PlayerItemTrays : NetworkBehaviour
             bool ok = ItemTrayService.Instance.TryGetAnchors(seatIndex1Based, out invAnchors, out conAnchors);
             if (!ok || invAnchors == null || conAnchors == null)
             {
-                Debug.LogWarning("[PlayerItemTrays] Seat" + seatIndex1Based + " missing anchors. " +
-                                 "Ensure TraysRoot/Seat" + seatIndex1Based + "/Inventory(8) and /Consume(8).");
+                Debug.LogWarning("[PlayerItemTrays] Seat" + seatIndex1Based +
+                                 " missing anchors. Ensure TraysRoot/Seat" + seatIndex1Based +
+                                 "/Inventory(8) and /Consume(8).");
             }
-        }
-        else
-        {
-            // silently wait; auto-assign loop will set seat soon
         }
     }
 
-    // ----- Server: seat assignment by proximity -----
+    // ----- Server: seat assignment by proximity (with hard fallback) -----
     [Server]
     private IEnumerator Server_AutoSeatAssignLoop()
     {
-        float timeout = 8f;
         float t = 0f;
-        while (seatIndex1Based <= 0 && t < timeout)
+        while (seatIndex1Based <= 0 && t < hardAssignSeconds)
         {
             int guess; float distSq;
             Server_GuessNearestSeatIndex(out guess, out distSq);
-            if (guess > 0 && distSq <= (seatAssignMaxDistance * seatAssignMaxDistance))
+
+            if (guess > 0)
             {
-                seatIndex1Based = guess;
-                yield break;
+                bool withinSoft = distSq <= (seatAssignMaxDistance * seatAssignMaxDistance);
+                bool afterSoft = t >= softAssignSeconds;
+
+                if (withinSoft || afterSoft)
+                {
+                    seatIndex1Based = guess;
+                    yield break;
+                }
             }
+
             yield return new WaitForSeconds(0.25f);
             t += 0.25f;
+        }
+
+        if (seatIndex1Based <= 0)
+        {
+            int guess; float distSq;
+            Server_GuessNearestSeatIndex(out guess, out distSq);
+            if (guess > 0) seatIndex1Based = guess;
         }
     }
 
@@ -142,19 +156,27 @@ public class PlayerItemTrays : NetworkBehaviour
         List<int> toApply = new List<int>(consume.Count);
         for (int i = 0; i < consume.Count; i++) toApply.Add(consume[i]);
 
+        // Clear and force-clear visuals everywhere (prevents RPC/SyncList ordering glitches)
         consume.Clear();
-        RpcRefreshTrays(); // make visuals refresh everywhere immediately
+        RpcClearConsumeVisuals();
 
+        // Apply effects on the owner client
         Target_ApplyEffects(connectionToClient, toApply.ToArray());
     }
 
     [ClientRpc]
-    private void RpcRefreshTrays()
+    private void RpcClearConsumeVisuals()
     {
-        RebuildAllVisuals();
+        // Destroy consume models immediately on all clients.
+        for (int i = 0; i < conVisuals.Count; i++)
+        {
+            var go = conVisuals[i];
+            if (go != null) Object.Destroy(go);
+        }
+        conVisuals.Clear();
     }
 
-    // spawn effect prefabs locally and start them
+    // ----- Effects spawn: merge duplicates into one effect (sum duration, max intensity) -----
     [TargetRpc]
     private void Target_ApplyEffects(NetworkConnectionToClient conn, int[] itemIds)
     {
@@ -165,22 +187,55 @@ public class PlayerItemTrays : NetworkBehaviour
         if (lcc != null && lcc.playerCamera != null) cam = lcc.playerCamera;
         if (cam == null) cam = GetComponentInChildren<Camera>(true);
         if (cam == null) return;
+        if (ItemDeck.Instance == null) return;
 
+        Dictionary<int, Agg> map = new Dictionary<int, Agg>(16);
         for (int i = 0; i < itemIds.Length; i++)
         {
-            var def = (ItemDeck.Instance != null) ? ItemDeck.Instance.Get(itemIds[i]) : null;
+            int id = itemIds[i];
+            var def = ItemDeck.Instance.Get(id);
             if (def == null || def.effectPrefab == null) continue;
 
-            PsychoactiveEffectBase eff = Object.Instantiate(def.effectPrefab);
-            eff.name = "Effect_" + (string.IsNullOrEmpty(def.itemName) ? ("Item_" + itemIds[i]) : def.itemName);
-            eff.transform.SetParent(cam.transform, false);
+            Agg a;
+            if (!map.TryGetValue(id, out a))
+            {
+                a.itemId = id;
+                a.totalDuration = Mathf.Max(0f, def.durationSeconds);
+                a.intensity = def.intensity;
+                a.displayName = string.IsNullOrEmpty(def.itemName) ? def.effectPrefab.GetType().Name : def.itemName;
+                a.prefab = def.effectPrefab;
+                map[id] = a;
+            }
+            else
+            {
+                a.totalDuration += Mathf.Max(0f, def.durationSeconds);
+                if (def.intensity > a.intensity) a.intensity = def.intensity;
+                map[id] = a;
+            }
+        }
 
-            string disp = string.IsNullOrEmpty(def.itemName) ? eff.GetType().Name : def.itemName;
-            eff.BeginNamed(cam, def.durationSeconds, def.intensity, disp);
+        foreach (var kv in map)
+        {
+            var a = kv.Value;
+            if (a.prefab == null) continue;
+
+            PsychoactiveEffectBase eff = Object.Instantiate(a.prefab);
+            eff.name = "Effect_" + a.displayName;
+            eff.transform.SetParent(cam.transform, false);
+            eff.BeginNamed(cam, Mathf.Max(0.01f, a.totalDuration), Mathf.Clamp01(a.intensity), a.displayName);
         }
     }
 
-    // only current turn player can give items (TurnManagerNet validates)
+    private struct Agg
+    {
+        public int itemId;
+        public float totalDuration;
+        public float intensity;
+        public string displayName;
+        public PsychoactiveEffectBase prefab;
+    }
+
+    // ----- Trading -----
     [Command]
     public void Cmd_GiveItemToPlayer(int inventorySlotIndex, NetworkIdentity targetPlayer)
     {
@@ -201,8 +256,10 @@ public class PlayerItemTrays : NetworkBehaviour
         inventory.RemoveAt(inventorySlotIndex);
         targetTrays.consume.Add(itemId);
 
-        // client visuals will update via SyncList callback; we also ping a refresh for safety
+        // Force quick visual refresh on both ends (owner + target)
         Target_PingRefresh(connectionToClient);
+        var targetConn = targetPlayer.connectionToClient;
+        if (targetConn != null) targetTrays.Target_PingRefresh(targetConn);
     }
 
     [TargetRpc]
@@ -211,7 +268,7 @@ public class PlayerItemTrays : NetworkBehaviour
         RebuildAllVisuals();
     }
 
-    // ----- visuals -----
+    // ----- SyncList-driven visuals -----
     private void OnInvChanged(SyncListIntLite.Operation op, int index, int oldItem, int newItem)
     {
         RebuildInventoryVisuals();
@@ -244,9 +301,6 @@ public class PlayerItemTrays : NetworkBehaviour
         if (invAnchors == null || ItemDeck.Instance == null) return;
         int n = Mathf.Min(inventory.Count, MaxSlots);
         n = (invAnchors != null) ? Mathf.Min(n, invAnchors.Length) : 0;
-
-        if (n == 0 && inventory.Count > 0)
-            Debug.LogWarning("[PlayerItemTrays] Seat" + seatIndex1Based + " has inventory items but no anchors.");
 
         for (int i = 0; i < n; i++)
         {
@@ -284,9 +338,6 @@ public class PlayerItemTrays : NetworkBehaviour
         if (conAnchors == null || ItemDeck.Instance == null) return;
         int n = Mathf.Min(consume.Count, MaxSlots);
         n = (conAnchors != null) ? Mathf.Min(n, conAnchors.Length) : 0;
-
-        if (n == 0 && consume.Count > 0)
-            Debug.LogWarning("[PlayerItemTrays] Seat" + seatIndex1Based + " has consume items but no anchors.");
 
         for (int i = 0; i < n; i++)
         {

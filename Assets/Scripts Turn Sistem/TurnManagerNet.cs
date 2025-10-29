@@ -1,9 +1,9 @@
 // FILE: TurnManagerNet.cs
 // FULL REPLACEMENT (ASCII)
-// Fixes: late seat assignment missing initial 4 items.
-// - Seeds at PreTrade start (as before)
-// - Also seeds right after PreTrade ends (entering Turn)
-// - Also seeds at the start of a player's first turn if still unseeded
+// - Waits for lobby to end AND at least one seated player before starting Pre-Trade.
+// - Seeds only SEATED, EMPTY, UNSEEDED players (seatIndex1Based > 0).
+// - Keeps repeated seeding during Pre-Trade and a safety seed before first Turn.
+// - Round resets seeded set at each Pre-Trade.
 
 using UnityEngine;
 using Mirror;
@@ -17,6 +17,7 @@ public class TurnManagerNet : NetworkBehaviour
 
     public enum Phase { Waiting, PreTrade, Turn }
 
+    // Seat order used during the Turn phase (must correspond to TraysRoot/Seat1..Seat5)
     public int[] seatTurnOrder = new int[] { 1, 2, 3, 4, 5 };
 
     [Header("Counts")]
@@ -27,13 +28,13 @@ public class TurnManagerNet : NetworkBehaviour
     public float preTradeSeconds = 30f;
     public float turnSeconds = 30f;
 
+    // HUD sync
     [SyncVar] public Phase phase = Phase.Waiting;
     [SyncVar] public double phaseEndTime = 0;
     [SyncVar] public int currentSeat = 0;
     [SyncVar] public uint currentTurnNetId = 0;
     [SyncVar] public double turnEndTime = 0;
 
-    // track who already got initialDraw
     private readonly HashSet<uint> seeded = new HashSet<uint>();
     private bool turnForceEnd = false;
 
@@ -70,49 +71,56 @@ public class TurnManagerNet : NetworkBehaviour
 
     private IEnumerator ServerMainLoop()
     {
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(0.25f);
 
         while (true)
         {
-            var order = BuildCurrentOrder();
-            if (order.Count == 0)
+            // Stay in Waiting while lobby is active or no one is seated yet.
+            if (IsLobbyActive() || !HasAnySeatedPlayer())
             {
                 phase = Phase.Waiting;
                 currentSeat = 0;
                 currentTurnNetId = 0;
                 turnEndTime = 0;
-                yield return new WaitForSeconds(0.5f);
+                yield return new WaitForSeconds(0.25f);
                 continue;
             }
 
-            // ----- PRE-TRADE -----
+            // ----- PRE-TRADE (craft window) -----
             phase = Phase.PreTrade;
             currentSeat = 0;
             currentTurnNetId = 0;
             turnEndTime = 0;
             phaseEndTime = NetworkTime.time + preTradeSeconds;
 
-            SeedUnseededIfEmpty(order); // initial grant at the start
+            // New round: clear seeded tracker
+            seeded.Clear();
 
-            // also handle late seat joins during pre-trade
+            // Seed seated, empty players at the start
+            Server_SeedSeatedUnseededIfEmpty("pre-trade start");
+
+            // Keep seeding during pre-trade for seats that appear late
             while (NetworkTime.time < phaseEndTime)
             {
-                order = BuildCurrentOrder();
-                SeedUnseededIfEmpty(order);
+                Server_SeedSeatedUnseededIfEmpty("pre-trade loop");
                 yield return new WaitForSeconds(0.25f);
             }
 
-            // Before turns start, one more safety seed (covers teleports that finished right at the end)
-            order = BuildCurrentOrder();
-            SeedUnseededIfEmpty(order);
+            // Safety seed just before turns start
+            Server_SeedSeatedUnseededIfEmpty("pre-turn safety");
 
             // ----- TURN PHASE -----
             phase = Phase.Turn;
 
             while (true)
             {
-                order = BuildCurrentOrder();
-                if (order.Count == 0) break;
+                var order = BuildCurrentOrder();
+                if (order.Count == 0)
+                {
+                    // If table emptied (e.g., everyone left), go back to Waiting
+                    yield return new WaitForSeconds(0.25f);
+                    break;
+                }
 
                 for (int i = 0; i < seatTurnOrder.Length; i++)
                 {
@@ -123,26 +131,27 @@ public class TurnManagerNet : NetworkBehaviour
                     currentSeat = p.seatIndex1Based;
                     currentTurnNetId = (id != null) ? id.netId : 0;
 
-                    // final safety: if this player somehow never got seeded and is empty, seed now
+                    // Final safety: if never seeded and still empty, seed now
                     if (id != null && !seeded.Contains(id.netId) && p.inventory.Count == 0)
                     {
-                        p.Server_AddSeveralToInventoryClamped(initialDraw);
+                        int added = p.Server_AddSeveralToInventoryClamped(initialDraw);
                         seeded.Add(id.netId);
+                        Debug.Log("[TurnManagerNet] Seed on first turn: Seat" + p.seatIndex1Based +
+                                  " netId=" + id.netId + " added=" + added);
                     }
 
-                    // 1) Auto-consume
+                    // 1) Auto-consume at start of the turn
                     p.Server_ConsumeAllNow();
 
-                    // 2) (minigame placeholder spot)
+                    // 2) (Minigame placeholder)
 
-                    // 3) trading window for this player
+                    // 3) Trading window
                     turnForceEnd = false;
                     turnEndTime = NetworkTime.time + turnSeconds;
-
                     while (NetworkTime.time < turnEndTime && !turnForceEnd)
                         yield return null;
 
-                    // 4) end-of-turn grant
+                    // 4) End-of-turn grant
                     p.Server_AddSeveralToInventoryClamped(drawAfterTurn);
 
                     yield return new WaitForSeconds(0.25f);
@@ -151,21 +160,51 @@ public class TurnManagerNet : NetworkBehaviour
         }
     }
 
-    // seed all seated players that are empty and not yet seeded
-    [Server]
-    private void SeedUnseededIfEmpty(List<PlayerItemTrays> trays)
+    // Helpers
+
+    private bool IsLobbyActive()
     {
-        for (int i = 0; i < trays.Count; i++)
+        var ls = LobbyStage.Instance;
+        if (ls == null) return true; // be conservative: if we cannot confirm, assume lobby
+        return ls.lobbyActive;
+    }
+
+    private bool HasAnySeatedPlayer()
+    {
+        var traysAll = FindObjectsOfType<PlayerItemTrays>();
+        for (int i = 0; i < traysAll.Length; i++)
+            if (traysAll[i].seatIndex1Based > 0) return true;
+        return false;
+    }
+
+    // Only seed players who are SEATED, EMPTY, and not yet seeded.
+    [Server]
+    private void Server_SeedSeatedUnseededIfEmpty(string label)
+    {
+        var traysAll = FindObjectsOfType<PlayerItemTrays>();
+        int seededCount = 0;
+
+        for (int i = 0; i < traysAll.Length; i++)
         {
-            var p = trays[i];
+            var p = traysAll[i];
+            if (p == null) continue;
+            if (p.seatIndex1Based <= 0) continue; // only after they are at the table
+
             var id = p.GetComponent<NetworkIdentity>();
             if (id == null) continue;
             if (seeded.Contains(id.netId)) continue;
             if (p.inventory.Count > 0) continue;
 
-            p.Server_AddSeveralToInventoryClamped(initialDraw);
+            int added = p.Server_AddSeveralToInventoryClamped(initialDraw);
             seeded.Add(id.netId);
+            seededCount++;
+
+            Debug.Log("[TurnManagerNet] Seed " + label + ": Seat" + p.seatIndex1Based +
+                      " netId=" + id.netId + " added=" + added);
         }
+
+        // Uncomment for verbose:
+        // if (seededCount == 0) Debug.Log("[TurnManagerNet] Seed " + label + ": none");
     }
 
     private List<PlayerItemTrays> BuildCurrentOrder()
