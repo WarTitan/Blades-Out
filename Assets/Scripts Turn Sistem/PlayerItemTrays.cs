@@ -1,11 +1,12 @@
 // FILE: PlayerItemTrays.cs
-// FULL REPLACEMENT (ASCII only)
-// Per-player trays with 8 inventory and 8 consume slots.
-// On consume, effects are spawned client-side from ItemDeck and begun on the player's camera.
+// FULL REPLACEMENT (ASCII)
+// Fixes: clearer logs on missing anchors; robust visual resync after consume;
+// no functional change to trading (still only current-turn player can give).
 
 using UnityEngine;
 using Mirror;
 using System.Collections.Generic;
+using System.Collections;
 
 [AddComponentMenu("Gameplay/Items/Player Item Trays")]
 public class PlayerItemTrays : NetworkBehaviour
@@ -14,7 +15,11 @@ public class PlayerItemTrays : NetworkBehaviour
 
     public class SyncListIntLite : SyncList<int> { }
 
-    [SyncVar] public int seatIndex1Based = 0;
+    [Header("Seat Auto-Assign")]
+    public float seatAssignMaxDistance = 6f;
+
+    [SyncVar(hook = nameof(OnSeatChanged))]
+    public int seatIndex1Based = 0;
 
     public SyncListIntLite inventory = new SyncListIntLite();
     public SyncListIntLite consume = new SyncListIntLite();
@@ -27,6 +32,8 @@ public class PlayerItemTrays : NetworkBehaviour
 
     private void Start()
     {
+        if (isServer) StartCoroutine(Server_AutoSeatAssignLoop());
+
         ResolveAnchors();
         inventory.Callback += OnInvChanged;
         consume.Callback += OnConChanged;
@@ -40,14 +47,68 @@ public class PlayerItemTrays : NetworkBehaviour
         RebuildAllVisuals();
     }
 
-    private void ResolveAnchors()
+    private void OnSeatChanged(int oldVal, int newVal)
     {
-        if (ItemTrayService.Instance == null) return;
-        ItemTrayService.Instance.TryGetAnchors(seatIndex1Based, out invAnchors, out conAnchors);
+        ResolveAnchors();
+        RebuildAllVisuals();
     }
 
-    // ---------- SERVER API ----------
+    private void ResolveAnchors()
+    {
+        invAnchors = null; conAnchors = null;
 
+        if (ItemTrayService.Instance != null && seatIndex1Based > 0)
+        {
+            bool ok = ItemTrayService.Instance.TryGetAnchors(seatIndex1Based, out invAnchors, out conAnchors);
+            if (!ok || invAnchors == null || conAnchors == null)
+            {
+                Debug.LogWarning("[PlayerItemTrays] Seat" + seatIndex1Based + " missing anchors. " +
+                                 "Ensure TraysRoot/Seat" + seatIndex1Based + "/Inventory(8) and /Consume(8).");
+            }
+        }
+        else
+        {
+            // silently wait; auto-assign loop will set seat soon
+        }
+    }
+
+    // ----- Server: seat assignment by proximity -----
+    [Server]
+    private IEnumerator Server_AutoSeatAssignLoop()
+    {
+        float timeout = 8f;
+        float t = 0f;
+        while (seatIndex1Based <= 0 && t < timeout)
+        {
+            int guess; float distSq;
+            Server_GuessNearestSeatIndex(out guess, out distSq);
+            if (guess > 0 && distSq <= (seatAssignMaxDistance * seatAssignMaxDistance))
+            {
+                seatIndex1Based = guess;
+                yield break;
+            }
+            yield return new WaitForSeconds(0.25f);
+            t += 0.25f;
+        }
+    }
+
+    [Server]
+    private void Server_GuessNearestSeatIndex(out int bestIdx, out float bestDistSq)
+    {
+        bestIdx = 0; bestDistSq = float.MaxValue;
+        if (ItemTrayService.Instance == null || ItemTrayService.Instance.traysRoot == null) return;
+
+        var root = ItemTrayService.Instance.traysRoot;
+        for (int s = 1; s <= 5; s++)
+        {
+            var seat = root.Find("Seat" + s);
+            if (seat == null) continue;
+            float d = (seat.position - transform.position).sqrMagnitude;
+            if (d < bestDistSq) { bestDistSq = d; bestIdx = s; }
+        }
+    }
+
+    // ----- Server tray API -----
     [Server]
     public bool Server_AddItemToInventory(int itemId)
     {
@@ -61,10 +122,11 @@ public class PlayerItemTrays : NetworkBehaviour
     public int Server_AddSeveralToInventoryClamped(int count)
     {
         int added = 0;
+        if (ItemDeck.Instance == null) return 0;
         for (int i = 0; i < count; i++)
         {
             if (inventory.Count >= MaxSlots) break;
-            int draw = (ItemDeck.Instance != null) ? ItemDeck.Instance.DrawRandomId() : -1;
+            int draw = ItemDeck.Instance.DrawRandomId();
             if (draw < 0) break;
             inventory.Add(draw);
             added++;
@@ -79,49 +141,55 @@ public class PlayerItemTrays : NetworkBehaviour
 
         List<int> toApply = new List<int>(consume.Count);
         for (int i = 0; i < consume.Count; i++) toApply.Add(consume[i]);
+
         consume.Clear();
+        RpcRefreshTrays(); // make visuals refresh everywhere immediately
 
         Target_ApplyEffects(connectionToClient, toApply.ToArray());
     }
 
-    // NOTE: We do NOT depend on PsychoactiveEffectsManager APIs.
-    // We instantiate the effect prefab directly and call Begin(cam, duration, intensity).
+    [ClientRpc]
+    private void RpcRefreshTrays()
+    {
+        RebuildAllVisuals();
+    }
+
+    // spawn effect prefabs locally and start them
     [TargetRpc]
     private void Target_ApplyEffects(NetworkConnectionToClient conn, int[] itemIds)
     {
         if (itemIds == null || itemIds.Length == 0) return;
 
-        // Find the player's camera (prefer LocalCameraController)
         Camera cam = null;
         var lcc = GetComponent<LocalCameraController>();
         if (lcc != null && lcc.playerCamera != null) cam = lcc.playerCamera;
         if (cam == null) cam = GetComponentInChildren<Camera>(true);
-
-        if (cam == null)
-        {
-            Debug.LogWarning("[PlayerItemTrays] No camera found on local player; cannot apply effects.");
-            return;
-        }
+        if (cam == null) return;
 
         for (int i = 0; i < itemIds.Length; i++)
         {
             var def = (ItemDeck.Instance != null) ? ItemDeck.Instance.Get(itemIds[i]) : null;
             if (def == null || def.effectPrefab == null) continue;
 
-            // Instantiate the effect prefab as a child of the camera so it can find mixers easily.
-            PsychoactiveEffectBase eff = Instantiate(def.effectPrefab);
+            PsychoactiveEffectBase eff = Object.Instantiate(def.effectPrefab);
             eff.name = "Effect_" + (string.IsNullOrEmpty(def.itemName) ? ("Item_" + itemIds[i]) : def.itemName);
             eff.transform.SetParent(cam.transform, false);
 
-            // Kick it off
-            eff.Begin(cam, def.durationSeconds, def.intensity);
+            string disp = string.IsNullOrEmpty(def.itemName) ? eff.GetType().Name : def.itemName;
+            eff.BeginNamed(cam, def.durationSeconds, def.intensity, disp);
         }
     }
 
+    // only current turn player can give items (TurnManagerNet validates)
     [Command]
     public void Cmd_GiveItemToPlayer(int inventorySlotIndex, NetworkIdentity targetPlayer)
     {
         if (!isServer) return;
+
+        var requester = (connectionToClient != null) ? connectionToClient.identity : null;
+        if (TurnManagerNet.Instance == null || !TurnManagerNet.Instance.CanTradeNow(requester))
+            return;
+
         if (inventorySlotIndex < 0 || inventorySlotIndex >= inventory.Count) return;
         if (targetPlayer == null) return;
 
@@ -132,10 +200,18 @@ public class PlayerItemTrays : NetworkBehaviour
         int itemId = inventory[inventorySlotIndex];
         inventory.RemoveAt(inventorySlotIndex);
         targetTrays.consume.Add(itemId);
+
+        // client visuals will update via SyncList callback; we also ping a refresh for safety
+        Target_PingRefresh(connectionToClient);
     }
 
-    // ---------- CLIENT VISUALS ----------
+    [TargetRpc]
+    private void Target_PingRefresh(NetworkConnectionToClient conn)
+    {
+        RebuildAllVisuals();
+    }
 
+    // ----- visuals -----
     private void OnInvChanged(SyncListIntLite.Operation op, int index, int oldItem, int newItem)
     {
         RebuildInventoryVisuals();
@@ -157,7 +233,7 @@ public class PlayerItemTrays : NetworkBehaviour
         for (int i = 0; i < list.Count; i++)
         {
             var go = list[i];
-            if (go != null) Destroy(go);
+            if (go != null) Object.Destroy(go);
         }
         list.Clear();
     }
@@ -166,15 +242,26 @@ public class PlayerItemTrays : NetworkBehaviour
     {
         ClearList(invVisuals);
         if (invAnchors == null || ItemDeck.Instance == null) return;
+        int n = Mathf.Min(inventory.Count, MaxSlots);
+        n = (invAnchors != null) ? Mathf.Min(n, invAnchors.Length) : 0;
 
-        int n = Mathf.Min(inventory.Count, invAnchors.Length);
+        if (n == 0 && inventory.Count > 0)
+            Debug.LogWarning("[PlayerItemTrays] Seat" + seatIndex1Based + " has inventory items but no anchors.");
+
         for (int i = 0; i < n; i++)
         {
             var def = ItemDeck.Instance.Get(inventory[i]);
-            if (def == null || def.visualPrefab == null) continue;
+            if (def == null) continue;
 
             var slot = invAnchors[i];
-            var go = Instantiate(def.visualPrefab);
+            GameObject go = Object.Instantiate(def.visualPrefab != null ? def.visualPrefab : GameObject.CreatePrimitive(PrimitiveType.Cube));
+            if (def.visualPrefab == null)
+            {
+                var col = go.GetComponent<Collider>(); if (col != null) Object.Destroy(col);
+                go.transform.localScale = Vector3.one * 0.18f;
+                go.name = "Placeholder_" + (string.IsNullOrEmpty(def.itemName) ? "Item" : def.itemName);
+            }
+
             go.transform.SetPositionAndRotation(slot.position, slot.rotation);
             go.transform.SetParent(slot, true);
 
@@ -195,15 +282,26 @@ public class PlayerItemTrays : NetworkBehaviour
     {
         ClearList(conVisuals);
         if (conAnchors == null || ItemDeck.Instance == null) return;
+        int n = Mathf.Min(consume.Count, MaxSlots);
+        n = (conAnchors != null) ? Mathf.Min(n, conAnchors.Length) : 0;
 
-        int n = Mathf.Min(consume.Count, conAnchors.Length);
+        if (n == 0 && consume.Count > 0)
+            Debug.LogWarning("[PlayerItemTrays] Seat" + seatIndex1Based + " has consume items but no anchors.");
+
         for (int i = 0; i < n; i++)
         {
             var def = ItemDeck.Instance.Get(consume[i]);
-            if (def == null || def.visualPrefab == null) continue;
+            if (def == null) continue;
 
             var slot = conAnchors[i];
-            var go = Instantiate(def.visualPrefab);
+            GameObject go = Object.Instantiate(def.visualPrefab != null ? def.visualPrefab : GameObject.CreatePrimitive(PrimitiveType.Cube));
+            if (def.visualPrefab == null)
+            {
+                var col = go.GetComponent<Collider>(); if (col != null) Object.Destroy(col);
+                go.transform.localScale = Vector3.one * 0.18f;
+                go.name = "Placeholder_" + (string.IsNullOrEmpty(def.itemName) ? "Item" : def.itemName);
+            }
+
             go.transform.SetPositionAndRotation(slot.position, slot.rotation);
             go.transform.SetParent(slot, true);
 

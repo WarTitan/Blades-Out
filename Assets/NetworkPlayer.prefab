@@ -4597,6 +4597,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
       insertIndex: -1
       addedObject: {fileID: 241873791727944675}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2622817285863979709}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 178210307435595179}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4708702899404729097}
   m_SourcePrefab: {fileID: 100100000, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
 --- !u!1 &3784944211829141594 stripped
 GameObject:
@@ -4934,7 +4943,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3784944211829141594}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f25c2910be03a6c44a653a4b569be8ac, type: 3}
   m_Name: 
@@ -4942,36 +4951,63 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  items:
-  - itemName: Vodka
-    description: 
-    previewPrefab: {fileID: 0}
-    effectPrefab: {fileID: 8592099208058942138, guid: 9ae91ec52406859408ebe416130d17f3, type: 3}
-    durationSeconds: 10
-    intensity: 1
-  - itemName: Speed
-    description: 
-    previewPrefab: {fileID: 0}
-    effectPrefab: {fileID: 803944652759227712, guid: 6bc219c16e15cae409c409a11b7935da, type: 3}
-    durationSeconds: 9
-    intensity: 1
-  - itemName: Ketamine
-    description: 
-    previewPrefab: {fileID: 0}
-    effectPrefab: {fileID: 5627519088009419456, guid: 694d22c95cdbabe48a6ee3ef90df8cdc, type: 3}
-    durationSeconds: 11
-    intensity: 1
-  - itemName: Lsd
-    description: 
-    previewPrefab: {fileID: 0}
-    effectPrefab: {fileID: 1174183902846764924, guid: f902d7b1997db0345b09b38127e5cdb5, type: 3}
-    durationSeconds: 11
-    intensity: 1
+  items: []
   blockWhileLobbyActive: 1
   allowWhenForcedGameplay: 1
   enableHotkeys: 1
   alsoUseNumpad: 1
   verboseLogs: 0
+--- !u!114 &2622817285863979709
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3784944211829141594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d1d26c4a0d7a03449939298c92f3ada, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerItemTrays
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  seatAssignMaxDistance: 6
+  seatIndex1Based: 0
+--- !u!114 &178210307435595179
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3784944211829141594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 598f52e999912c64cb905db15f958af7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemInteraction
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  raycastMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  maxDistance: 200
+--- !u!114 &4708702899404729097
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3784944211829141594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ced6077118651b4db47d1964ae4bf48, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TurnInput
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
 --- !u!4 &4597333103463066336 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}

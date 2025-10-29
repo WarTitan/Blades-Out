@@ -1,84 +1,78 @@
 // FILE: PsychoactiveEffectBase.cs
-// FULL REPLACEMENT (ASCII only)
-// Base class for all psychoactive effects.
-// Provides Begin(...), ExtendDuration(...), Cancel(), and End().
-// Derived effects must read 'endTime' to allow runtime extension.
+// FULL REPLACEMENT (ASCII)
+// Base class that all effect scripts inherit from.
+// Now exposes startTime and camTransform for legacy effects.
 
+using System.Collections;
 using UnityEngine;
-using System;
 
-public abstract class PsychoactiveEffectBase : MonoBehaviour
+[AddComponentMenu("Gameplay/Effects/Effect Base")]
+public class PsychoactiveEffectBase : MonoBehaviour
 {
-    [Header("Common")]
-    public string itemName = "";
-
     protected Camera targetCam;
-    protected Transform camTransform;
+    protected Transform camTransform;     // <— added for effects that use camera transform
+    protected float startTime;            // <— added for effects that track elapsed via startTime
+    protected float endTime;
+    protected float durationSeconds;
+    protected float intensity01;
+    protected string displayName;
 
-    // Store the camera FOV at begin for reference (mixer may override application)
-    protected float baseFov;
+    protected float baseFov = 60f;
 
-    // Timing state (shared so manager can extend duration)
-    protected float startTime;
-    protected float endTime;          // absolute game time when effect ends
-    protected float durationSeconds;  // initial requested duration
-    protected float intensity01;      // 0..1
+    private Coroutine lifeRoutine;
 
-    public event Action<PsychoactiveEffectBase> OnFinished;
-
+    // Public entry points used by item application
     public void Begin(Camera cam, float duration, float intensity)
     {
-        if (cam == null)
-        {
-            Debug.LogWarning("[PsychoactiveEffectBase] Begin called with null camera.");
-        }
+        BeginNamed(cam, duration, intensity, GetType().Name);
+    }
+
+    public void BeginNamed(Camera cam, float duration, float intensity, string name)
+    {
+        if (cam == null) { Destroy(gameObject); return; }
 
         targetCam = cam;
-        camTransform = (cam != null ? cam.transform : null);
-        baseFov = (cam != null ? cam.fieldOfView : 60f);
-
+        camTransform = cam.transform;            // set for child effects
         durationSeconds = Mathf.Max(0.01f, duration);
         intensity01 = Mathf.Clamp01(intensity);
+        displayName = string.IsNullOrEmpty(name) ? GetType().Name : name;
 
-        startTime = Time.time;
+        if (targetCam != null && !targetCam.orthographic)
+            baseFov = targetCam.fieldOfView;
+
+        startTime = Time.time;                   // set for child effects
         endTime = startTime + durationSeconds;
+
+        var mgr = GetComponentInParent<PsychoactiveEffectsManager>();
+        if (mgr != null) mgr.NotifyStart(displayName, this, endTime, durationSeconds);
+
+        if (lifeRoutine != null) StopCoroutine(lifeRoutine);
+        lifeRoutine = StartCoroutine(Life());
 
         OnBegin(durationSeconds, intensity01);
     }
 
-    // Adds seconds to the current endTime. Derived effects should read 'endTime' in their loops.
-    public void ExtendDuration(float addSeconds)
+    public void End()
     {
-        float add = Mathf.Max(0f, addSeconds);
-        endTime += add;
-        OnExtended(add);
-    }
+        if (lifeRoutine != null) { StopCoroutine(lifeRoutine); lifeRoutine = null; }
 
-    // Remaining time in seconds (never negative)
-    public float GetRemainingTime()
-    {
-        return Mathf.Max(0f, endTime - Time.time);
-    }
+        OnEnd(); // let derived clean up
 
-    public void Cancel()
-    {
-        OnEnd();
-        var h = OnFinished;
-        if (h != null) h(this);
+        var mgr = GetComponentInParent<PsychoactiveEffectsManager>();
+        if (mgr != null) mgr.NotifyEnd(this);
+
         Destroy(gameObject);
     }
 
-    // Call from derived effect when finished naturally
-    protected void End()
+    private IEnumerator Life()
     {
-        OnEnd();
-        var h = OnFinished;
-        if (h != null) h(this);
-        Destroy(gameObject);
+        while (Time.time < endTime)
+            yield return null;
+
+        End();
     }
 
-    // ---- Hooks for derived classes ----
-    protected abstract void OnBegin(float duration, float intensity);
+    // Override in derived classes
+    protected virtual void OnBegin(float duration, float intensity) { }
     protected virtual void OnEnd() { }
-    protected virtual void OnExtended(float addSeconds) { }
 }
