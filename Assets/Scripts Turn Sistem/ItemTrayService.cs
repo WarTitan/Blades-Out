@@ -1,36 +1,35 @@
 // FILE: ItemTrayService.cs
-// FULL REPLACEMENT (ASCII only)
-// More tolerant seat/anchor lookup:
-// - Finds SeatN even if named "Seat N" or nested deep under traysRoot
-// - Accepts "Inventory"/"Inv"/"Items" and "Consume"/"Consumables"/"Cons"/"ToConsume"/"Use"
-// - Detailed logs showing what was found when anchors are missing
+// FULL FILE (ASCII only)
+// Resolves inventory/consume anchors for each seat (1..5) reliably.
+// Expected layout under traysRoot:
+//   Seat1
+//     Inventory   (children are slots 0..N-1)
+//     Consume     (children are slots 0..N-1)
+//   Seat2
+//     Inventory
+//     Consume
+//   ...
+//
+// Variants supported for child names (case-insensitive):
+//   "Inventory" OR "Inv" OR "Items"
+//   "Consume"   OR "Consumables" OR "Cons" OR "Use"
+//
+// If something is missing, we log clear warnings once per seat.
 
 using UnityEngine;
-using System.Collections.Generic;
-using System.Text;
 
 [AddComponentMenu("Gameplay/Items/Item Tray Service")]
 public class ItemTrayService : MonoBehaviour
 {
     public static ItemTrayService Instance { get; private set; }
 
-    [Tooltip("Root that contains seat transforms (Seat1..Seat5). They may be nested; deep search is used.")]
+    [Header("Root with Seat1..Seat5")]
     public Transform traysRoot;
 
-    private class SeatCache
-    {
-        public Transform seat;
-        public Transform invRoot;
-        public Transform conRoot;
-        public Transform[] invSlots;
-        public Transform[] conSlots;
-    }
-
-    private readonly Dictionary<int, SeatCache> cache = new Dictionary<int, SeatCache>();
-
-    // Accepted names (case-insensitive)
-    private static readonly string[] InvNames = new string[] { "Inventory", "Inv", "Items" };
-    private static readonly string[] ConNames = new string[] { "Consume", "Consumables", "Cons", "ToConsume", "Use" };
+    // simple cache per seat
+    private Transform[][] cachedInv = new Transform[6][];
+    private Transform[][] cachedCon = new Transform[6][];
+    private bool[] warned = new bool[6];
 
     private void Awake()
     {
@@ -38,185 +37,127 @@ public class ItemTrayService : MonoBehaviour
         Instance = this;
     }
 
-    public void ClearCache()
-    {
-        cache.Clear();
-    }
-
     public bool TryGetAnchors(int seatIndex1Based, out Transform[] inventorySlots, out Transform[] consumeSlots)
     {
         inventorySlots = null;
         consumeSlots = null;
 
+        if (seatIndex1Based < 1 || seatIndex1Based > 5)
+        {
+            if (!warnedSafe(seatIndex1Based))
+                Debug.LogWarning("[ItemTrayService] Bad seat index: " + seatIndex1Based);
+            return false;
+        }
+
         if (traysRoot == null)
         {
-            Debug.LogWarning("[ItemTrayService] traysRoot is null.");
-            return false;
-        }
-        if (seatIndex1Based <= 0)
-        {
-            Debug.Log("[ItemTrayService] Requested seat <= 0; not resolving yet.");
-            return false;
-        }
-
-        SeatCache sc;
-        if (!cache.TryGetValue(seatIndex1Based, out sc))
-        {
-            sc = BuildSeatCache(seatIndex1Based);
-            if (sc != null) cache[seatIndex1Based] = sc;
-        }
-
-        if (sc == null || sc.invRoot == null || sc.conRoot == null)
-        {
-            DebugMissingForSeat(seatIndex1Based, sc);
+            if (!warned[0])
+            {
+                warned[0] = true;
+                Debug.LogWarning("[ItemTrayService] traysRoot is NULL.");
+            }
             return false;
         }
 
-        inventorySlots = sc.invSlots;
-        consumeSlots = sc.conSlots;
-        if ((inventorySlots == null || inventorySlots.Length == 0) ||
-            (consumeSlots == null || consumeSlots.Length == 0))
+        // return from cache if present
+        if (cachedInv[seatIndex1Based] != null && cachedCon[seatIndex1Based] != null)
         {
-            DebugLogSlotsEmpty(seatIndex1Based, sc);
+            inventorySlots = cachedInv[seatIndex1Based];
+            consumeSlots = cachedCon[seatIndex1Based];
+            return inventorySlots.Length > 0 && consumeSlots.Length > 0;
         }
-        return (inventorySlots != null && consumeSlots != null);
-    }
 
-    private SeatCache BuildSeatCache(int seatIndex)
-    {
-        var seat = FindSeatDeep(traysRoot, seatIndex);
+        // find seat transform
+        Transform seat = traysRoot.Find("Seat" + seatIndex1Based);
         if (seat == null)
         {
-            Debug.LogWarning("[ItemTrayService] Seat" + seatIndex + " not found under traysRoot (deep search).");
-            return null;
+            // try "Seat 3" (with space)
+            seat = traysRoot.Find("Seat " + seatIndex1Based);
+        }
+        if (seat == null)
+        {
+            if (!warned[seatIndex1Based])
+            {
+                warned[seatIndex1Based] = true;
+                Debug.LogWarning("[ItemTrayService] Could not find child Seat" + seatIndex1Based + " under " + traysRoot.name);
+            }
+            return false;
         }
 
-        var invRoot = FindChildByNamesDeep(seat, InvNames);
-        var conRoot = FindChildByNamesDeep(seat, ConNames);
+        // find inventory and consume parents (case-insensitive variants)
+        Transform invRoot = FindChildCI(seat, "Inventory", "Inv", "Items");
+        Transform conRoot = FindChildCI(seat, "Consume", "Consumables", "Cons", "Use");
 
-        var invSlots = CollectChildren(invRoot);
-        var conSlots = CollectChildren(conRoot);
-
-        return new SeatCache
+        if (invRoot == null || conRoot == null)
         {
-            seat = seat,
-            invRoot = invRoot,
-            conRoot = conRoot,
-            invSlots = invSlots,
-            conSlots = conSlots
-        };
+            if (!warned[seatIndex1Based])
+            {
+                warned[seatIndex1Based] = true;
+                Debug.LogWarning("[ItemTrayService] Seat" + seatIndex1Based + " missing roots. inv=" + (invRoot ? invRoot.name : "null") +
+                                 " con=" + (conRoot ? conRoot.name : "null"));
+            }
+            return false;
+        }
+
+        var inv = CollectChildren(invRoot);
+        var con = CollectChildren(conRoot);
+
+        if ((inv == null || inv.Length == 0) || (con == null || con.Length == 0))
+        {
+            if (!warned[seatIndex1Based])
+            {
+                warned[seatIndex1Based] = true;
+                Debug.LogWarning("[ItemTrayService] Seat" + seatIndex1Based + " has empty slots. inv=" + (inv != null ? inv.Length : 0) +
+                                 " con=" + (con != null ? con.Length : 0));
+            }
+            return false;
+        }
+
+        cachedInv[seatIndex1Based] = inv;
+        cachedCon[seatIndex1Based] = con;
+
+        inventorySlots = inv;
+        consumeSlots = con;
+        return true;
     }
 
-    private static Transform[] CollectChildren(Transform root)
+    private Transform[] CollectChildren(Transform root)
     {
-        if (root == null) return null;
         int n = root.childCount;
         Transform[] arr = new Transform[n];
         for (int i = 0; i < n; i++) arr[i] = root.GetChild(i);
         return arr;
     }
 
-    // Deep search for "SeatX" or "Seat X", case-insensitive
-    private static Transform FindSeatDeep(Transform root, int seatIndex)
-    {
-        if (root == null) return null;
-        string wantA = "seat" + seatIndex;
-        string wantB = "seat " + seatIndex;
-
-        Queue<Transform> q = new Queue<Transform>();
-        q.Enqueue(root);
-        while (q.Count > 0)
-        {
-            var t = q.Dequeue();
-            var nm = t.name.Trim();
-            var nmLower = nm.ToLowerInvariant();
-            if (nmLower == wantA || nmLower == wantB)
-                return t;
-
-            for (int i = 0; i < t.childCount; i++)
-                q.Enqueue(t.GetChild(i));
-        }
-        return null;
-    }
-
-    // Deep search for any of the accepted names (case-insensitive)
-    private static Transform FindChildByNamesDeep(Transform parent, string[] names)
+    private Transform FindChildCI(Transform parent, params string[] names)
     {
         if (parent == null) return null;
-
-        HashSet<string> set = new HashSet<string>();
-        for (int i = 0; i < names.Length; i++) set.Add(names[i].ToLowerInvariant());
-
-        Queue<Transform> q = new Queue<Transform>();
-        q.Enqueue(parent);
-        while (q.Count > 0)
+        int n = parent.childCount;
+        for (int i = 0; i < n; i++)
         {
-            var t = q.Dequeue();
-            string nm = t.name.Trim().ToLowerInvariant();
-            if (set.Contains(nm)) return t;
-
-            for (int i = 0; i < t.childCount; i++)
-                q.Enqueue(t.GetChild(i));
+            var c = parent.GetChild(i);
+            var cn = c.name.ToLowerInvariant();
+            for (int j = 0; j < names.Length; j++)
+            {
+                if (cn == names[j].ToLowerInvariant()) return c;
+            }
+        }
+        // second pass: partial contains
+        for (int i = 0; i < n; i++)
+        {
+            var c = parent.GetChild(i);
+            var cn = c.name.ToLowerInvariant();
+            for (int j = 0; j < names.Length; j++)
+            {
+                if (cn.Contains(names[j].ToLowerInvariant())) return c;
+            }
         }
         return null;
     }
 
-    private void DebugMissingForSeat(int seatIndex, SeatCache sc)
+    private bool warnedSafe(int seat)
     {
-        var sb = new StringBuilder();
-        sb.Append("[ItemTrayService] No anchors for Seat").Append(seatIndex).Append(". ");
-
-        var seat = (sc != null) ? sc.seat : FindSeatDeep(traysRoot, seatIndex);
-        if (seat == null)
-        {
-            sb.Append("Seat not found. Children under traysRoot: ");
-            ListChildrenNames(traysRoot, sb, maxPerParent: 20);
-            Debug.LogWarning(sb.ToString());
-            return;
-        }
-
-        sb.Append("Found seat: ").Append(seat.name).Append(". ");
-        if (sc == null || sc.invRoot == null) sb.Append("Missing Inventory root. ");
-        if (sc == null || sc.conRoot == null) sb.Append("Missing Consume root. ");
-
-        sb.Append("Direct children of seat: ");
-        ListDirectChildrenNames(seat, sb, max: 20);
-
-        Debug.LogWarning(sb.ToString());
-    }
-
-    private void DebugLogSlotsEmpty(int seatIndex, SeatCache sc)
-    {
-        var sb = new StringBuilder();
-        sb.Append("[ItemTrayService] Seat").Append(seatIndex).Append(": ");
-        if (sc.invRoot != null)
-        {
-            sb.Append("Inventory children=").Append(sc.invRoot.childCount).Append(". ");
-        }
-        if (sc.conRoot != null)
-        {
-            sb.Append("Consume children=").Append(sc.conRoot.childCount).Append(". ");
-        }
-        Debug.Log(sb.ToString());
-    }
-
-    private static void ListDirectChildrenNames(Transform t, StringBuilder sb, int max)
-    {
-        if (t == null) return;
-        int n = Mathf.Min(max, t.childCount);
-        for (int i = 0; i < n; i++)
-        {
-            if (i == 0) sb.Append("[");
-            sb.Append(t.GetChild(i).name);
-            if (i < n - 1) sb.Append(", ");
-            if (i == n - 1) sb.Append("]");
-        }
-    }
-
-    private static void ListChildrenNames(Transform t, StringBuilder sb, int maxPerParent)
-    {
-        if (t == null) return;
-        sb.Append(t.name).Append(": ");
-        ListDirectChildrenNames(t, sb, maxPerParent);
+        if (seat < 0 || seat >= warned.Length) return warned[warned.Length - 1];
+        return warned[seat];
     }
 }

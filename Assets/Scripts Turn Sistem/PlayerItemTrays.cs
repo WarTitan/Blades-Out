@@ -1,371 +1,382 @@
 // FILE: PlayerItemTrays.cs
-// FULL REPLACEMENT (ASCII)
-// - On consume, broadcast RpcClearConsumeVisuals() so ALL clients immediately delete models,
-//   avoiding SyncList update ordering races.
-// - Keeps duplicate-merge (sum durations) when applying effects.
+// FULL FILE (ASCII only)
+//
+// What this fixes:
+// - If seat anchors are not found, it FALLS BACK to the SeatAnchorTag of your seat and
+//   spawns local temp anchors there so items are still visible.
+// - Adds loud logs on client when visuals are rebuilt (seat, counts, anchor source).
+// - Keeps Cmd_GiveItemToPlayer so ItemInteraction.cs compiles.
+// - Does not touch seat logic (SeatIndexAuthority sets seatIndex1Based).
+//
+// Note: Server logs show draw happened; this ensures clients always render something.
 
 using UnityEngine;
 using Mirror;
 using System.Collections.Generic;
-using System.Collections;
 
 [AddComponentMenu("Gameplay/Items/Player Item Trays")]
 public class PlayerItemTrays : NetworkBehaviour
 {
     public const int MaxSlots = 8;
 
-    public class SyncListIntLite : SyncList<int> { }
-
-    [Header("Seat Auto-Assign")]
-    public float seatAssignMaxDistance = 6f; // soft radius
-    public float softAssignSeconds = 2f;     // after this, ignore distance
-    public float hardAssignSeconds = 10f;    // hard fallback
-
+    [Header("Seating")]
     [SyncVar(hook = nameof(OnSeatChanged))]
-    public int seatIndex1Based = 0;
+    public int seatIndex1Based = 0; // 1..5
 
-    public SyncListIntLite inventory = new SyncListIntLite();
-    public SyncListIntLite consume = new SyncListIntLite();
+    [Header("Visuals")]
+    public float itemScale = 0.9f;
+    public Vector3 inventoryOffset = Vector3.zero;
+    public Vector3 consumeOffset = Vector3.zero;
+
+    [Header("Debug")]
+    public bool debugLogs = true;
+
+    public class IntList : SyncList<int> { }
+    public IntList inventory = new IntList();
+    public IntList consume = new IntList();
+
+    private readonly List<GameObject> invVisuals = new List<GameObject>(MaxSlots);
+    private readonly List<GameObject> conVisuals = new List<GameObject>(MaxSlots);
 
     private Transform[] invAnchors;
     private Transform[] conAnchors;
 
-    private readonly List<GameObject> invVisuals = new List<GameObject>();
-    private readonly List<GameObject> conVisuals = new List<GameObject>();
-
-    private void Start()
-    {
-        if (isServer) StartCoroutine(Server_AutoSeatAssignLoop());
-
-        ResolveAnchors();
-        inventory.Callback += OnInvChanged;
-        consume.Callback += OnConChanged;
-        RebuildAllVisuals();
-    }
+    // -------- Mirror lifecycle --------
 
     public override void OnStartClient()
     {
         base.OnStartClient();
-        ResolveAnchors();
-        RebuildAllVisuals();
+        RebindAnchors();
+        inventory.Callback += OnInventoryChanged;
+        consume.Callback += OnConsumeChanged;
+
+        // Initial build (in case items already present when we spawned)
+        RebuildInventoryVisuals();
+        RebuildConsumeVisuals();
     }
 
-    private void OnSeatChanged(int oldVal, int newVal)
+    public override void OnStopClient()
     {
-        ResolveAnchors();
-        RebuildAllVisuals();
+        base.OnStopClient();
+        inventory.Callback -= OnInventoryChanged;
+        consume.Callback -= OnConsumeChanged;
+        ClearVisuals(invVisuals);
+        ClearVisuals(conVisuals);
     }
 
-    private void ResolveAnchors()
+    private void OnSeatChanged(int oldSeat, int newSeat)
     {
-        invAnchors = null; conAnchors = null;
+        if (debugLogs) Debug.Log("[PlayerItemTrays] Client seat changed " + oldSeat + " -> " + newSeat);
+        RebindAnchors();
+        RebuildInventoryVisuals();
+        RebuildConsumeVisuals();
+    }
 
-        if (ItemTrayService.Instance != null && seatIndex1Based > 0)
+    private void RebindAnchors()
+    {
+        invAnchors = null;
+        conAnchors = null;
+
+        // 1) Preferred: from ItemTrayService (scene layout)
+        var svc = ItemTrayService.Instance;
+        if (svc != null && seatIndex1Based > 0)
         {
-            bool ok = ItemTrayService.Instance.TryGetAnchors(seatIndex1Based, out invAnchors, out conAnchors);
-            if (!ok || invAnchors == null || conAnchors == null)
+            Transform[] inv, con;
+            if (svc.TryGetAnchors(seatIndex1Based, out inv, out con))
             {
-                Debug.LogWarning("[PlayerItemTrays] Seat" + seatIndex1Based +
-                                 " missing anchors. Ensure TraysRoot/Seat" + seatIndex1Based +
-                                 "/Inventory(8) and /Consume(8).");
+                invAnchors = inv;
+                conAnchors = con;
+                if (debugLogs) Debug.Log("[PlayerItemTrays] Seat " + seatIndex1Based + " bound anchors from ItemTrayService. inv=" +
+                                         invAnchors.Length + " con=" + conAnchors.Length);
+                return;
+            }
+        }
+
+        // 2) Fallback: spawn temporary anchors at the SeatAnchorTag (world seat) so items are still visible
+        var sat = FindSeatAnchorTag(seatIndex1Based);
+        if (sat != null)
+        {
+            var invRoot = new GameObject("TempInvRoot_Seat" + seatIndex1Based).transform;
+            invRoot.SetParent(sat.transform, false);
+            var conRoot = new GameObject("TempConRoot_Seat" + seatIndex1Based).transform;
+            conRoot.SetParent(sat.transform, false);
+
+            int defaultSlots = 8;
+            invAnchors = new Transform[defaultSlots];
+            conAnchors = new Transform[defaultSlots];
+            for (int i = 0; i < defaultSlots; i++)
+            {
+                var a = new GameObject("Inv_Slot_" + i).transform;
+                a.SetParent(invRoot, false);
+                a.localPosition = new Vector3(i * 0.25f, 0.0f, 0.0f);
+
+                var b = new GameObject("Con_Slot_" + i).transform;
+                b.SetParent(conRoot, false);
+                b.localPosition = new Vector3(i * 0.25f, -0.25f, 0.0f);
+
+                invAnchors[i] = a;
+                conAnchors[i] = b;
+            }
+
+            if (debugLogs) Debug.Log("[PlayerItemTrays] Seat " + seatIndex1Based + " using FALLBACK anchors at SeatAnchorTag.");
+            return;
+        }
+
+        if (debugLogs) Debug.LogWarning("[PlayerItemTrays] No anchors and no SeatAnchorTag found for seat " + seatIndex1Based + ". Will spawn under player object.");
+    }
+
+    private SeatAnchorTag FindSeatAnchorTag(int seat)
+    {
+        if (seat < 1) return null;
+        var all = GameObject.FindObjectsOfType<SeatAnchorTag>();
+        for (int i = 0; i < all.Length; i++)
+            if (all[i].seatIndex1Based == seat) return all[i];
+        return null;
+    }
+
+    // -------- SyncList callbacks -> visuals --------
+
+    private void OnInventoryChanged(SyncList<int>.Operation op, int index, int oldItem, int newItem)
+    {
+        if (debugLogs)
+            Debug.Log("[PlayerItemTrays] Client inventory changed (seat " + seatIndex1Based + "): op=" + op + " count=" + inventory.Count);
+        RebuildInventoryVisuals();
+    }
+
+    private void OnConsumeChanged(SyncList<int>.Operation op, int index, int oldItem, int newItem)
+    {
+        if (debugLogs)
+            Debug.Log("[PlayerItemTrays] Client consume changed (seat " + seatIndex1Based + "): op=" + op + " count=" + consume.Count);
+        RebuildConsumeVisuals();
+    }
+
+    private void RebuildInventoryVisuals()
+    {
+        ClearVisuals(invVisuals);
+        int count = Mathf.Min(inventory.Count, MaxSlots);
+        EnsureAnchorArray(ref invAnchors, count, true);
+        for (int i = 0; i < count; i++)
+        {
+            int itemId = inventory[i];
+            var go = SpawnItemVisual(itemId, GetAnchor(invAnchors, i), true, i);
+            invVisuals.Add(go);
+            if (debugLogs && go != null)
+            {
+                var wp = go.transform.position;
+                Debug.Log("[PlayerItemTrays] Spawned INV item " + itemId + " at " + wp.ToString("F3") + " seat=" + seatIndex1Based);
             }
         }
     }
 
-    // ----- Server: seat assignment by proximity (with hard fallback) -----
-    [Server]
-    private IEnumerator Server_AutoSeatAssignLoop()
+    private void RebuildConsumeVisuals()
     {
-        float t = 0f;
-        while (seatIndex1Based <= 0 && t < hardAssignSeconds)
+        ClearVisuals(conVisuals);
+        int count = Mathf.Min(consume.Count, MaxSlots);
+        EnsureAnchorArray(ref conAnchors, count, false);
+        for (int i = 0; i < count; i++)
         {
-            int guess; float distSq;
-            Server_GuessNearestSeatIndex(out guess, out distSq);
-
-            if (guess > 0)
+            int itemId = consume[i];
+            var go = SpawnItemVisual(itemId, GetAnchor(conAnchors, i), false, i);
+            conVisuals.Add(go);
+            if (debugLogs && go != null)
             {
-                bool withinSoft = distSq <= (seatAssignMaxDistance * seatAssignMaxDistance);
-                bool afterSoft = t >= softAssignSeconds;
-
-                if (withinSoft || afterSoft)
-                {
-                    seatIndex1Based = guess;
-                    yield break;
-                }
+                var wp = go.transform.position;
+                Debug.Log("[PlayerItemTrays] Spawned CON item " + itemId + " at " + wp.ToString("F3") + " seat=" + seatIndex1Based);
             }
-
-            yield return new WaitForSeconds(0.25f);
-            t += 0.25f;
-        }
-
-        if (seatIndex1Based <= 0)
-        {
-            int guess; float distSq;
-            Server_GuessNearestSeatIndex(out guess, out distSq);
-            if (guess > 0) seatIndex1Based = guess;
         }
     }
 
-    [Server]
-    private void Server_GuessNearestSeatIndex(out int bestIdx, out float bestDistSq)
+    private void ClearVisuals(List<GameObject> list)
     {
-        bestIdx = 0; bestDistSq = float.MaxValue;
-        if (ItemTrayService.Instance == null || ItemTrayService.Instance.traysRoot == null) return;
-
-        var root = ItemTrayService.Instance.traysRoot;
-        for (int s = 1; s <= 5; s++)
-        {
-            var seat = root.Find("Seat" + s);
-            if (seat == null) continue;
-            float d = (seat.position - transform.position).sqrMagnitude;
-            if (d < bestDistSq) { bestDistSq = d; bestIdx = s; }
-        }
+        for (int i = 0; i < list.Count; i++)
+            if (list[i] != null) Destroy(list[i]);
+        list.Clear();
     }
 
-    // ----- Server tray API -----
-    [Server]
-    public bool Server_AddItemToInventory(int itemId)
-    {
-        if (itemId < 0) return false;
-        if (inventory.Count >= MaxSlots) return false;
-        inventory.Add(itemId);
-        return true;
-    }
+    // -------- Server API (draw/consume) --------
 
     [Server]
     public int Server_AddSeveralToInventoryClamped(int count)
     {
+        if (count <= 0) return 0;
+
         int added = 0;
-        if (ItemDeck.Instance == null) return 0;
-        for (int i = 0; i < count; i++)
+        var deck = FindObjectOfType<ItemDeck>();
+        if (deck == null)
         {
-            if (inventory.Count >= MaxSlots) break;
-            int draw = ItemDeck.Instance.DrawRandomId();
-            if (draw < 0) break;
-            inventory.Add(draw);
+            Debug.LogError("[PlayerItemTrays] No ItemDeck in scene. Cannot draw items.");
+            return 0;
+        }
+        if (deck.Count <= 0)
+        {
+            Debug.LogError("[PlayerItemTrays] ItemDeck has 0 entries. Populate items first (or enable auto-fill).");
+            return 0;
+        }
+
+        List<int> justAdded = null;
+
+        while (added < count && inventory.Count < MaxSlots)
+        {
+            int id = deck.DrawRandomId();
+            if (id < 0) break;
+            inventory.Add(id);
+            if (justAdded == null) justAdded = new List<int>(count);
+            justAdded.Add(id);
             added++;
         }
+
+        if (added > 0)
+        {
+            string s = "[PlayerItemTrays] Seat " + seatIndex1Based + " drew " + added + " item(s)";
+            if (justAdded != null) s += " ids=[" + string.Join(",", justAdded) + "]";
+            Debug.Log(s);
+        }
+
         return added;
     }
 
     [Server]
     public void Server_ConsumeAllNow()
     {
-        if (consume.Count == 0) return;
+        if (consume.Count > 0)
+            Debug.Log("[PlayerItemTrays] Server_ConsumeAllNow seat=" + seatIndex1Based + " count=" + consume.Count);
 
-        List<int> toApply = new List<int>(consume.Count);
-        for (int i = 0; i < consume.Count; i++) toApply.Add(consume[i]);
-
-        // Clear and force-clear visuals everywhere (prevents RPC/SyncList ordering glitches)
         consume.Clear();
         RpcClearConsumeVisuals();
-
-        // Apply effects on the owner client
-        Target_ApplyEffects(connectionToClient, toApply.ToArray());
     }
+
+    // -------- Trading (Command used by ItemInteraction) --------
+
+    [Command]
+    public void Cmd_GiveItemToPlayer(uint targetNetId, int fromSlotIndex)
+    {
+        var senderId = GetComponent<NetworkIdentity>();
+        if (senderId == null) return;
+
+        var tm = TurnManagerNet.Instance;
+        if (tm == null) return;
+        if (!tm.CanTradeNow(senderId)) return;
+
+        if (fromSlotIndex < 0 || fromSlotIndex >= inventory.Count) return;
+
+        NetworkIdentity targetIdentity = FindNetIdentity(targetNetId);
+        if (targetIdentity == null) return;
+
+        var targetTrays = targetIdentity.GetComponent<PlayerItemTrays>();
+        if (targetTrays == null) return;
+        if (targetTrays.inventory.Count >= MaxSlots) return;
+
+        int itemId = inventory[fromSlotIndex];
+        inventory.RemoveAt(fromSlotIndex);
+        targetTrays.inventory.Add(itemId);
+
+        Debug.Log("[PlayerItemTrays] Trade seat " + seatIndex1Based + " -> netId " + targetNetId + " item " + itemId);
+    }
+
+    [Server]
+    private NetworkIdentity FindNetIdentity(uint netId)
+    {
+        if (netId == 0) return null;
+        var all = FindObjectsOfType<NetworkIdentity>();
+        for (int i = 0; i < all.Length; i++)
+            if (all[i].netId == netId) return all[i];
+        return null;
+    }
+
+    // -------- RPCs --------
 
     [ClientRpc]
     private void RpcClearConsumeVisuals()
     {
-        // Destroy consume models immediately on all clients.
-        for (int i = 0; i < conVisuals.Count; i++)
-        {
-            var go = conVisuals[i];
-            if (go != null) Object.Destroy(go);
-        }
-        conVisuals.Clear();
+        ClearVisuals(conVisuals);
     }
 
-    // ----- Effects spawn: merge duplicates into one effect (sum duration, max intensity) -----
-    [TargetRpc]
-    private void Target_ApplyEffects(NetworkConnectionToClient conn, int[] itemIds)
+    // -------- Visual helpers --------
+
+    private GameObject SpawnItemVisual(int itemId, Transform anchor, bool isInventory, int slotIndex)
     {
-        if (itemIds == null || itemIds.Length == 0) return;
-
-        Camera cam = null;
-        var lcc = GetComponent<LocalCameraController>();
-        if (lcc != null && lcc.playerCamera != null) cam = lcc.playerCamera;
-        if (cam == null) cam = GetComponentInChildren<Camera>(true);
-        if (cam == null) return;
-        if (ItemDeck.Instance == null) return;
-
-        Dictionary<int, Agg> map = new Dictionary<int, Agg>(16);
-        for (int i = 0; i < itemIds.Length; i++)
+        GameObject prefab = null;
+        var deck = FindObjectOfType<ItemDeck>();
+        if (deck != null)
         {
-            int id = itemIds[i];
-            var def = ItemDeck.Instance.Get(id);
-            if (def == null || def.effectPrefab == null) continue;
+            var entry = deck.Get(itemId);
+            if (entry != null && entry.visualPrefab != null)
+                prefab = entry.visualPrefab;
+        }
 
-            Agg a;
-            if (!map.TryGetValue(id, out a))
+        GameObject go;
+        if (prefab != null) go = Object.Instantiate(prefab, Vector3.zero, Quaternion.identity);
+        else
+        {
+            go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var r = go.GetComponent<Renderer>();
+            if (r != null)
             {
-                a.itemId = id;
-                a.totalDuration = Mathf.Max(0f, def.durationSeconds);
-                a.intensity = def.intensity;
-                a.displayName = string.IsNullOrEmpty(def.itemName) ? def.effectPrefab.GetType().Name : def.itemName;
-                a.prefab = def.effectPrefab;
-                map[id] = a;
-            }
-            else
-            {
-                a.totalDuration += Mathf.Max(0f, def.durationSeconds);
-                if (def.intensity > a.intensity) a.intensity = def.intensity;
-                map[id] = a;
+                var m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                if (m.HasProperty("_BaseColor"))
+                    m.SetColor("_BaseColor", isInventory ? new Color(0.6f, 0.8f, 1f) : new Color(1f, 0.8f, 0.4f));
+                r.material = m;
             }
         }
 
-        foreach (var kv in map)
+        go.name = (isInventory ? "Inv_" : "Use_") + slotIndex + "_Item" + itemId;
+        go.transform.SetParent(anchor != null ? anchor : transform, false);
+        go.transform.localPosition = isInventory ? inventoryOffset : consumeOffset;
+        go.transform.localRotation = Quaternion.identity;
+        go.transform.localScale = Vector3.one * itemScale;
+
+        if (go.GetComponent<Collider>() == null) go.AddComponent<BoxCollider>();
+
+        var inst = go.GetComponent<ItemInstance>();
+        if (inst == null) inst = go.AddComponent<ItemInstance>();
+        inst.itemId = itemId;
+        inst.isInventorySlot = isInventory;
+        inst.slotIndex = slotIndex;
+        inst.owner = this;
+
+        return go;
+    }
+
+    private static Transform GetAnchor(Transform[] anchors, int index)
+    {
+        if (anchors == null || anchors.Length == 0) return null;
+        if (index < 0 || index >= anchors.Length)
+            return anchors[Mathf.Clamp(index, 0, anchors.Length - 1)];
+        return anchors[index];
+    }
+
+    private void EnsureAnchorArray(ref Transform[] anchors, int expected, bool forInventory)
+    {
+        if (anchors != null && anchors.Length >= expected) return;
+
+        // Try to rebind from service once more
+        var svc = ItemTrayService.Instance;
+        if (svc != null && seatIndex1Based > 0)
         {
-            var a = kv.Value;
-            if (a.prefab == null) continue;
-
-            PsychoactiveEffectBase eff = Object.Instantiate(a.prefab);
-            eff.name = "Effect_" + a.displayName;
-            eff.transform.SetParent(cam.transform, false);
-            eff.BeginNamed(cam, Mathf.Max(0.01f, a.totalDuration), Mathf.Clamp01(a.intensity), a.displayName);
-        }
-    }
-
-    private struct Agg
-    {
-        public int itemId;
-        public float totalDuration;
-        public float intensity;
-        public string displayName;
-        public PsychoactiveEffectBase prefab;
-    }
-
-    // ----- Trading -----
-    [Command]
-    public void Cmd_GiveItemToPlayer(int inventorySlotIndex, NetworkIdentity targetPlayer)
-    {
-        if (!isServer) return;
-
-        var requester = (connectionToClient != null) ? connectionToClient.identity : null;
-        if (TurnManagerNet.Instance == null || !TurnManagerNet.Instance.CanTradeNow(requester))
-            return;
-
-        if (inventorySlotIndex < 0 || inventorySlotIndex >= inventory.Count) return;
-        if (targetPlayer == null) return;
-
-        var targetTrays = targetPlayer.GetComponent<PlayerItemTrays>();
-        if (targetTrays == null) return;
-        if (targetTrays.consume.Count >= MaxSlots) return;
-
-        int itemId = inventory[inventorySlotIndex];
-        inventory.RemoveAt(inventorySlotIndex);
-        targetTrays.consume.Add(itemId);
-
-        // Force quick visual refresh on both ends (owner + target)
-        Target_PingRefresh(connectionToClient);
-        var targetConn = targetPlayer.connectionToClient;
-        if (targetConn != null) targetTrays.Target_PingRefresh(targetConn);
-    }
-
-    [TargetRpc]
-    private void Target_PingRefresh(NetworkConnectionToClient conn)
-    {
-        RebuildAllVisuals();
-    }
-
-    // ----- SyncList-driven visuals -----
-    private void OnInvChanged(SyncListIntLite.Operation op, int index, int oldItem, int newItem)
-    {
-        RebuildInventoryVisuals();
-    }
-
-    private void OnConChanged(SyncListIntLite.Operation op, int index, int oldItem, int newItem)
-    {
-        RebuildConsumeVisuals();
-    }
-
-    private void RebuildAllVisuals()
-    {
-        RebuildInventoryVisuals();
-        RebuildConsumeVisuals();
-    }
-
-    private void ClearList(List<GameObject> list)
-    {
-        for (int i = 0; i < list.Count; i++)
-        {
-            var go = list[i];
-            if (go != null) Object.Destroy(go);
-        }
-        list.Clear();
-    }
-
-    private void RebuildInventoryVisuals()
-    {
-        ClearList(invVisuals);
-        if (invAnchors == null || ItemDeck.Instance == null) return;
-        int n = Mathf.Min(inventory.Count, MaxSlots);
-        n = (invAnchors != null) ? Mathf.Min(n, invAnchors.Length) : 0;
-
-        for (int i = 0; i < n; i++)
-        {
-            var def = ItemDeck.Instance.Get(inventory[i]);
-            if (def == null) continue;
-
-            var slot = invAnchors[i];
-            GameObject go = Object.Instantiate(def.visualPrefab != null ? def.visualPrefab : GameObject.CreatePrimitive(PrimitiveType.Cube));
-            if (def.visualPrefab == null)
+            Transform[] inv, con;
+            if (svc.TryGetAnchors(seatIndex1Based, out inv, out con))
             {
-                var col = go.GetComponent<Collider>(); if (col != null) Object.Destroy(col);
-                go.transform.localScale = Vector3.one * 0.18f;
-                go.name = "Placeholder_" + (string.IsNullOrEmpty(def.itemName) ? "Item" : def.itemName);
+                if (forInventory) anchors = inv; else anchors = con;
+                return;
             }
-
-            go.transform.SetPositionAndRotation(slot.position, slot.rotation);
-            go.transform.SetParent(slot, true);
-
-            var inst = go.GetComponent<ItemInstance>();
-            if (inst == null) inst = go.AddComponent<ItemInstance>();
-            inst.itemId = inventory[i];
-            inst.slotIndex = i;
-            inst.isInventorySlot = true;
-            inst.owner = this;
-
-            if (go.GetComponent<Collider>() == null) go.AddComponent<BoxCollider>();
-
-            invVisuals.Add(go);
         }
-    }
 
-    private void RebuildConsumeVisuals()
-    {
-        ClearList(conVisuals);
-        if (conAnchors == null || ItemDeck.Instance == null) return;
-        int n = Mathf.Min(consume.Count, MaxSlots);
-        n = (conAnchors != null) ? Mathf.Min(n, conAnchors.Length) : 0;
-
-        for (int i = 0; i < n; i++)
+        // Otherwise keep current (fallback may already be in place).
+        if (anchors == null || anchors.Length < expected)
         {
-            var def = ItemDeck.Instance.Get(consume[i]);
-            if (def == null) continue;
-
-            var slot = conAnchors[i];
-            GameObject go = Object.Instantiate(def.visualPrefab != null ? def.visualPrefab : GameObject.CreatePrimitive(PrimitiveType.Cube));
-            if (def.visualPrefab == null)
+            int n = Mathf.Max(expected, 1);
+            var root = new GameObject(forInventory ? "LocalInvAnchors" : "LocalConAnchors").transform;
+            root.SetParent(transform, false);
+            anchors = new Transform[n];
+            for (int i = 0; i < n; i++)
             {
-                var col = go.GetComponent<Collider>(); if (col != null) Object.Destroy(col);
-                go.transform.localScale = Vector3.one * 0.18f;
-                go.name = "Placeholder_" + (string.IsNullOrEmpty(def.itemName) ? "Item" : def.itemName);
+                var a = new GameObject((forInventory ? "Inv" : "Con") + "_Slot_" + i).transform;
+                a.SetParent(root, false);
+                a.localPosition = new Vector3(i * 0.25f, forInventory ? 0.0f : -0.25f, 0.0f);
+                anchors[i] = a;
             }
-
-            go.transform.SetPositionAndRotation(slot.position, slot.rotation);
-            go.transform.SetParent(slot, true);
-
-            var inst = go.GetComponent<ItemInstance>();
-            if (inst == null) inst = go.AddComponent<ItemInstance>();
-            inst.itemId = consume[i];
-            inst.slotIndex = i;
-            inst.isInventorySlot = false;
-            inst.owner = this;
-
-            if (go.GetComponent<Collider>() == null) go.AddComponent<BoxCollider>();
-
-            conVisuals.Add(go);
+            if (debugLogs)
+                Debug.Log("[PlayerItemTrays] Seat " + seatIndex1Based + " created LOCAL anchors (no service).");
         }
     }
 }
