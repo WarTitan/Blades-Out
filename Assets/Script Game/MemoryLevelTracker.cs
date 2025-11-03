@@ -13,7 +13,7 @@ public class MemoryLevelTracker : NetworkBehaviour
 
     // netId -> level (1..)
     public class LevelsDict : SyncDictionary<uint, ushort> { }
-    public LevelsDict levelByNetId = new LevelsDict();
+    public readonly LevelsDict levelByNetId = new LevelsDict();
 
     public override void OnStartServer()
     {

@@ -101,7 +101,9 @@ public class MemorySequenceUI : MonoBehaviour
             if (cChild != null) return cChild;
         }
         if (Camera.main != null) return Camera.main;
+#pragma warning disable CS0618
         return Object.FindObjectOfType<Camera>();
+#pragma warning restore CS0618
     }
 
     private int GetSeatLevel(int seat)

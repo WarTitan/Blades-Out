@@ -63,7 +63,9 @@ public class ItemInteraction : NetworkBehaviour
 
         if (playerCamera == null)
         {
+#pragma warning disable CS0618
             var cams = GameObject.FindObjectsOfType<Camera>();
+#pragma warning disable CS0618
             for (int i = 0; i < cams.Length; i++)
             {
                 if (cams[i].enabled && cams[i].gameObject.activeInHierarchy) { playerCamera = cams[i]; break; }

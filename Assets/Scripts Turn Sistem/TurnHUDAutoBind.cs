@@ -18,7 +18,9 @@ public class TurnHUDAutoBind : MonoBehaviour
 
     void Start()
     {
-        if (hud == null) hud = FindObjectOfType<TurnHUD>();
+#pragma warning disable CS0618
+        if (hud == null) {} hud = FindObjectOfType<TurnHUD>();
+#pragma warning disable CS0618
         if (hud == null) return;
 
         if (hud.titleObject == null)

@@ -59,7 +59,9 @@ public class SeatIndexAuthority : NetworkBehaviour
         // 3) Try until we assign
         while (isServer && !assigned && trays != null && trays.seatIndex1Based == 0)
         {
+#pragma warning disable CS0618
             var allTags = GameObject.FindObjectsOfType<SeatAnchorTag>();
+#pragma warning disable CS0618
             if (allTags == null || allTags.Length == 0)
             {
                 if (verboseLogs) Debug.LogWarning("[SeatIndexAuthority] No SeatAnchorTag found. Retrying...");
@@ -67,7 +69,7 @@ public class SeatIndexAuthority : NetworkBehaviour
                 continue;
             }
 
-            // Mark seats that are already taken
+
             bool[] taken = new bool[6]; // 1..5
             var everyone = GameObject.FindObjectsOfType<PlayerItemTrays>();
             for (int i = 0; i < everyone.Length; i++)

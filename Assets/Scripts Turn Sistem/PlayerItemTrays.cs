@@ -26,8 +26,9 @@ public class PlayerItemTrays : NetworkBehaviour
     public Vector3 consumeOffset = Vector3.zero;
 
     public class IntList : SyncList<int> { }
-    public IntList inventory = new IntList();
-    public IntList consume = new IntList();
+    public readonly IntList inventory = new IntList();
+    public readonly IntList consume = new IntList();
+
 
     private readonly List<GameObject> invVisuals = new List<GameObject>(MaxSlots);
     private readonly List<GameObject> conVisuals = new List<GameObject>(MaxSlots);
@@ -135,7 +136,9 @@ public class PlayerItemTrays : NetworkBehaviour
         if (count <= 0) return 0;
 
         int added = 0;
+#pragma warning disable CS0618
         var deck = Object.FindObjectOfType<ItemDeck>();
+#pragma warning disable CS0618
         if (deck == null)
         {
             Debug.LogError("[PlayerItemTrays] No ItemDeck in scene. Cannot draw items.");

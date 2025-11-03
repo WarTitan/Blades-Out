@@ -68,8 +68,9 @@ public class TurnHUD : MonoBehaviour
     private void ResolveSingleton()
     {
         if (s_resolved) return;
-
+#pragma warning disable CS0618
         var all = FindObjectsOfType<TurnHUD>(true);
+#pragma warning disable CS0618
         int bestScore = int.MinValue;
         TurnHUD best = null;
 

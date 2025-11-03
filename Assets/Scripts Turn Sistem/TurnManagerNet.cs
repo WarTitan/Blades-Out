@@ -321,10 +321,12 @@ public class TurnManagerNet : NetworkBehaviour
 
     private bool HasAnyPlayers()
     {
+#pragma warning disable CS0618
         var trays = GameObject.FindObjectsOfType<PlayerItemTrays>();
+#pragma warning disable CS0618
         return trays != null && trays.Length > 0;
     }
-
+#pragma warning disable CS0618
     private bool HasAnySeatedPlayer()
     {
         var trays = GameObject.FindObjectsOfType<PlayerItemTrays>();
@@ -332,6 +334,7 @@ public class TurnManagerNet : NetworkBehaviour
             if (trays[i].seatIndex1Based > 0) return true;
         return false;
     }
+#pragma warning disable CS0618
 
     [Server]
     private void Server_AutoSeatAllPlayersIfNeeded()

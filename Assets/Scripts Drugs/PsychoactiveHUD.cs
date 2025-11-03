@@ -284,7 +284,9 @@ public class PsychoactiveHUD : NetworkBehaviour
         if (!HasLayoutInParents(rt)) return;
 
         Canvas rootCanvas = null;
+#pragma warning disable CS0618
         var allCanvas = GameObject.FindObjectsOfType<Canvas>();
+#pragma warning disable CS0618
         for (int i = 0; i < allCanvas.Length; i++)
         {
             if (allCanvas[i] != null && allCanvas[i].isRootCanvas)
