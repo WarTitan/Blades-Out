@@ -1,6 +1,7 @@
 // FILE: ItemTrayService.cs
 // FULL FILE (ASCII only)
-// Resolves inventory/consume anchors for each seat (1..5) reliably.
+// Source of truth for item anchors using a single TraysRoot in the scene.
+//
 // Expected layout under traysRoot:
 //   Seat1
 //     Inventory   (children are slots 0..N-1)
@@ -11,10 +12,12 @@
 //   ...
 //
 // Variants supported for child names (case-insensitive):
-//   "Inventory" OR "Inv" OR "Items"
-//   "Consume"   OR "Consumables" OR "Cons" OR "Use"
+//   Inventory: "Inventory", "Inv", "Items"
+//   Consume:   "Consume", "Consumables", "Cons", "Use"
 //
-// If something is missing, we log clear warnings once per seat.
+// Notes:
+// - Caches results per seat after first lookup.
+// - Includes a compatibility alias TryGetAnchorsForSeat(...) for older callers.
 
 using UnityEngine;
 
@@ -26,7 +29,7 @@ public class ItemTrayService : MonoBehaviour
     [Header("Root with Seat1..Seat5")]
     public Transform traysRoot;
 
-    // simple cache per seat
+    // cache per seat index 1..5
     private Transform[][] cachedInv = new Transform[6][];
     private Transform[][] cachedCon = new Transform[6][];
     private bool[] warned = new bool[6];
@@ -37,6 +40,17 @@ public class ItemTrayService : MonoBehaviour
         Instance = this;
     }
 
+    private void OnEnable() { Invalidate(); }
+    private void OnDisable() { Invalidate(); }
+    private void OnValidate() { Invalidate(); }
+
+    private void Invalidate()
+    {
+        for (int i = 0; i < cachedInv.Length; i++) { cachedInv[i] = null; cachedCon[i] = null; }
+        for (int i = 0; i < warned.Length; i++) warned[i] = false;
+    }
+
+    // Primary API
     public bool TryGetAnchors(int seatIndex1Based, out Transform[] inventorySlots, out Transform[] consumeSlots)
     {
         inventorySlots = null;
@@ -59,7 +73,7 @@ public class ItemTrayService : MonoBehaviour
             return false;
         }
 
-        // return from cache if present
+        // cache hit
         if (cachedInv[seatIndex1Based] != null && cachedCon[seatIndex1Based] != null)
         {
             inventorySlots = cachedInv[seatIndex1Based];
@@ -67,13 +81,9 @@ public class ItemTrayService : MonoBehaviour
             return inventorySlots.Length > 0 && consumeSlots.Length > 0;
         }
 
-        // find seat transform
+        // locate seat
         Transform seat = traysRoot.Find("Seat" + seatIndex1Based);
-        if (seat == null)
-        {
-            // try "Seat 3" (with space)
-            seat = traysRoot.Find("Seat " + seatIndex1Based);
-        }
+        if (seat == null) seat = traysRoot.Find("Seat " + seatIndex1Based);
         if (seat == null)
         {
             if (!warned[seatIndex1Based])
@@ -84,7 +94,7 @@ public class ItemTrayService : MonoBehaviour
             return false;
         }
 
-        // find inventory and consume parents (case-insensitive variants)
+        // locate roots
         Transform invRoot = FindChildCI(seat, "Inventory", "Inv", "Items");
         Transform conRoot = FindChildCI(seat, "Consume", "Consumables", "Cons", "Use");
 
@@ -121,6 +131,12 @@ public class ItemTrayService : MonoBehaviour
         return true;
     }
 
+    // Back-compat alias for older code paths
+    public bool TryGetAnchorsForSeat(int seatIndex1Based, out Transform[] inventorySlots, out Transform[] consumeSlots)
+    {
+        return TryGetAnchors(seatIndex1Based, out inventorySlots, out consumeSlots);
+    }
+
     private Transform[] CollectChildren(Transform root)
     {
         int n = root.childCount;
@@ -133,6 +149,8 @@ public class ItemTrayService : MonoBehaviour
     {
         if (parent == null) return null;
         int n = parent.childCount;
+
+        // exact
         for (int i = 0; i < n; i++)
         {
             var c = parent.GetChild(i);
@@ -142,7 +160,7 @@ public class ItemTrayService : MonoBehaviour
                 if (cn == names[j].ToLowerInvariant()) return c;
             }
         }
-        // second pass: partial contains
+        // contains
         for (int i = 0; i < n; i++)
         {
             var c = parent.GetChild(i);

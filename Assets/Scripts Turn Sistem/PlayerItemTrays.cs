@@ -1,14 +1,11 @@
 // FILE: PlayerItemTrays.cs
 // FULL FILE (ASCII only)
 //
-// What this fixes:
-// - If seat anchors are not found, it FALLS BACK to the SeatAnchorTag of your seat and
-//   spawns local temp anchors there so items are still visible.
-// - Adds loud logs on client when visuals are rebuilt (seat, counts, anchor source).
-// - Keeps Cmd_GiveItemToPlayer so ItemInteraction.cs compiles.
-// - Does not touch seat logic (SeatIndexAuthority sets seatIndex1Based).
+// Server authoritative inventory + consume SyncLists,
+// trading Command used by ItemInteraction,
+// and simple client visuals (falls back to cubes if no prefab).
 //
-// Note: Server logs show draw happened; this ensures clients always render something.
+// Seat is NOT handled here (SeatIndexAuthority sets seatIndex1Based).
 
 using UnityEngine;
 using Mirror;
@@ -28,9 +25,6 @@ public class PlayerItemTrays : NetworkBehaviour
     public Vector3 inventoryOffset = Vector3.zero;
     public Vector3 consumeOffset = Vector3.zero;
 
-    [Header("Debug")]
-    public bool debugLogs = true;
-
     public class IntList : SyncList<int> { }
     public IntList inventory = new IntList();
     public IntList consume = new IntList();
@@ -49,8 +43,6 @@ public class PlayerItemTrays : NetworkBehaviour
         RebindAnchors();
         inventory.Callback += OnInventoryChanged;
         consume.Callback += OnConsumeChanged;
-
-        // Initial build (in case items already present when we spawned)
         RebuildInventoryVisuals();
         RebuildConsumeVisuals();
     }
@@ -66,7 +58,6 @@ public class PlayerItemTrays : NetworkBehaviour
 
     private void OnSeatChanged(int oldSeat, int newSeat)
     {
-        if (debugLogs) Debug.Log("[PlayerItemTrays] Client seat changed " + oldSeat + " -> " + newSeat);
         RebindAnchors();
         RebuildInventoryVisuals();
         RebuildConsumeVisuals();
@@ -76,8 +67,6 @@ public class PlayerItemTrays : NetworkBehaviour
     {
         invAnchors = null;
         conAnchors = null;
-
-        // 1) Preferred: from ItemTrayService (scene layout)
         var svc = ItemTrayService.Instance;
         if (svc != null && seatIndex1Based > 0)
         {
@@ -86,67 +75,19 @@ public class PlayerItemTrays : NetworkBehaviour
             {
                 invAnchors = inv;
                 conAnchors = con;
-                if (debugLogs) Debug.Log("[PlayerItemTrays] Seat " + seatIndex1Based + " bound anchors from ItemTrayService. inv=" +
-                                         invAnchors.Length + " con=" + conAnchors.Length);
-                return;
             }
         }
-
-        // 2) Fallback: spawn temporary anchors at the SeatAnchorTag (world seat) so items are still visible
-        var sat = FindSeatAnchorTag(seatIndex1Based);
-        if (sat != null)
-        {
-            var invRoot = new GameObject("TempInvRoot_Seat" + seatIndex1Based).transform;
-            invRoot.SetParent(sat.transform, false);
-            var conRoot = new GameObject("TempConRoot_Seat" + seatIndex1Based).transform;
-            conRoot.SetParent(sat.transform, false);
-
-            int defaultSlots = 8;
-            invAnchors = new Transform[defaultSlots];
-            conAnchors = new Transform[defaultSlots];
-            for (int i = 0; i < defaultSlots; i++)
-            {
-                var a = new GameObject("Inv_Slot_" + i).transform;
-                a.SetParent(invRoot, false);
-                a.localPosition = new Vector3(i * 0.25f, 0.0f, 0.0f);
-
-                var b = new GameObject("Con_Slot_" + i).transform;
-                b.SetParent(conRoot, false);
-                b.localPosition = new Vector3(i * 0.25f, -0.25f, 0.0f);
-
-                invAnchors[i] = a;
-                conAnchors[i] = b;
-            }
-
-            if (debugLogs) Debug.Log("[PlayerItemTrays] Seat " + seatIndex1Based + " using FALLBACK anchors at SeatAnchorTag.");
-            return;
-        }
-
-        if (debugLogs) Debug.LogWarning("[PlayerItemTrays] No anchors and no SeatAnchorTag found for seat " + seatIndex1Based + ". Will spawn under player object.");
-    }
-
-    private SeatAnchorTag FindSeatAnchorTag(int seat)
-    {
-        if (seat < 1) return null;
-        var all = GameObject.FindObjectsOfType<SeatAnchorTag>();
-        for (int i = 0; i < all.Length; i++)
-            if (all[i].seatIndex1Based == seat) return all[i];
-        return null;
     }
 
     // -------- SyncList callbacks -> visuals --------
 
     private void OnInventoryChanged(SyncList<int>.Operation op, int index, int oldItem, int newItem)
     {
-        if (debugLogs)
-            Debug.Log("[PlayerItemTrays] Client inventory changed (seat " + seatIndex1Based + "): op=" + op + " count=" + inventory.Count);
         RebuildInventoryVisuals();
     }
 
     private void OnConsumeChanged(SyncList<int>.Operation op, int index, int oldItem, int newItem)
     {
-        if (debugLogs)
-            Debug.Log("[PlayerItemTrays] Client consume changed (seat " + seatIndex1Based + "): op=" + op + " count=" + consume.Count);
         RebuildConsumeVisuals();
     }
 
@@ -160,11 +101,6 @@ public class PlayerItemTrays : NetworkBehaviour
             int itemId = inventory[i];
             var go = SpawnItemVisual(itemId, GetAnchor(invAnchors, i), true, i);
             invVisuals.Add(go);
-            if (debugLogs && go != null)
-            {
-                var wp = go.transform.position;
-                Debug.Log("[PlayerItemTrays] Spawned INV item " + itemId + " at " + wp.ToString("F3") + " seat=" + seatIndex1Based);
-            }
         }
     }
 
@@ -178,18 +114,16 @@ public class PlayerItemTrays : NetworkBehaviour
             int itemId = consume[i];
             var go = SpawnItemVisual(itemId, GetAnchor(conAnchors, i), false, i);
             conVisuals.Add(go);
-            if (debugLogs && go != null)
-            {
-                var wp = go.transform.position;
-                Debug.Log("[PlayerItemTrays] Spawned CON item " + itemId + " at " + wp.ToString("F3") + " seat=" + seatIndex1Based);
-            }
         }
     }
 
     private void ClearVisuals(List<GameObject> list)
     {
         for (int i = 0; i < list.Count; i++)
-            if (list[i] != null) Destroy(list[i]);
+        {
+            var go = list[i];
+            if (go != null) Object.Destroy(go);
+        }
         list.Clear();
     }
 
@@ -201,7 +135,7 @@ public class PlayerItemTrays : NetworkBehaviour
         if (count <= 0) return 0;
 
         int added = 0;
-        var deck = FindObjectOfType<ItemDeck>();
+        var deck = Object.FindObjectOfType<ItemDeck>();
         if (deck == null)
         {
             Debug.LogError("[PlayerItemTrays] No ItemDeck in scene. Cannot draw items.");
@@ -209,7 +143,7 @@ public class PlayerItemTrays : NetworkBehaviour
         }
         if (deck.Count <= 0)
         {
-            Debug.LogError("[PlayerItemTrays] ItemDeck has 0 entries. Populate items first (or enable auto-fill).");
+            Debug.LogError("[PlayerItemTrays] ItemDeck has 0 entries. Populate items first.");
             return 0;
         }
 
@@ -235,17 +169,43 @@ public class PlayerItemTrays : NetworkBehaviour
         return added;
     }
 
+    // Called by TurnManagerNet at the start of this player's turn.
+    // Consumes everything in 'consume', clears the tray everywhere,
+    // then spawns effect prefabs on this player's local camera.
     [Server]
     public void Server_ConsumeAllNow()
     {
-        if (consume.Count > 0)
-            Debug.Log("[PlayerItemTrays] Server_ConsumeAllNow seat=" + seatIndex1Based + " count=" + consume.Count);
+        if (consume.Count == 0) return;
 
+        // Copy the IDs we are about to consume.
+        List<int> toApply = new List<int>(consume.Count);
+        for (int i = 0; i < consume.Count; i++)
+            toApply.Add(consume[i]);
+
+        Debug.Log("[PlayerItemTrays] Server_ConsumeAllNow seat=" + seatIndex1Based +
+                  " count=" + toApply.Count);
+
+        // Clear the SyncList (propagates to all clients) and explicitly clear visuals.
         consume.Clear();
         RpcClearConsumeVisuals();
+
+        // Tell owning client to spawn effects.
+        if (connectionToClient != null && toApply.Count > 0)
+        {
+            Target_ApplyEffects(connectionToClient, toApply.ToArray());
+        }
+        else
+        {
+            Debug.LogWarning("[PlayerItemTrays] No connectionToClient on consume; cannot apply effects.");
+        }
     }
 
     // -------- Trading (Command used by ItemInteraction) --------
+    //
+    // NOTE: important:
+    //  - fromSlotIndex indexes *this* inventory.
+    //  - targetNetId is the other player's NetworkIdentity.netId.
+    //  - the item moves from this.inventory[fromSlotIndex] to target.consume.
 
     [Command]
     public void Cmd_GiveItemToPlayer(uint targetNetId, int fromSlotIndex)
@@ -264,31 +224,146 @@ public class PlayerItemTrays : NetworkBehaviour
 
         var targetTrays = targetIdentity.GetComponent<PlayerItemTrays>();
         if (targetTrays == null) return;
-        if (targetTrays.inventory.Count >= MaxSlots) return;
+
+        // Gift goes into CONSUME, not inventory.
+        if (targetTrays.consume.Count >= MaxSlots) return;
 
         int itemId = inventory[fromSlotIndex];
         inventory.RemoveAt(fromSlotIndex);
-        targetTrays.inventory.Add(itemId);
+        targetTrays.consume.Add(itemId);
 
-        Debug.Log("[PlayerItemTrays] Trade seat " + seatIndex1Based + " -> netId " + targetNetId + " item " + itemId);
+        Debug.Log("[PlayerItemTrays] Trade seat " + seatIndex1Based +
+                  " -> netId " + targetNetId +
+                  " item " + itemId + " (into target.consume)");
     }
 
     [Server]
     private NetworkIdentity FindNetIdentity(uint netId)
     {
         if (netId == 0) return null;
-        var all = FindObjectsOfType<NetworkIdentity>();
+        var all = Object.FindObjectsOfType<NetworkIdentity>();
         for (int i = 0; i < all.Length; i++)
             if (all[i].netId == netId) return all[i];
         return null;
     }
 
-    // -------- RPCs --------
+    // -------- RPCs & effect spawning --------
 
     [ClientRpc]
     private void RpcClearConsumeVisuals()
     {
+        // Clear tracked consume visuals
         ClearVisuals(conVisuals);
+
+        // Extra safety: also destroy ANY children under consume anchors
+        // in case something slipped past our conVisuals list on this client.
+        if (conAnchors != null)
+        {
+            for (int i = 0; i < conAnchors.Length; i++)
+            {
+                var anchor = conAnchors[i];
+                if (anchor == null) continue;
+
+                for (int c = anchor.childCount - 1; c >= 0; c--)
+                {
+                    var child = anchor.GetChild(c);
+                    if (child != null)
+                        Destroy(child.gameObject);
+                }
+            }
+        }
+    }
+
+    // When this player consumes, the server sends the itemIds we drank.
+    // We look them up in ItemDeck, group by itemId and spawn one effect prefab
+    // per type, with lifetime equal to sum of effectLifetime values.
+    [TargetRpc]
+    private void Target_ApplyEffects(NetworkConnectionToClient conn, int[] itemIds)
+    {
+        if (itemIds == null || itemIds.Length == 0) return;
+
+        // Find this player's camera.
+        Camera cam = null;
+        var lcc = GetComponent<LocalCameraController>();
+        if (lcc != null && lcc.playerCamera != null)
+            cam = lcc.playerCamera;
+        if (cam == null)
+            cam = GetComponentInChildren<Camera>(true);
+        if (cam == null)
+        {
+            Debug.LogWarning("[PlayerItemTrays] No camera found to apply effects.");
+            return;
+        }
+
+        var deck = Object.FindObjectOfType<ItemDeck>();
+        if (deck == null)
+        {
+            Debug.LogError("[PlayerItemTrays] No ItemDeck on client; cannot resolve effects.");
+            return;
+        }
+
+        // Aggregate by itemId.
+        Dictionary<int, EffectAggregate> agg = new Dictionary<int, EffectAggregate>(16);
+        for (int i = 0; i < itemIds.Length; i++)
+        {
+            int id = itemIds[i];
+            var def = deck.Get(id);
+            if (def == null || def.effectPrefab == null) continue;
+
+            EffectAggregate ea;
+            if (!agg.TryGetValue(id, out ea))
+            {
+                ea.itemId = id;
+                ea.totalLifetime = Mathf.Max(0f, def.effectLifetime);
+                ea.displayName = string.IsNullOrEmpty(def.itemName)
+                    ? def.effectPrefab.name
+                    : def.itemName;
+                ea.effectPrefab = def.effectPrefab;
+                agg[id] = ea;
+            }
+            else
+            {
+                ea.totalLifetime += Mathf.Max(0f, def.effectLifetime);
+                agg[id] = ea;
+            }
+        }
+
+        foreach (var kv in agg)
+        {
+            var e = kv.Value;
+            if (e.effectPrefab == null) continue;
+
+            GameObject go = Object.Instantiate(e.effectPrefab);
+            go.name = "Effect_" + e.displayName;
+            go.transform.SetParent(cam.transform, false);
+
+            float lifetime = e.totalLifetime > 0f ? e.totalLifetime : 5f;
+
+            // If the effect prefab has a PsychoactiveEffectBase, use its BeginNamed API.
+            var effectComp = go.GetComponent<PsychoactiveEffectBase>();
+            if (effectComp == null)
+                effectComp = go.GetComponentInChildren<PsychoactiveEffectBase>();
+
+            if (effectComp != null)
+            {
+                // Intensity fixed to 1 for now.
+                effectComp.BeginNamed(cam, lifetime, 1f, e.displayName);
+            }
+            else
+            {
+                // No psychoactive script, just destroy after lifetime.
+                if (lifetime > 0f)
+                    Object.Destroy(go, lifetime);
+            }
+        }
+    }
+
+    private struct EffectAggregate
+    {
+        public int itemId;
+        public float totalLifetime;
+        public string displayName;
+        public GameObject effectPrefab;
     }
 
     // -------- Visual helpers --------
@@ -296,7 +371,7 @@ public class PlayerItemTrays : NetworkBehaviour
     private GameObject SpawnItemVisual(int itemId, Transform anchor, bool isInventory, int slotIndex)
     {
         GameObject prefab = null;
-        var deck = FindObjectOfType<ItemDeck>();
+        var deck = Object.FindObjectOfType<ItemDeck>();
         if (deck != null)
         {
             var entry = deck.Get(itemId);
@@ -312,9 +387,9 @@ public class PlayerItemTrays : NetworkBehaviour
             var r = go.GetComponent<Renderer>();
             if (r != null)
             {
-                var m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-                if (m.HasProperty("_BaseColor"))
-                    m.SetColor("_BaseColor", isInventory ? new Color(0.6f, 0.8f, 1f) : new Color(1f, 0.8f, 0.4f));
+                var m = new Material(r.sharedMaterial);
+                if (m.HasProperty("_Color"))
+                    m.SetColor("_Color", isInventory ? new Color(0.6f, 0.8f, 1f) : new Color(1f, 0.8f, 0.4f));
                 r.material = m;
             }
         }
@@ -349,34 +424,51 @@ public class PlayerItemTrays : NetworkBehaviour
     {
         if (anchors != null && anchors.Length >= expected) return;
 
-        // Try to rebind from service once more
-        var svc = ItemTrayService.Instance;
-        if (svc != null && seatIndex1Based > 0)
-        {
-            Transform[] inv, con;
-            if (svc.TryGetAnchors(seatIndex1Based, out inv, out con))
-            {
-                if (forInventory) anchors = inv; else anchors = con;
-                return;
-            }
-        }
+        // Ask service again (maybe seat changed)
+        RebindAnchors();
 
-        // Otherwise keep current (fallback may already be in place).
         if (anchors == null || anchors.Length < expected)
         {
-            int n = Mathf.Max(expected, 1);
-            var root = new GameObject(forInventory ? "LocalInvAnchors" : "LocalConAnchors").transform;
+            var root = new GameObject(forInventory ? "InvAnchors" : "UseAnchors").transform;
             root.SetParent(transform, false);
-            anchors = new Transform[n];
-            for (int i = 0; i < n; i++)
+            anchors = new Transform[expected];
+            for (int i = 0; i < expected; i++)
             {
-                var a = new GameObject((forInventory ? "Inv" : "Con") + "_Slot_" + i).transform;
+                var a = new GameObject((forInventory ? "Inv" : "Use") + "_Slot_" + i).transform;
                 a.SetParent(root, false);
-                a.localPosition = new Vector3(i * 0.25f, forInventory ? 0.0f : -0.25f, 0.0f);
+                a.localPosition = new Vector3(i * 0.25f, 0f, 0f);
                 anchors[i] = a;
             }
-            if (debugLogs)
-                Debug.Log("[PlayerItemTrays] Seat " + seatIndex1Based + " created LOCAL anchors (no service).");
+        }
+    }
+
+    // -------- Extra safety: client-side desync guard --------
+
+    private void Update()
+    {
+        if (!isClient) return;
+
+        // If the SyncList says no items in consume, but we still have visuals,
+        // nuke them. This catches any weird ordering/late RPC issues.
+        if (consume.Count == 0 && conVisuals.Count > 0)
+        {
+            ClearVisuals(conVisuals);
+
+            if (conAnchors != null)
+            {
+                for (int i = 0; i < conAnchors.Length; i++)
+                {
+                    var anchor = conAnchors[i];
+                    if (anchor == null) continue;
+
+                    for (int c = anchor.childCount - 1; c >= 0; c--)
+                    {
+                        var child = anchor.GetChild(c);
+                        if (child != null)
+                            Destroy(child.gameObject);
+                    }
+                }
+            }
         }
     }
 }

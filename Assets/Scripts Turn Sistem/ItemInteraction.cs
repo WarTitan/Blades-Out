@@ -1,137 +1,229 @@
 // FILE: ItemInteraction.cs
 // FULL FILE (ASCII only)
 //
-// Purpose:
-// - Client-side helper to give an inventory item to another player.
-// - Calls PlayerItemTrays.Cmd_GiveItemToPlayer(uint targetNetId, int fromSlotIndex)
-//   with the correct argument order and types.
+// Local-player component for selecting an inventory item with the crosshair and
+// gifting it to another player by clicking them. This version NEVER calls any
+// [Server] methods locally. All gating/validation happens on the server in
+// PlayerItemTrays.Cmd_GiveItemToPlayer.
 //
-// Usage patterns provided:
-//
-// 1) Crosshair targeting:
-//    - Call GiveFromInventorySlotViaCrosshair(int fromSlotIndex).
-//      It raycasts from the local player's camera center to find a PlayerItemTrays
-//      on another player and uses that player's NetworkIdentity.netId.
-//
-// 2) Seat targeting:
-//    - Call GiveFromInventorySlotToSeat(int seatIndex1Based, int fromSlotIndex).
-//
-// Requirements:
-// - This component should live on the LOCAL player's object (has authority).
-// - The same GameObject should have PlayerItemTrays and a Camera reference
-//   (or a LocalCameraController that exposes playerCamera).
-// - PlayerItemTrays.cs must include Cmd_GiveItemToPlayer(uint, int) as provided.
+// Flow:
+//   - Left click #1: raycast hits your own inventory item (ItemInstance.owner == this trays, isInventorySlot==true)
+//                    -> remember its slot index.
+//   - Left click #2: raycast (RaycastAll) finds closest PlayerItemTrays that is not yours
+//                    -> send Cmd_GiveItemToPlayer(target.netId, selectedSlot)
+//   - Right click / Esc: cancel selection.
 //
 // Notes:
-// - No automatic input here; call these public methods from your UI or hotkeys.
-// - All arguments are range-checked. If anything is invalid, the call is ignored.
+//   - Uses camera-forward ray from the active player camera (crosshair).
+//   - rayMask should include the layers for items and for the other players' colliders.
+//   - UI clicks are ignored if an EventSystem exists.
+//   - All permission/turn checks are performed on the SERVER in Cmd_GiveItemToPlayer.
+//
+// Requirements:
+//   - PlayerItemTrays on each player; it spawns ItemInstance on visuals.
+//   - NetworkIdentity on the same GameObject as this script.
 
 using UnityEngine;
 using Mirror;
+using UnityEngine.EventSystems;
 
 [AddComponentMenu("Gameplay/Items/Item Interaction")]
 public class ItemInteraction : NetworkBehaviour
 {
-    [Header("References")]
-    public PlayerItemTrays trays;         // owner trays (on this player)
-    public Camera playerCamera;           // local camera for crosshair ray
-    public LayerMask rayMask = ~0;        // optional filter for raycast
+    [Header("Refs (auto if left empty)")]
+    public PlayerItemTrays trays;
+    public Camera playerCamera;
 
-    [Header("Raycast")]
+    [Header("Ray")]
+    public LayerMask rayMask = ~0;
     public float rayDistance = 100f;
 
-    private void Awake()
+    [Header("Debug")]
+    public bool drawDebugRay = true;
+
+    // current selected inventory slot on this local player (-1 means none)
+    private int selectedInvSlot = -1;
+
+    public override void OnStartLocalPlayer()
     {
         if (trays == null) trays = GetComponent<PlayerItemTrays>();
+        ResolveCamera();
+        Debug.Log("[ItemInteraction] Local ready. cam=" + (playerCamera ? playerCamera.name : "null") + " mask=" + rayMask.value);
+    }
+
+    private void ResolveCamera()
+    {
+        if (playerCamera != null) return;
+
+        // If you have a LocalCameraController that exposes playerCamera, prefer it
+        var lcc = GetComponent<LocalCameraController>();
+        if (lcc != null && lcc.playerCamera != null) playerCamera = lcc.playerCamera;
+
+        if (playerCamera == null && Camera.main != null) playerCamera = Camera.main;
 
         if (playerCamera == null)
         {
-            // Try common patterns
-            var lcc = GetComponent<LocalCameraController>();
-            if (lcc != null && lcc.playerCamera != null) playerCamera = lcc.playerCamera;
-            if (playerCamera == null && Camera.main != null) playerCamera = Camera.main;
-            if (playerCamera == null)
+            var cams = GameObject.FindObjectsOfType<Camera>();
+            for (int i = 0; i < cams.Length; i++)
             {
-                var anyCam = GetComponentInChildren<Camera>(true);
-                if (anyCam != null) playerCamera = anyCam;
+                if (cams[i].enabled && cams[i].gameObject.activeInHierarchy) { playerCamera = cams[i]; break; }
             }
         }
     }
 
-    // -------- Public API: call these from UI/hotkeys --------
-
-    // Give an item from our INVENTORY slot to the player under the crosshair.
-    public void GiveFromInventorySlotViaCrosshair(int fromSlotIndex)
+    private void Update()
     {
         if (!isLocalPlayer) return;
-        if (trays == null) return;
 
-        if (!IsValidInventorySlot(fromSlotIndex)) return;
+        // ignore UI clicks if using a cursor at times
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
-        var targetId = RaycastTargetIdentity();
-        if (targetId == null) return;
-        if (targetId == trays.GetComponent<NetworkIdentity>()) return; // cannot give to self
+        if (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1))
+        {
+            ClearSelection("cancel");
+            return;
+        }
 
-        // Correct arg order and types:
-        //   (uint targetNetId, int fromSlotIndex)
-        trays.Cmd_GiveItemToPlayer(targetId.netId, fromSlotIndex);
+        if (Input.GetMouseButtonDown(0))
+        {
+            if (selectedInvSlot < 0)
+            {
+                TrySelectOwnInventoryItemUnderCrosshair();
+            }
+            else
+            {
+                TryGiftToPlayerUnderCrosshair();
+            }
+        }
+
+        if (drawDebugRay && playerCamera != null)
+        {
+            Debug.DrawRay(playerCamera.transform.position, playerCamera.transform.forward * 2.0f, Color.cyan);
+        }
     }
 
-    // Give an item from our INVENTORY slot to the player seated at the given seat.
-    public void GiveFromInventorySlotToSeat(int seatIndex1Based, int fromSlotIndex)
+    private void TrySelectOwnInventoryItemUnderCrosshair()
     {
-        if (!isLocalPlayer) return;
-        if (trays == null) return;
+        if (trays == null) { Debug.LogWarning("[ItemInteraction] No PlayerItemTrays on player."); return; }
 
-        if (seatIndex1Based <= 0) return;
-        if (!IsValidInventorySlot(fromSlotIndex)) return;
-
-        var targetTrays = FindTraysBySeat(seatIndex1Based);
-        if (targetTrays == null) return;
-
-        var myId = trays.GetComponent<NetworkIdentity>();
-        var targetId = targetTrays.GetComponent<NetworkIdentity>();
-        if (targetId == null) return;
-        if (myId != null && targetId == myId) return; // cannot give to self
-
-        trays.Cmd_GiveItemToPlayer(targetId.netId, fromSlotIndex);
-    }
-
-    // -------- Helpers --------
-
-    private bool IsValidInventorySlot(int index)
-    {
-        if (index < 0) return false;
-        if (trays.inventory == null) return false;
-        if (index >= trays.inventory.Count) return false;
-        return true;
-    }
-
-    private NetworkIdentity RaycastTargetIdentity()
-    {
-        if (playerCamera == null) return null;
-
-        Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        Ray ray = MakeCenterRay();
         RaycastHit hit;
-        if (Physics.Raycast(ray, out hit, rayDistance, rayMask, QueryTriggerInteraction.Ignore))
+        if (Physics.Raycast(ray, out hit, rayDistance, rayMask, QueryTriggerInteraction.Collide))
         {
-            var traysHit = hit.collider.GetComponentInParent<PlayerItemTrays>();
-            if (traysHit != null)
+            var inst = hit.collider.GetComponentInParent<ItemInstance>();
+            if (inst == null)
             {
-                return traysHit.GetComponent<NetworkIdentity>();
+                Debug.Log("[ItemInteraction] First click hit " + hit.collider.name + " but no ItemInstance.");
+                return;
             }
+
+            // Must be YOUR item and in INVENTORY, not consume
+            if (!inst.isInventorySlot || inst.owner == null || inst.owner != trays)
+            {
+                Debug.Log("[ItemInteraction] Item is not in your INVENTORY (owner mismatch or consume side).");
+                return;
+            }
+
+            if (inst.slotIndex < 0 || inst.slotIndex >= trays.inventory.Count)
+            {
+                Debug.LogWarning("[ItemInteraction] Bad slotIndex on item: " + inst.slotIndex);
+                return;
+            }
+
+            selectedInvSlot = inst.slotIndex;
+            Debug.Log("[ItemInteraction] Selected inventory slot " + selectedInvSlot + " (itemId " + inst.itemId + ").");
         }
-        return null;
+        else
+        {
+            Debug.Log("[ItemInteraction] First click raycast hit nothing.");
+        }
     }
 
-    private PlayerItemTrays FindTraysBySeat(int seatIndex1Based)
+    private void TryGiftToPlayerUnderCrosshair()
     {
-        var all = GameObject.FindObjectsOfType<PlayerItemTrays>();
-        for (int i = 0; i < all.Length; i++)
+        if (trays == null)
         {
-            if (all[i] != null && all[i].seatIndex1Based == seatIndex1Based)
-                return all[i];
+            Debug.LogWarning("[ItemInteraction] No PlayerItemTrays on local player.");
+            ClearSelection("missing-trays");
+            return;
         }
-        return null;
+
+        if (selectedInvSlot < 0 || selectedInvSlot >= trays.inventory.Count)
+        {
+            Debug.LogWarning("[ItemInteraction] Selected slot invalid now (maybe item moved).");
+            ClearSelection("invalid-slot");
+            return;
+        }
+
+        Ray ray = MakeCenterRay();
+        RaycastHit[] hits = Physics.RaycastAll(ray, rayDistance, rayMask, QueryTriggerInteraction.Collide);
+
+        if (hits == null || hits.Length == 0)
+        {
+            Debug.Log("[ItemInteraction] Second click raycast hit nothing.");
+            return;
+        }
+
+        PlayerItemTrays targetTrays = null;
+        RaycastHit chosen = hits[0];
+        float best = float.MaxValue;
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            // Find the closest transform that has PlayerItemTrays in its parents and is not me
+            var t = hits[i].collider.GetComponentInParent<PlayerItemTrays>();
+            if (t != null && t != trays)
+            {
+                float d = hits[i].distance;
+                if (d < best) { best = d; chosen = hits[i]; targetTrays = t; }
+            }
+        }
+
+        if (targetTrays == null)
+        {
+            Debug.Log("[ItemInteraction] No PlayerItemTrays in ray hits (closest was " + hits[0].collider.name + ").");
+            ClearSelection("bad-target");
+            return;
+        }
+
+        var targetId = targetTrays.GetComponent<NetworkIdentity>();
+        if (targetId == null)
+        {
+            Debug.LogWarning("[ItemInteraction] Target has no NetworkIdentity.");
+            ClearSelection("no-netid");
+            return;
+        }
+
+        // Send to SERVER. Server will validate (turn, memory, capacity) inside Cmd_GiveItemToPlayer.
+        trays.Cmd_GiveItemToPlayer(targetId.netId, selectedInvSlot);
+        Debug.Log("[ItemInteraction] Requested gift: fromSlot " + selectedInvSlot + " -> netId " + targetId.netId +
+                  " (hit " + chosen.collider.name + ")");
+
+        ClearSelection("sent");
+    }
+
+    private Ray MakeCenterRay()
+    {
+        ResolveCamera();
+        Vector3 origin;
+        Vector3 dir;
+        if (playerCamera != null)
+        {
+            origin = playerCamera.transform.position;
+            dir = playerCamera.transform.forward;
+        }
+        else
+        {
+            origin = transform.position + Vector3.up * 1.6f;
+            dir = transform.forward;
+        }
+        return new Ray(origin, dir);
+    }
+
+    private void ClearSelection(string why)
+    {
+        if (selectedInvSlot >= 0)
+            Debug.Log("[ItemInteraction] Cleared selection (" + why + ").");
+        selectedInvSlot = -1;
     }
 }

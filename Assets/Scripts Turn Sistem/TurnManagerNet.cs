@@ -1,8 +1,20 @@
 // FILE: TurnManagerNet.cs
 // FULL FILE (ASCII only)
 //
-// Robust seeding + clear logs. Seats are assigned elsewhere.
-// Flow: Consume -> Memory -> Trade (timer) -> DrawAfterTurn.
+// Trade window removed: after memory ends, the current player can trade indefinitely
+// until they manually end their turn via Server_EndCurrentTurnBy(requesterNetId).
+//
+// Flow per seated, non-eliminated player:
+//   1) Auto-consume their CONSUME list
+//   2) Play memory minigame (strike on fail, eliminate at 3)
+//   3) Free trading period (no timer) -> Wait until player ends turn
+//   4) Draw after turn
+//
+// Notes:
+// - CanTradeNow() now ONLY checks: phase==Turn, who.netId==currentTurnNetId, !memoryActive, not eliminated.
+// - HUD fields like turnEndTime remain but are not used (set to 0).
+// - Seeding still happens: initialDraw at cycle start (if empty), drawAfterTurn at step 4.
+// - Target_StartMemoryGame sends seat index so client can spawn board at the correct seat.
 
 using UnityEngine;
 using Mirror;
@@ -23,9 +35,10 @@ public class TurnManagerNet : NetworkBehaviour
     public int initialDraw = 4;
     public int drawAfterTurn = 2;
 
-    [Header("Timing (seconds)")]
+    [Header("Timing")]
     public float memorySeconds = 45f;
-    public float turnSeconds = 30f;
+    // trade timer removed; keeping the field for compatibility but unused
+    public float turnSeconds = 0f;
 
     [Header("Gating")]
     public bool ignoreLobbyForTesting = false;
@@ -35,7 +48,7 @@ public class TurnManagerNet : NetworkBehaviour
     [SyncVar] public Phase phase = Phase.Waiting;
     [SyncVar] public int currentSeat = 0;
     [SyncVar] public uint currentTurnNetId = 0;
-    [SyncVar] public double turnEndTime = 0;
+    [SyncVar] public double turnEndTime = 0; // unused now (kept for HUD compatibility)
 
     // Memory HUD sync
     [SyncVar] public bool memoryActive = false;
@@ -43,7 +56,6 @@ public class TurnManagerNet : NetworkBehaviour
 
     // Internal
     private readonly HashSet<uint> seededThisCycle = new HashSet<uint>();
-    private bool turnForceEnd = false;
     private bool loopStarted = false;
     private float nextWaitLog = 0f;
 
@@ -51,6 +63,9 @@ public class TurnManagerNet : NetworkBehaviour
     private int memoryToken = 0;
     private uint memoryPlayerNetId = 0;
     private bool memoryResultArrived = false;
+
+    // Manual end-turn flag
+    private bool turnForceEnd = false;
 
     private void Awake()
     {
@@ -85,6 +100,7 @@ public class TurnManagerNet : NetworkBehaviour
         }
     }
 
+    // Called by hotkey/UI on the current player to finish their turn
     [Server]
     public void Server_EndCurrentTurnBy(uint requesterNetId)
     {
@@ -94,16 +110,17 @@ public class TurnManagerNet : NetworkBehaviour
         turnForceEnd = true;
     }
 
+    // Allow trading when it is THIS player's turn, memory is not running, and the player is not eliminated.
     [Server]
     public bool CanTradeNow(NetworkIdentity who)
     {
         if (phase != Phase.Turn) return false;
         if (who == null) return false;
         if (who.netId != currentTurnNetId) return false;
-        if (NetworkTime.time >= turnEndTime) return false;
         if (memoryActive) return false;
         var e = MemoryStrikeTracker.FindForNetId(who.netId);
         if (e != null && e.eliminated) return false;
+        // No time gating anymore
         return true;
     }
 
@@ -183,6 +200,7 @@ public class TurnManagerNet : NetworkBehaviour
                     if (id != null)
                         yield return Server_PlayMemory(id, p.seatIndex1Based);
 
+                    // Player might be eliminated by strikes
                     if (IsEliminated(currentTurnNetId))
                     {
                         Debug.Log("[TurnManagerNet] Eliminated after memory. Skipping trade.");
@@ -190,10 +208,11 @@ public class TurnManagerNet : NetworkBehaviour
                         continue;
                     }
 
-                    // 3) Trading window
+                    // 3) Trading period (NO TIMER) — wait for manual end
                     turnForceEnd = false;
-                    turnEndTime = NetworkTime.time + turnSeconds;
-                    while (NetworkTime.time < turnEndTime && !turnForceEnd) yield return null;
+                    turnEndTime = 0; // not used anymore
+                    Debug.Log("[TurnManagerNet] Trading open for Seat " + p.seatIndex1Based + " (manual end required).");
+                    while (!turnForceEnd) yield return null;
 
                     // 4) Draw after turn
                     p.Server_AddSeveralToInventoryClamped(drawAfterTurn);

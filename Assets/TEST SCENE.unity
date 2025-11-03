@@ -2086,21 +2086,19 @@ MonoBehaviour:
   - itemName: Vodka
     visualPrefab: {fileID: 8628332330970385836, guid: 93d1b796a08e017429fe6a5fee7ffc0f, type: 3}
     effectPrefab: {fileID: 781037269146559980, guid: 9ae91ec52406859408ebe416130d17f3, type: 3}
-    weight: 1
+    effectLifetime: 10
   - itemName: Speed
     visualPrefab: {fileID: 4061434974024459310, guid: 4e0ce4c9a1634c649a413de8870e9e4f, type: 3}
     effectPrefab: {fileID: 675223683943468972, guid: 6bc219c16e15cae409c409a11b7935da, type: 3}
-    weight: 1
+    effectLifetime: 10
   - itemName: Lsd
     visualPrefab: {fileID: 8455480575854202021, guid: 0c298bc4a8ec1e04fa853b756ff2f848, type: 3}
     effectPrefab: {fileID: 6989959791228492703, guid: f902d7b1997db0345b09b38127e5cdb5, type: 3}
-    weight: 1
+    effectLifetime: 10
   - itemName: Keramin
     visualPrefab: {fileID: 6570823217832225423, guid: 922a570f0b838804e9f8969838115bf8, type: 3}
     effectPrefab: {fileID: 1480074593121182732, guid: 694d22c95cdbabe48a6ee3ef90df8cdc, type: 3}
-    weight: 1
-  autoFillIfEmptyInPlayMode: 0
-  autoFillCount: 20
+    effectLifetime: 10
 --- !u!4 &357020190
 Transform:
   m_ObjectHideFlags: 0
