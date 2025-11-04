@@ -4884,8 +4884,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LocalCameraController
   playerBody: {fileID: 4597333103463066336}
   playerCamera: {fileID: 5127393552435462056}
-  sensitivityX: 6
-  sensitivityY: 6
+  sensitivityX: 4
+  sensitivityY: 4
   invertY: 0
   minPitch: -80
   maxPitch: 80
@@ -4994,6 +4994,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   rayDistance: 100
+  drawDebugRay: 1
 --- !u!114 &4708702899404729097
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5039,7 +5040,8 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  settleFrames: 6
+  waitForLobbyExit: 1
+  settleFramesAfterLobby: 8
   retrySeconds: 0.25
   verboseLogs: 1
 --- !u!4 &4597333103463066336 stripped
