@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: b7267878df4c16c4da3587707c03a15b
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 112000000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 326585
+  packageName: 20X Distortion Pro
+  packageVersion: 1.1
+  assetPath: Assets/20X Distortion Pro/Example Scenes/ExampleSceneDark/LightingData.asset
+  uploadId: 804332

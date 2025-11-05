@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 320bee77863b0794790d77eef3fd615a
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  preprocessorOverride: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 326585
+  packageName: 20X Distortion Pro
+  packageVersion: 1.1
+  assetPath: Assets/20X Distortion Pro/Resources/Shaders/FluidWorleyDisplacement.shader
+  uploadId: 804332

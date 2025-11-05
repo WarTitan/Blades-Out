@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: b345e032a28bbfa48a6b8682be043d89
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 326585
+  packageName: 20X Distortion Pro
+  packageVersion: 1.1
+  assetPath: Assets/20X Distortion Pro/Scripts/Volumes/WorleyDisplacement.cs
+  uploadId: 804332

@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 6e6654f3f34813647807eb18d6e9d9c7
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 326585
+  packageName: 20X Distortion Pro
+  packageVersion: 1.1
+  assetPath: Assets/20X Distortion Pro/Scripts/RenderFeatures/TiledDriftDistortion_20X.cs
+  uploadId: 804332

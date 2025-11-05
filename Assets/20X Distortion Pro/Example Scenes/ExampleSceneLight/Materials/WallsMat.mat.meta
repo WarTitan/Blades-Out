@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: b4a48a7ce33f7e14c86f00dd50373a91
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 326585
+  packageName: 20X Distortion Pro
+  packageVersion: 1.1
+  assetPath: Assets/20X Distortion Pro/Example Scenes/ExampleSceneLight/Materials/WallsMat.mat
+  uploadId: 804332

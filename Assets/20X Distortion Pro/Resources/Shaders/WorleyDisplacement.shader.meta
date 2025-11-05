@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 45b355cea82b74e4c848973b47e2cd81
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  preprocessorOverride: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 326585
+  packageName: 20X Distortion Pro
+  packageVersion: 1.1
+  assetPath: Assets/20X Distortion Pro/Resources/Shaders/WorleyDisplacement.shader
+  uploadId: 804332

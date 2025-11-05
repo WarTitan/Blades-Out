@@ -2,7 +2,8 @@
 // FULL FILE (ASCII only)
 //
 // Scene singleton holding all item definitions.
-// Each entry defines a name, a visual prefab (tray model), and an effect prefab (VFX + optional scripts).
+// Each entry defines a name, a visual prefab (tray model),
+// an effect prefab (VFX + scripts), a lifetime, and an intensity.
 //
 // Put this on a scene object and fill 'items' in the inspector.
 
@@ -15,16 +16,28 @@ public class ItemDeck : MonoBehaviour
     [System.Serializable]
     public class ItemEntry
     {
+        [Header("Info")]
         public string itemName;
-        public GameObject visualPrefab;              // 3D object to show in trays
-        public GameObject effectPrefab;              // Effect prefab to spawn on consume (client-side)
-        public float effectLifetime = 0f;            // If > 0, destroys effect after this many seconds
+
+        [Header("Visual on tray")]
+        public GameObject visualPrefab;
+
+        [Header("Effect")]
+        [Tooltip("Prefab spawned when this item is consumed. Can contain PsychoactiveEffectBase or IItemEffect.")]
+        public GameObject effectPrefab;
+
+        [Tooltip("How long the effect should last (seconds).")]
+        public float effectLifetime = 5f;
+
+        [Tooltip("How strong the effect is. For Flow Mosh this maps to Blend (0..1).")]
+        [Range(0f, 1f)]
+        public float effectIntensity = 1f;
     }
 
-    [Header("Deck")]
+    [Header("All items in the game")]
     public List<ItemEntry> items = new List<ItemEntry>();
 
-    public int Count => items != null ? items.Count : 0;
+    public int Count => (items != null ? items.Count : 0);
 
     public ItemEntry Get(int id)
     {

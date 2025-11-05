@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 8649ae6ec4502484e9b351f262c63076
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  preprocessorOverride: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 326585
+  packageName: 20X Distortion Pro
+  packageVersion: 1.1
+  assetPath: Assets/20X Distortion Pro/Resources/Shaders/RadialSliceShifter.shader
+  uploadId: 804332

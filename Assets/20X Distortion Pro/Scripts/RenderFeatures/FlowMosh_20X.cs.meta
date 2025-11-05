@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 661e3e9afd4e8f84aa491a538bc3b176
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 326585
+  packageName: 20X Distortion Pro
+  packageVersion: 1.1
+  assetPath: Assets/20X Distortion Pro/Scripts/RenderFeatures/FlowMosh_20X.cs
+  uploadId: 804332

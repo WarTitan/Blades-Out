@@ -1,5 +1,200 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-9072920405389888811
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e6654f3f34813647807eb18d6e9d9c7, type: 3}
+  m_Name: TiledDriftDistortion_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.TiledDriftDistortion_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: b1d0a9ed6f6b9b443a86b2a67cd444c1, type: 3}
+  Event: 550
+--- !u!114 &-8128338850801564499
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b532af9c1fc726242bafcae55c97944a, type: 3}
+  m_Name: FracturedNoiseDisplacement_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.FracturedNoiseDisplacement_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: 9458872bbaebc2c49811eee186a53b6e, type: 3}
+  Event: 550
+--- !u!114 &-7961466382962655086
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc1d962deaf6f4443b1dccaab384ca86, type: 3}
+  m_Name: TwistShrinkDistortion_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.TwistShrinkDistortion_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: 11caaae9c5ceb0244928956b803735e0, type: 3}
+  Event: 550
+--- !u!114 &-7586831799370962936
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca5382990b109a44292a41f95a0fd3a5, type: 3}
+  m_Name: PrismaticDisplacement_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.PrismaticDisplacement_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: 0059b0b8f09e5bc4e82a4995b0a2fd66, type: 3}
+  Event: 550
+--- !u!114 &-5140074671994776949
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e93093cb13e5d5045962a74b98627784, type: 3}
+  m_Name: FluidWorleyDisplacement_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.FluidWorleyDisplacement_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: 320bee77863b0794790d77eef3fd615a, type: 3}
+  Event: 550
+--- !u!114 &-5125152717909671997
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0c7fdc342731b64bbfe80eb82db51aa, type: 3}
+  m_Name: DrunkBlitFeature
+  m_EditorClassIdentifier: Assembly-CSharp::DrunkBlitFeature
+  m_Active: 1
+  passEvent: 600
+--- !u!114 &-5043747586611156138
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9919f23f68a9e24c903e2d70c9de0fb, type: 3}
+  m_Name: CircularRippleWarp_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.CircularRippleWarp_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: 281c764dad2434f4aafcbf52ce3815f3, type: 3}
+  Event: 550
+--- !u!114 &-4238757735141134391
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4f78d601cd557945ab1e1bff6f14d74, type: 3}
+  m_Name: FluidNoiseDistortion_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.FluidNoiseDistortion_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: 17cde08e80b38164688f56bba551e2d9, type: 3}
+  Event: 550
+--- !u!114 &-4224298805156530733
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08f855aaf251d0042be531a192e23fba, type: 3}
+  m_Name: VortexSwirlDisplacement_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.VortexSwirlDisplacement_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: 88cd2ee93f166d84fa4fd3c2c3044fdd, type: 3}
+  Event: 550
+--- !u!114 &-2372985443199761272
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 661e3e9afd4e8f84aa491a538bc3b176, type: 3}
+  m_Name: FlowMosh_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.FlowMosh_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: 28390cb1300dcdc4ab02e08251026e12, type: 3}
+  material: {fileID: 0}
+  Event: 550
+--- !u!114 &-2333772537638690937
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9565ce5a10e1a904bba7a90f0e8a98b0, type: 3}
+  m_Name: RadialSliceShifter_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.RadialSliceShifter_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: 8649ae6ec4502484e9b351f262c63076, type: 3}
+  Event: 550
+--- !u!114 &-1807492168312390032
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 147e7389eb4382248823716c10f08fb1, type: 3}
+  m_Name: SpeedWarp_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.SpeedWarp_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: f10b8b44f0c011c47927b64e9c9f206b, type: 3}
+  Event: 550
+--- !u!114 &-1270117584503248781
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b043099953a981445aea5df758d3e0da, type: 3}
+  m_Name: SpiralSliceKaleidoscope_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.SpiralSliceKaleidoscope_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: 85b99a5f6fa04a841b4c25997569c577, type: 3}
+  Event: 550
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13,32 +208,49 @@ MonoBehaviour:
   m_Name: PC_Renderer
   m_EditorClassIdentifier: 
   debugShaders:
-    debugReplacementPS: {fileID: 4800000, guid: cf852408f2e174538bcd9b7fda1c5ae7,
-      type: 3}
+    debugReplacementPS: {fileID: 4800000, guid: cf852408f2e174538bcd9b7fda1c5ae7, type: 3}
     hdrDebugViewPS: {fileID: 4800000, guid: 573620ae32aec764abd4d728906d2587, type: 3}
-    probeVolumeSamplingDebugComputeShader: {fileID: 7200000, guid: 53626a513ea68ce47b59dc1299fe3959,
-      type: 3}
+    probeVolumeSamplingDebugComputeShader: {fileID: 7200000, guid: 53626a513ea68ce47b59dc1299fe3959, type: 3}
   probeVolumeResources:
-    probeVolumeDebugShader: {fileID: 4800000, guid: e5c6678ed2aaa91408dd3df699057aae,
-      type: 3}
-    probeVolumeFragmentationDebugShader: {fileID: 4800000, guid: 03cfc4915c15d504a9ed85ecc404e607,
-      type: 3}
-    probeVolumeOffsetDebugShader: {fileID: 4800000, guid: 53a11f4ebaebf4049b3638ef78dc9664,
-      type: 3}
-    probeVolumeSamplingDebugShader: {fileID: 4800000, guid: 8f96cd657dc40064aa21efcc7e50a2e7,
-      type: 3}
-    probeSamplingDebugMesh: {fileID: -3555484719484374845, guid: 57d7c4c16e2765b47a4d2069b311bffe,
-      type: 3}
-    probeSamplingDebugTexture: {fileID: 2800000, guid: 24ec0e140fb444a44ab96ee80844e18e,
-      type: 3}
-    probeVolumeBlendStatesCS: {fileID: 7200000, guid: b9a23f869c4fd45f19c5ada54dd82176,
-      type: 3}
+    probeVolumeDebugShader: {fileID: 4800000, guid: e5c6678ed2aaa91408dd3df699057aae, type: 3}
+    probeVolumeFragmentationDebugShader: {fileID: 4800000, guid: 03cfc4915c15d504a9ed85ecc404e607, type: 3}
+    probeVolumeOffsetDebugShader: {fileID: 4800000, guid: 53a11f4ebaebf4049b3638ef78dc9664, type: 3}
+    probeVolumeSamplingDebugShader: {fileID: 4800000, guid: 8f96cd657dc40064aa21efcc7e50a2e7, type: 3}
+    probeSamplingDebugMesh: {fileID: -3555484719484374845, guid: 57d7c4c16e2765b47a4d2069b311bffe, type: 3}
+    probeSamplingDebugTexture: {fileID: 2800000, guid: 24ec0e140fb444a44ab96ee80844e18e, type: 3}
+    probeVolumeBlendStatesCS: {fileID: 7200000, guid: b9a23f869c4fd45f19c5ada54dd82176, type: 3}
   m_RendererFeatures:
   - {fileID: 7833122117494664109}
-  m_RendererFeatureMap: ad6b866f10d7b46c
+  - {fileID: -5125152717909671997}
+  - {fileID: 793492591353713609}
+  - {fileID: -2372985443199761272}
+  - {fileID: -4224298805156530733}
+  - {fileID: -8128338850801564499}
+  - {fileID: 1288935750008755215}
+  - {fileID: -2333772537638690937}
+  - {fileID: -1807492168312390032}
+  - {fileID: 1348081295162135421}
+  - {fileID: 2939004264010918345}
+  - {fileID: -7961466382962655086}
+  - {fileID: 8865168150517341740}
+  - {fileID: -5140074671994776949}
+  - {fileID: 2030801703764172049}
+  - {fileID: 8006625252309053199}
+  - {fileID: -5043747586611156138}
+  - {fileID: -9072920405389888811}
+  - {fileID: 6138851261945451057}
+  - {fileID: -7586831799370962936}
+  - {fileID: -1270117584503248781}
+  - {fileID: 2771629251264827194}
+  - {fileID: -4238757735141134391}
+  m_RendererFeatureMap: ad6b866f10d7b46cc3bf5dddc1ccdfb8c9d38ac74e0d030b88c4e7e04f7611dfd3b589359e4660c5ad44f787e156328f0fd4924d3c38e31187df7beb3dc69cdf707e700d737feae67dd37ca6cb58b512c9a9ba7dce70c92892004ca0813083912c5eb1957667077b8bd2c4b051c9aab8111d1fd263db2e1c0faf8dfd3e3f1d6f56eb4efb4a0201bad5b25731f68216823192379db29431550828dbdbac28b69673e8b448c9a25fee3acfb88a1ece7626c92ff93b4ce82cc5
   m_UseNativeRenderPass: 1
+  xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
-  m_AssetVersion: 2
+  m_AssetVersion: 3
+  m_PrepassLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
   m_OpaqueLayerMask:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -56,8 +268,115 @@ MonoBehaviour:
   m_RenderingMode: 2
   m_DepthPrimingMode: 0
   m_CopyDepthMode: 0
+  m_DepthAttachmentFormat: 0
+  m_DepthTextureFormat: 0
   m_AccurateGbufferNormals: 0
   m_IntermediateTextureMode: 0
+--- !u!114 &793492591353713609
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f505a524444255f4990198befe576621, type: 3}
+  m_Name: CenteredFractalDistortion_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.CenteredFractalDistortion_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: 4c79f0af1397fb44d87084e1099aac27, type: 3}
+  Event: 550
+--- !u!114 &1288935750008755215
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 41fefbbab7bd5be479d31327f3327f92, type: 3}
+  m_Name: VortexPixelShatter_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.VortexPixelShatter_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: 9a24fa18e5914bc43a110f1297ff22e5, type: 3}
+  Event: 550
+--- !u!114 &1348081295162135421
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9313030c8f893d0458334b27aee123ef, type: 3}
+  m_Name: ZigzagJitterDisplacement_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.ZigzagJitterDisplacement_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: 0ad644674b58a114e838a113f773cf4f, type: 3}
+  Event: 550
+--- !u!114 &2030801703764172049
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b844f40b7625e04b8837d209b44177d, type: 3}
+  m_Name: DripMeltDistortion_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.DripMeltDistortion_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: 9d80a6a16ede8e649b7d396a06abb267, type: 3}
+  Event: 550
+--- !u!114 &2771629251264827194
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e8313e82f0db98418b71bc2dd7d69e6, type: 3}
+  m_Name: RecursiveVortexWarp_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.RecursiveVortexWarp_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: df240d411aa53b44b95a93a0e89bead5, type: 3}
+  Event: 550
+--- !u!114 &2939004264010918345
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8bfaf16384b848449feef718e269f1a, type: 3}
+  m_Name: SmearDisplacement_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.SmearDisplacement_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: dc01cc967e00df841971ea9666ee4967, type: 3}
+  Event: 550
+--- !u!114 &6138851261945451057
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5a7711de183748645bf8c84d18b02bd5, type: 3}
+  m_Name: SectorKaleidoDistort_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.SectorKaleidoDistort_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: 83991e2c765be0d47a9ad5200d04bd13, type: 3}
+  Event: 550
 --- !u!114 &7833122117494664109
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -84,12 +403,33 @@ MonoBehaviour:
     BlurQuality: 0
     Falloff: 100
     SampleCount: -1
-  m_BlueNoise256Textures:
-  - {fileID: 2800000, guid: 36f118343fc974119bee3d09e2111500, type: 3}
-  - {fileID: 2800000, guid: 4b7b083e6b6734e8bb2838b0b50a0bc8, type: 3}
-  - {fileID: 2800000, guid: c06cc21c692f94f5fb5206247191eeee, type: 3}
-  - {fileID: 2800000, guid: cb76dd40fa7654f9587f6a344f125c9a, type: 3}
-  - {fileID: 2800000, guid: e32226222ff144b24bf3a5a451de54bc, type: 3}
-  - {fileID: 2800000, guid: 3302065f671a8450b82c9ddf07426f3a, type: 3}
-  - {fileID: 2800000, guid: 56a77a3e8d64f47b6afe9e3c95cb57d5, type: 3}
-  m_Shader: {fileID: 4800000, guid: 0849e84e3d62649e8882e9d6f056a017, type: 3}
+--- !u!114 &8006625252309053199
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a6fc063ee098724c9921980051f1112, type: 3}
+  m_Name: VoronoiPatterns_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.VoronoiPatterns_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: c4a004de2776310419dbb9b067a82982, type: 3}
+  Event: 550
+--- !u!114 &8865168150517341740
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9700fd773e4cc8429343f67705834f1, type: 3}
+  m_Name: WorleyDisplacement_20X
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.WorleyDisplacement_20X
+  m_Active: 1
+  m_Shader: {fileID: 4800000, guid: 45b355cea82b74e4c848973b47e2cd81, type: 3}
+  Event: 550

@@ -140,7 +140,12 @@ public class TurnManagerNet : NetworkBehaviour
                 continue;
             }
 
-            if (autoSeatOnServer) Server_AutoSeatAllPlayersIfNeeded();
+            // IMPORTANT: do NOT auto-seat if SeatIndexAuthority is present.
+            // That script assigns seats by nearest chair after lobby.
+            if (autoSeatOnServer && !HasSeatIndexAuthority())
+            {
+                Server_AutoSeatAllPlayersIfNeeded();
+            }
 
             if (IsLobbyBlockingStart())
             {
@@ -323,9 +328,10 @@ public class TurnManagerNet : NetworkBehaviour
     {
 #pragma warning disable CS0618
         var trays = GameObject.FindObjectsOfType<PlayerItemTrays>();
-#pragma warning disable CS0618
+#pragma warning restore CS0618
         return trays != null && trays.Length > 0;
     }
+
 #pragma warning disable CS0618
     private bool HasAnySeatedPlayer()
     {
@@ -334,12 +340,24 @@ public class TurnManagerNet : NetworkBehaviour
             if (trays[i].seatIndex1Based > 0) return true;
         return false;
     }
+#pragma warning restore CS0618
+
+    // NEW: detect if SeatIndexAuthority exists in this scene.
+    // If it does, we do NOT auto-seat from TurnManagerNet.
+    private bool HasSeatIndexAuthority()
+    {
 #pragma warning disable CS0618
+        var seats = GameObject.FindObjectsOfType<SeatIndexAuthority>();
+#pragma warning restore CS0618
+        return seats != null && seats.Length > 0;
+    }
 
     [Server]
     private void Server_AutoSeatAllPlayersIfNeeded()
     {
+#pragma warning disable CS0618
         var traysAll = GameObject.FindObjectsOfType<PlayerItemTrays>();
+#pragma warning restore CS0618
         if (traysAll == null || traysAll.Length == 0) return;
 
         bool[] used = new bool[6]; // 1..5
@@ -372,8 +390,11 @@ public class TurnManagerNet : NetworkBehaviour
     [Server]
     private void Server_SeedSeatedIfEmpty(string label)
     {
+#pragma warning disable CS0618
         var traysAll = GameObject.FindObjectsOfType<PlayerItemTrays>();
         var deck = Object.FindObjectOfType<ItemDeck>();
+#pragma warning restore CS0618
+
         if (deck == null)
         {
             Debug.LogError("[TurnManagerNet] No ItemDeck found in scene. Seeding will add 0 items.");
@@ -404,7 +425,9 @@ public class TurnManagerNet : NetworkBehaviour
     [Server]
     private void Server_LogSeatMap(string tag)
     {
+#pragma warning disable CS0618
         var traysAll = GameObject.FindObjectsOfType<PlayerItemTrays>();
+#pragma warning restore CS0618
         if (traysAll == null || traysAll.Length == 0)
         {
             Debug.Log("[TurnManagerNet] SeatMap(" + tag + "): no trays found.");
@@ -429,7 +452,10 @@ public class TurnManagerNet : NetworkBehaviour
 
     private List<PlayerItemTrays> BuildOrderSkippingEliminated()
     {
+#pragma warning disable CS0618
         var traysAll = GameObject.FindObjectsOfType<PlayerItemTrays>();
+#pragma warning restore CS0618
+
         Dictionary<int, PlayerItemTrays> bySeat = new Dictionary<int, PlayerItemTrays>();
 
         for (int i = 0; i < traysAll.Length; i++)

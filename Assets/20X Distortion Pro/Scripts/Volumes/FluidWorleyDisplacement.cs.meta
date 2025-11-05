@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 8a1fdfe6d13d9024799b24e13a21eef7
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 326585
+  packageName: 20X Distortion Pro
+  packageVersion: 1.1
+  assetPath: Assets/20X Distortion Pro/Scripts/Volumes/FluidWorleyDisplacement.cs
+  uploadId: 804332

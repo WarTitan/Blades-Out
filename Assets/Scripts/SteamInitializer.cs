@@ -26,6 +26,11 @@ namespace BladesOut
                 }
 
                 initialized = true;
+                if (transform.parent != null)
+                {
+                    transform.SetParent(null);
+                }
+
                 DontDestroyOnLoad(gameObject);
 
                 string personaName = SteamFriends.GetPersonaName();

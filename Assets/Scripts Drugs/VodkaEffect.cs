@@ -1,18 +1,19 @@
 // FILE: VodkaEffect.cs
-// FULL REPLACEMENT (ASCII only)
-// Drunk warp via blit (Built-in RP). Optional tiny FOV wobble via EffectFovMixer.
-// Uses base.startTime / base.endTime so ExtendDuration() works.
-// Adds safe tear-down to avoid end-of-effect hitching.
+// Vodka drunk effect for URP. Uses DrunkBlitFeature to do a fullscreen blit.
+// Optional FOV wobble via EffectFovMixer. Requires URP and DrunkBlitFeature
+// added as a Renderer Feature to your active URP renderer.
 
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using System.Collections;
 
-[AddComponentMenu("Gameplay/Effects/Vodka Effect")]
+[AddComponentMenu("Gameplay/Effects/Vodka Effect (URP)")]
 [DefaultExecutionOrder(50510)]
 public class VodkaEffect : PsychoactiveEffectBase
 {
-    [Header("Drunk Blit (Built-in RP)")]
-    public Material drunkMaterialTemplate;  // your drunk shader material (optional)
+    [Header("Drunk Material Template (URP)")]
+    public Material drunkMaterialTemplate;  // Assign material that uses your DrunkEffect shader
 
     [Header("Optional FOV Wobble (via mixer)")]
     public float fovWobbleAmplitude = 0f;   // set > 0 for tiny breathing of FOV
@@ -28,16 +29,31 @@ public class VodkaEffect : PsychoactiveEffectBase
     // Runtime
     private Coroutine routine;
     private Material runtimeMat;
-    private DrunkBlit drunk;
     private EffectFovMixer mixer;
     private int fovHandle = -1;
     private bool isEnding;
 
     protected override void OnBegin(float duration, float intensity)
     {
+        if (verboseLogs)
+        {
+            Debug.Log("[VodkaEffect] OnBegin duration=" + duration +
+                      " intensity=" + intensity);
+        }
+
+        // URP check
+        var rp = GraphicsSettings.currentRenderPipeline;
+        if (!(rp is UniversalRenderPipelineAsset))
+        {
+            Debug.LogWarning("[VodkaEffect] Current render pipeline is not URP. " +
+                             "VodkaEffect (URP) only works with URP. Aborting.");
+            End();
+            return;
+        }
+
         if (targetCam == null || !targetCam.gameObject.activeInHierarchy)
         {
-            if (verboseLogs) Debug.LogWarning("[VodkaEffect] Camera missing/inactive. Aborting.");
+            Debug.LogWarning("[VodkaEffect] targetCam is null or inactive. Aborting.");
             End();
             return;
         }
@@ -46,49 +62,108 @@ public class VodkaEffect : PsychoactiveEffectBase
         if (!enabled) enabled = true;
         isEnding = false;
 
-        // Ensure mixer only if we actually use FOV wobble
+        // Optional FOV wobble
         if (fovWobbleAmplitude > 0f)
         {
             mixer = targetCam.GetComponent<EffectFovMixer>();
-            if (mixer == null) mixer = targetCam.gameObject.AddComponent<EffectFovMixer>();
+            if (mixer == null)
+            {
+                mixer = targetCam.gameObject.AddComponent<EffectFovMixer>();
+                if (verboseLogs)
+                {
+                    Debug.Log("[VodkaEffect] Added EffectFovMixer to camera " +
+                              targetCam.name);
+                }
+            }
             mixer.SetBaseFov(baseFov);
             fovHandle = mixer.Register(this, 0);
         }
 
-        // Drunk blit
-        drunk = targetCam.GetComponent<DrunkBlit>();
-        if (drunk == null) drunk = targetCam.gameObject.AddComponent<DrunkBlit>();
+        // Create runtime material
+        CreateRuntimeMaterial();
+
+        // Tell the URP feature to use our material
+        DrunkBlitFeature.DebugLogs = verboseLogs;
+        if (runtimeMat != null && runtimeMat.shader != null)
+        {
+            DrunkBlitFeature.SetRuntimeMaterial(runtimeMat);
+            if (verboseLogs)
+            {
+                Debug.Log("[VodkaEffect] Assigned runtime material '" +
+                          runtimeMat.name + "' to DrunkBlitFeature.");
+            }
+        }
+        else
+        {
+            DrunkBlitFeature.SetRuntimeMaterial(null);
+            Debug.LogWarning("[VodkaEffect] runtimeMat is null or has no shader. " +
+                             "DrunkBlitFeature will not render anything.");
+        }
+
+        routine = StartCoroutine(Run(Mathf.Clamp01(intensity)));
+    }
+
+    private void CreateRuntimeMaterial()
+    {
+        runtimeMat = null;
 
         if (drunkMaterialTemplate != null)
         {
             runtimeMat = new Material(drunkMaterialTemplate);
+            if (verboseLogs)
+            {
+                Debug.Log("[VodkaEffect] Created runtime material from template '" +
+                          drunkMaterialTemplate.name + "'.");
+            }
         }
         else
         {
-            // Fallback: try find by name if user created shader named "Drunk"
-            var sh = Shader.Find("Drunk");
-            if (sh != null) runtimeMat = new Material(sh);
+            // Try some common shader names as fallback
+            Shader sh =
+                Shader.Find("Drunk") ??
+                Shader.Find("Hidden/Drunk") ??
+                Shader.Find("Hidden/DrunkEffect") ??
+                Shader.Find("Custom/DrunkEffect");
+
+            if (sh != null)
+            {
+                runtimeMat = new Material(sh);
+                if (verboseLogs)
+                {
+                    Debug.Log("[VodkaEffect] Created runtime material from Shader.Find('" +
+                              sh.name + "').");
+                }
+            }
+            else if (verboseLogs)
+            {
+                Debug.LogWarning("[VodkaEffect] No drunkMaterialTemplate assigned and no " +
+                                 "matching drunk shader found by name.");
+            }
         }
 
         if (runtimeMat != null)
         {
-            // If your shader exposes _Intensity, we will drive it for fade in/out.
-            runtimeMat.SetFloat("_Intensity", 0f);
-            drunk.SetMaterial(runtimeMat);
+            // Try to initialize intensity props if they exist
+            if (runtimeMat.HasProperty("_Intensity"))
+            {
+                runtimeMat.SetFloat("_Intensity", 0f);
+            }
+            if (runtimeMat.HasProperty("_Strength"))
+            {
+                runtimeMat.SetFloat("_Strength", 0f);
+            }
         }
-        else
-        {
-            drunk.SetMaterial(null);
-        }
-
-        // IMPORTANT: use shared endTime from base so ExtendDuration() works.
-        routine = StartCoroutine(Run(Mathf.Clamp01(intensity)));
     }
 
     protected override void OnEnd()
     {
         if (isEnding) return;
         isEnding = true;
+
+        if (verboseLogs)
+        {
+            Debug.Log("[VodkaEffect] OnEnd called.");
+        }
 
         if (routine != null)
         {
@@ -102,14 +177,10 @@ public class VodkaEffect : PsychoactiveEffectBase
             fovHandle = -1;
         }
 
-        // Disable the blit first so OnRenderImage stops running this frame.
-        if (drunk != null)
-        {
-            drunk.SetMaterial(null);
-            drunk.enabled = false;
-        }
+        // Stop URP render feature
+        DrunkBlitFeature.SetRuntimeMaterial(null);
 
-        // Defer material destruction to the next frame to avoid a stall while the camera is rendering.
+        // Defer material destruction to next frame
         if (runtimeMat != null)
         {
             StartCoroutine(DestroyMatNextFrame(runtimeMat));
@@ -119,10 +190,8 @@ public class VodkaEffect : PsychoactiveEffectBase
 
     private IEnumerator DestroyMatNextFrame(Material m)
     {
-        // Wait until end of frame to ensure no camera is mid-blit.
         yield return null;
 #if UNITY_EDITOR
-        // In Play Mode, prefer Destroy; DestroyImmediate can stall the editor.
         if (Application.isPlaying) Object.Destroy(m);
         else Object.DestroyImmediate(m);
 #else
@@ -140,19 +209,22 @@ public class VodkaEffect : PsychoactiveEffectBase
             float t = Time.time - startTime;
             float timeLeft = Mathf.Max(0f, endTime - Time.time);
 
-            // Smooth fade in/out envelope
             float in01 = (fin > 0f) ? Mathf.Clamp01(t / fin) : 1f;
             float out01 = (fout > 0f) ? Mathf.Clamp01(timeLeft / fout) : 1f;
             float env = Mathf.Clamp01(Mathf.Min(in01, out01) * Mathf.Clamp01(strength));
 
-            // Drive drunk material intensity if supported by the shader
             if (runtimeMat != null)
             {
-                // If your shader does not have _Intensity, this is harmless.
-                runtimeMat.SetFloat("_Intensity", env);
+                if (runtimeMat.HasProperty("_Intensity"))
+                {
+                    runtimeMat.SetFloat("_Intensity", env);
+                }
+                if (runtimeMat.HasProperty("_Strength"))
+                {
+                    runtimeMat.SetFloat("_Strength", env);
+                }
             }
 
-            // Optional tiny FOV wobble via mixer (never writes camera.fieldOfView directly)
             if (mixer != null && fovHandle != -1)
             {
                 float wobble = Mathf.Sin(t * fovWobbleHz * 2f * Mathf.PI) * fovWobbleAmplitude;
@@ -163,34 +235,5 @@ public class VodkaEffect : PsychoactiveEffectBase
         }
 
         End();
-    }
-}
-
-[AddComponentMenu("Rendering/Drunk Blit (Built-in RP)")]
-[RequireComponent(typeof(Camera))]
-public class DrunkBlit : MonoBehaviour
-{
-    [SerializeField] private Material material;
-
-    public void SetMaterial(Material m)
-    {
-        material = m;
-        enabled = (material != null && material.shader != null);
-    }
-
-    private void OnEnable()
-    {
-        if (material == null || material.shader == null)
-            enabled = false;
-    }
-
-    private void OnRenderImage(RenderTexture source, RenderTexture destination)
-    {
-        if (material == null || material.shader == null)
-        {
-            Graphics.Blit(source, destination);
-            return;
-        }
-        Graphics.Blit(source, destination, material);
     }
 }

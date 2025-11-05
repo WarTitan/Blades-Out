@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 147e7389eb4382248823716c10f08fb1
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 326585
+  packageName: 20X Distortion Pro
+  packageVersion: 1.1
+  assetPath: Assets/20X Distortion Pro/Scripts/RenderFeatures/SpeedWarp_20X.cs
+  uploadId: 804332

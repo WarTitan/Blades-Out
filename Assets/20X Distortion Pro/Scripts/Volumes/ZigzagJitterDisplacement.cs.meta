@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 635e31a9e2f34aa4abb8d023d3d24592
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 326585
+  packageName: 20X Distortion Pro
+  packageVersion: 1.1
+  assetPath: Assets/20X Distortion Pro/Scripts/Volumes/ZigzagJitterDisplacement.cs
+  uploadId: 804332

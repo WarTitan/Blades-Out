@@ -66,6 +66,56 @@ MonoBehaviour:
   p21:
     m_OverrideState: 1
     m_Value: 0
+--- !u!114 &-7956533305413381691
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab89929daf578194182206fa080f7baa, type: 3}
+  m_Name: SpiralSliceKaleidoscope
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.SpiralSliceKaleidoscope
+  active: 1
+  Fade:
+    m_OverrideState: 1
+    m_Value: 0
+  Images:
+    m_OverrideState: 1
+    m_Value: 5
+  Scale:
+    m_OverrideState: 1
+    m_Value: 1
+  Rotation:
+    m_OverrideState: 1
+    m_Value: 45
+  Offset:
+    m_OverrideState: 1
+    m_Value: 1
+  NoiseWarpStrength:
+    m_OverrideState: 1
+    m_Value: 0.5
+  Black:
+    m_OverrideState: 1
+    m_Value: 0
+  Speed:
+    m_OverrideState: 1
+    m_Value: 0.5
+  mask:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  maskChannel:
+    m_OverrideState: 1
+    m_Value: 0
+  maskEdgeFineTuning:
+    m_OverrideState: 1
+    m_Value: 0.15
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
 --- !u!114 &-7750755424749557576
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -107,6 +157,44 @@ MonoBehaviour:
   clamp:
     m_OverrideState: 1
     m_Value: 0.05
+--- !u!114 &-7735433955710361492
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b345e032a28bbfa48a6b8682be043d89, type: 3}
+  m_Name: WorleyDisplacement
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.WorleyDisplacement
+  active: 1
+  Amount:
+    m_OverrideState: 1
+    m_Value: 0
+  Size:
+    m_OverrideState: 1
+    m_Value: 0.056
+  Speed:
+    m_OverrideState: 1
+    m_Value: 1
+  Fade:
+    m_OverrideState: 1
+    m_Value: 1
+  mask:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  maskChannel:
+    m_OverrideState: 1
+    m_Value: 0
+  maskEdgeFineTuning:
+    m_OverrideState: 1
+    m_Value: 0.15
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
 --- !u!114 &-7274224791359825572
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -280,6 +368,76 @@ MonoBehaviour:
   SunScatteringIntensity:
     m_OverrideState: 1
     m_Value: 2
+--- !u!114 &-4744199235891573753
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53e2e681a87fcaf419723e3cd409ae51, type: 3}
+  m_Name: TwistShrinkDistortion
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.TwistShrinkDistortion
+  active: 1
+  Fade:
+    m_OverrideState: 1
+    m_Value: 0
+  Intensity:
+    m_OverrideState: 1
+    m_Value: 1
+  Delay:
+    m_OverrideState: 1
+    m_Value: 6
+  Speed:
+    m_OverrideState: 1
+    m_Value: 1
+  mask:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  maskChannel:
+    m_OverrideState: 1
+    m_Value: 0
+  maskEdgeFineTuning:
+    m_OverrideState: 1
+    m_Value: 0.15
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
+--- !u!114 &-4515407421029785273
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1ba6dbd5db697749a0989aa82c60c2e, type: 3}
+  m_Name: SmearDisplacement
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.SmearDisplacement
+  active: 1
+  Intensity:
+    m_OverrideState: 1
+    m_Value: 0
+  Invert:
+    m_OverrideState: 1
+    m_Value: 0
+  mask:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  maskChannel:
+    m_OverrideState: 1
+    m_Value: 0
+  maskEdgeFineTuning:
+    m_OverrideState: 1
+    m_Value: 0.15
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
 --- !u!114 &-4463884970436517307
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -299,6 +457,158 @@ MonoBehaviour:
   cropToFit:
     m_OverrideState: 1
     m_Value: 1
+--- !u!114 &-4096478254653796283
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55848e9a74a1a8b42b3807c945b51a61, type: 3}
+  m_Name: VortexSwirlDisplacement
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.VortexSwirlDisplacement
+  active: 1
+  Fade:
+    m_OverrideState: 1
+    m_Value: 0
+  Iterations:
+    m_OverrideState: 1
+    m_Value: 2
+  Speed:
+    m_OverrideState: 1
+    m_Value: 0.1
+  CenterOffset:
+    m_OverrideState: 1
+    m_Value: {x: 0, y: 0}
+  RotationScale:
+    m_OverrideState: 1
+    m_Value: 0.5
+  Falloff:
+    m_OverrideState: 1
+    m_Value: 1
+  mask:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  maskChannel:
+    m_OverrideState: 1
+    m_Value: 0
+  maskEdgeFineTuning:
+    m_OverrideState: 1
+    m_Value: 0.15
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
+--- !u!114 &-3269562932149121215
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe78a531bc59fd2499fbf35365bcdf51, type: 3}
+  m_Name: FracturedNoiseDisplacement
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.FracturedNoiseDisplacement
+  active: 1
+  Amount:
+    m_OverrideState: 1
+    m_Value: 0
+  Fade:
+    m_OverrideState: 1
+    m_Value: 1
+  Speed:
+    m_OverrideState: 1
+    m_Value: 0.1
+  mask:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  maskChannel:
+    m_OverrideState: 1
+    m_Value: 0
+  maskEdgeFineTuning:
+    m_OverrideState: 1
+    m_Value: 0.15
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
+--- !u!114 &-3034447181514761508
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ff1b6119bdfe4c4a86dbd44757b9669, type: 3}
+  m_Name: TiledDriftDistortion
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.TiledDriftDistortion
+  active: 1
+  Amount:
+    m_OverrideState: 1
+    m_Value: 0
+  Size:
+    m_OverrideState: 1
+    m_Value: 10
+  Speed:
+    m_OverrideState: 1
+    m_Value: 1
+  mask:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  maskChannel:
+    m_OverrideState: 1
+    m_Value: 0
+  maskEdgeFineTuning:
+    m_OverrideState: 1
+    m_Value: 0.15
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
+--- !u!114 &-1944222711926462737
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1532a27d9dbecb9488764d74645476a7, type: 3}
+  m_Name: CircularRippleWarp
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.CircularRippleWarp
+  active: 1
+  Fade:
+    m_OverrideState: 1
+    m_Value: 0
+  RingsCount:
+    m_OverrideState: 1
+    m_Value: 5
+  Zoom:
+    m_OverrideState: 1
+    m_Value: 0.5
+  Speed:
+    m_OverrideState: 1
+    m_Value: 1
+  mask:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  maskChannel:
+    m_OverrideState: 1
+    m_Value: 0
+  maskEdgeFineTuning:
+    m_OverrideState: 1
+    m_Value: 0.15
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
 --- !u!114 &-1410297666881709256
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -342,6 +652,44 @@ MonoBehaviour:
   skyOcclusionIntensityMultiplier:
     m_OverrideState: 1
     m_Value: 1
+  worldOffset:
+    m_OverrideState: 1
+    m_Value: {x: 0, y: 0, z: 0}
+--- !u!114 &-1236714628823794927
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 59713ce2b58f4864a8047d3a09e227b9, type: 3}
+  m_Name: FluidNoiseDistortion
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.FluidNoiseDistortion
+  active: 1
+  Intensity:
+    m_OverrideState: 1
+    m_Value: 0
+  Speed:
+    m_OverrideState: 1
+    m_Value: 1
+  Size:
+    m_OverrideState: 1
+    m_Value: 0.1
+  mask:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  maskChannel:
+    m_OverrideState: 1
+    m_Value: 0
+  maskEdgeFineTuning:
+    m_OverrideState: 1
+    m_Value: 0.15
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
 --- !u!114 &-1216621516061285780
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -462,8 +810,65 @@ MonoBehaviour:
   - {fileID: -6288072647309666549}
   - {fileID: 7518938298396184218}
   - {fileID: -1410297666881709256}
-  - {fileID: -7750755424749557576}
-  - {fileID: -5139089513906902183}
+  - {fileID: 6622791217286797795}
+  - {fileID: 5057870457029561104}
+  - {fileID: 6382679936460891966}
+  - {fileID: -1944222711926462737}
+  - {fileID: -3034447181514761508}
+  - {fileID: 3379080360611061211}
+  - {fileID: 172651069144689039}
+  - {fileID: -1236714628823794927}
+  - {fileID: -7735433955710361492}
+  - {fileID: -3269562932149121215}
+  - {fileID: 5893374155910775661}
+  - {fileID: 5978840548296189286}
+  - {fileID: -4515407421029785273}
+  - {fileID: 1417882331254665992}
+  - {fileID: 2571215443678907783}
+  - {fileID: 4982505607468632938}
+  - {fileID: -4096478254653796283}
+  - {fileID: 5449402775764356074}
+  - {fileID: -7956533305413381691}
+  - {fileID: 8783351961148879223}
+  - {fileID: -4744199235891573753}
+--- !u!114 &172651069144689039
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c3b719ffefa7f0438f5abd0f66325df, type: 3}
+  m_Name: PrismaticDisplacement
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.PrismaticDisplacement
+  active: 1
+  Fade:
+    m_OverrideState: 1
+    m_Value: 0
+  Size:
+    m_OverrideState: 1
+    m_Value: 2
+  Speed:
+    m_OverrideState: 1
+    m_Value: 0.1
+  ColorOffset:
+    m_OverrideState: 1
+    m_Value: 0.02
+  mask:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  maskChannel:
+    m_OverrideState: 1
+    m_Value: 0
+  maskEdgeFineTuning:
+    m_OverrideState: 1
+    m_Value: 0.15
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
 --- !u!114 &853819529557874667
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -565,6 +970,38 @@ MonoBehaviour:
   highlightsEnd:
     m_OverrideState: 1
     m_Value: 1
+--- !u!114 &1417882331254665992
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b2bb84938f4b574396bfbf72b2c2ee2, type: 3}
+  m_Name: VortexPixelShatter
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.VortexPixelShatter
+  active: 1
+  Amount:
+    m_OverrideState: 1
+    m_Value: 0
+  Center:
+    m_OverrideState: 1
+    m_Value: {x: 0, y: 0}
+  mask:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  maskChannel:
+    m_OverrideState: 1
+    m_Value: 0
+  maskEdgeFineTuning:
+    m_OverrideState: 1
+    m_Value: 0.15
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
 --- !u!114 &1666464333004379222
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -774,6 +1211,87 @@ MonoBehaviour:
   contribution:
     m_OverrideState: 1
     m_Value: 0
+--- !u!114 &2571215443678907783
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 019751547df1ee34b86dab7b4865544b, type: 3}
+  m_Name: FlowMosh
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.FlowMosh
+  active: 1
+  Blend:
+    m_OverrideState: 1
+    m_Value: 1
+  ActivationThreshold:
+    m_OverrideState: 1
+    m_Value: 0.9
+  FlowGain:
+    m_OverrideState: 1
+    m_Value: 0.8
+  FlowXScale:
+    m_OverrideState: 1
+    m_Value: 0.5
+  BrightnessThreshold:
+    m_OverrideState: 1
+    m_Value: 0.4
+  MicroContrastBoost:
+    m_OverrideState: 1
+    m_Value: 0.4
+  BlockSize:
+    m_OverrideState: 1
+    m_Value: 0.002
+  NoiseAmplitude:
+    m_OverrideState: 1
+    m_Value: 0.9
+  ChromaShift:
+    m_OverrideState: 1
+    m_Value: 0.5
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
+--- !u!114 &3379080360611061211
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e9eb3b3ab5f823469cb1efb5c336739, type: 3}
+  m_Name: SpeedWarp
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.SpeedWarp
+  active: 1
+  Intensity:
+    m_OverrideState: 1
+    m_Value: 0
+  Frequency:
+    m_OverrideState: 1
+    m_Value: 64
+  Speed:
+    m_OverrideState: 1
+    m_Value: 0.5
+  Center:
+    m_OverrideState: 1
+    m_Value: {x: 0, y: 0}
+  mask:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  maskChannel:
+    m_OverrideState: 1
+    m_Value: 0
+  maskEdgeFineTuning:
+    m_OverrideState: 1
+    m_Value: 0.15
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
 --- !u!114 &3959858460715838825
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -852,6 +1370,272 @@ MonoBehaviour:
   intensity:
     m_OverrideState: 1
     m_Value: 0
+--- !u!114 &4982505607468632938
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a1fdfe6d13d9024799b24e13a21eef7, type: 3}
+  m_Name: FluidWorleyDisplacement
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.FluidWorleyDisplacement
+  active: 1
+  Intensity:
+    m_OverrideState: 1
+    m_Value: 0
+  Offset:
+    m_OverrideState: 1
+    m_Value: 0.1
+  Speed:
+    m_OverrideState: 1
+    m_Value: 1
+  Size:
+    m_OverrideState: 1
+    m_Value: 0.1
+  mask:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  maskChannel:
+    m_OverrideState: 1
+    m_Value: 0
+  maskEdgeFineTuning:
+    m_OverrideState: 1
+    m_Value: 0.15
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
+--- !u!114 &5057870457029561104
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ddef1def65550eb409a4eb5c4e70aaf2, type: 3}
+  m_Name: RadialSliceShifter
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.RadialSliceShifter
+  active: 1
+  LineWidth:
+    m_OverrideState: 1
+    m_Value: 0
+  Speed:
+    m_OverrideState: 1
+    m_Value: 1
+  AnimateLine:
+    m_OverrideState: 1
+    m_Value: 1
+  Mask:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  MaskChannel:
+    m_OverrideState: 1
+    m_Value: 0
+  MaskEdgeFineTuning:
+    m_OverrideState: 1
+    m_Value: 0.15
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
+--- !u!114 &5449402775764356074
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 635e31a9e2f34aa4abb8d023d3d24592, type: 3}
+  m_Name: ZigzagJitterDisplacement
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.ZigzagJitterDisplacement
+  active: 1
+  Intensity:
+    m_OverrideState: 1
+    m_Value: 0
+  Size:
+    m_OverrideState: 1
+    m_Value: 1
+  Speed:
+    m_OverrideState: 1
+    m_Value: 1
+  Fade:
+    m_OverrideState: 1
+    m_Value: 1
+  mask:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  maskChannel:
+    m_OverrideState: 1
+    m_Value: 0
+  maskEdgeFineTuning:
+    m_OverrideState: 1
+    m_Value: 0.15
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
+--- !u!114 &5893374155910775661
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2b0cc4cf823c3f54c91c607d8d7ab268, type: 3}
+  m_Name: DripMeltDistortion
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.DripMeltDistortion
+  active: 1
+  Strength:
+    m_OverrideState: 1
+    m_Value: 0
+  Speed:
+    m_OverrideState: 1
+    m_Value: 0.05
+  Size:
+    m_OverrideState: 1
+    m_Value: 0.1
+  mask:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  maskChannel:
+    m_OverrideState: 1
+    m_Value: 0
+  maskEdgeFineTuning:
+    m_OverrideState: 1
+    m_Value: 0.15
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
+--- !u!114 &5978840548296189286
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b6f2637a509f40e46b74de1bd8548879, type: 3}
+  m_Name: SectorKaleidoDistort
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.SectorKaleidoDistort
+  active: 1
+  Fade:
+    m_OverrideState: 1
+    m_Value: 0
+  Intensity:
+    m_OverrideState: 1
+    m_Value: 1
+  InnerRadius:
+    m_OverrideState: 1
+    m_Value: 0.1
+  OuterRadius:
+    m_OverrideState: 1
+    m_Value: 0.49
+  Fill:
+    m_OverrideState: 1
+    m_Value: 0.9
+  Black:
+    m_OverrideState: 1
+    m_Value: 1
+  mask:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  maskChannel:
+    m_OverrideState: 1
+    m_Value: 0
+  maskEdgeFineTuning:
+    m_OverrideState: 1
+    m_Value: 0.15
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
+--- !u!114 &6382679936460891966
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e55d7d24607f836469aae4cf781d2dab, type: 3}
+  m_Name: CenteredFractalDistortion
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.CenteredFractalDistortion
+  active: 1
+  Intensity:
+    m_OverrideState: 1
+    m_Value: 0
+  CenterFocus:
+    m_OverrideState: 1
+    m_Value: 0
+  CubicNoise:
+    m_OverrideState: 1
+    m_Value: 0
+  Size:
+    m_OverrideState: 1
+    m_Value: 0.6
+  Speed:
+    m_OverrideState: 1
+    m_Value: 1
+  mask:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  maskChannel:
+    m_OverrideState: 1
+    m_Value: 0
+  maskEdgeFineTuning:
+    m_OverrideState: 1
+    m_Value: 0.15
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
+--- !u!114 &6622791217286797795
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbd6b71c5f044f04c91fe3976a7465fc, type: 3}
+  m_Name: RecursiveVortexWarp
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.RecursiveVortexWarp
+  active: 1
+  Fade:
+    m_OverrideState: 1
+    m_Value: 0
+  MaximumImages:
+    m_OverrideState: 1
+    m_Value: 1
+  Speed:
+    m_OverrideState: 1
+    m_Value: 0.5
+  mask:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  maskChannel:
+    m_OverrideState: 1
+    m_Value: 0
+  maskEdgeFineTuning:
+    m_OverrideState: 1
+    m_Value: 0.15
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
 --- !u!114 &6940869943325143175
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -921,6 +1705,47 @@ MonoBehaviour:
   scale:
     m_OverrideState: 1
     m_Value: 1
+--- !u!114 &8783351961148879223
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1418908a8f7e2d47badc03f7812bb86, type: 3}
+  m_Name: VoronoiPatterns
+  m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.VoronoiPatterns
+  active: 1
+  Fade:
+    m_OverrideState: 1
+    m_Value: 0
+  DisplaceMode:
+    m_OverrideState: 1
+    m_Value: 0
+  Size:
+    m_OverrideState: 1
+    m_Value: 64
+  Thikness:
+    m_OverrideState: 1
+    m_Value: 1
+  Speed:
+    m_OverrideState: 1
+    m_Value: 1
+  mask:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  maskChannel:
+    m_OverrideState: 1
+    m_Value: 0
+  maskEdgeFineTuning:
+    m_OverrideState: 1
+    m_Value: 0.15
+  GlobalPostProcessingSettings:
+    m_OverrideState: 1
+    m_Value: 0
 --- !u!114 &9001657382290151224
 MonoBehaviour:
   m_ObjectHideFlags: 3

@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: e55d7d24607f836469aae4cf781d2dab
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 326585
+  packageName: 20X Distortion Pro
+  packageVersion: 1.1
+  assetPath: Assets/20X Distortion Pro/Scripts/Volumes/CenteredFractalDistortion.cs
+  uploadId: 804332

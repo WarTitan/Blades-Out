@@ -53,7 +53,8 @@ public class TurnHUD : MonoBehaviour
         }
 
         Instance = this;
-        if (dontDestroyOnLoad) DontDestroyOnLoad(gameObject);
+        if (dontDestroyOnLoad && transform.root != null)
+            DontDestroyOnLoad(transform.root.gameObject);
 
         CacheRefs();
 

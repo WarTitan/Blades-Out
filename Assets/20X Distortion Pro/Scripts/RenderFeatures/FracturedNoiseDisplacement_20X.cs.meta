@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: b532af9c1fc726242bafcae55c97944a
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 326585
+  packageName: 20X Distortion Pro
+  packageVersion: 1.1
+  assetPath: Assets/20X Distortion Pro/Scripts/RenderFeatures/FracturedNoiseDisplacement_20X.cs
+  uploadId: 804332

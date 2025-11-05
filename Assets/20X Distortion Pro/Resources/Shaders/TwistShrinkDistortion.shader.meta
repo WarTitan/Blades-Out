@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 11caaae9c5ceb0244928956b803735e0
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  preprocessorOverride: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 326585
+  packageName: 20X Distortion Pro
+  packageVersion: 1.1
+  assetPath: Assets/20X Distortion Pro/Resources/Shaders/TwistShrinkDistortion.shader
+  uploadId: 804332

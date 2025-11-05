@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: cc97188d7500ea644894669b8665c41b
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 326585
+  packageName: 20X Distortion Pro
+  packageVersion: 1.1
+  assetPath: Assets/20X Distortion Pro/Example Scenes/ExampleSceneLight/Materials/CeilingMat.mat
+  uploadId: 804332

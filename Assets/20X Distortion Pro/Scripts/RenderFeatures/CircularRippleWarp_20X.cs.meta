@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: e9919f23f68a9e24c903e2d70c9de0fb
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 326585
+  packageName: 20X Distortion Pro
+  packageVersion: 1.1
+  assetPath: Assets/20X Distortion Pro/Scripts/RenderFeatures/CircularRippleWarp_20X.cs
+  uploadId: 804332

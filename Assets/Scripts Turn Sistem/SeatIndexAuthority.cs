@@ -1,36 +1,31 @@
 // FILE: SeatIndexAuthority.cs
-// FULL FILE (ASCII only)
+// FULL REPLACEMENT (ASCII only)
 //
-// Server-authoritative seat assignment AFTER lobby exit.
+// Server-side seat assignment for each player.
+// - Waits until lobby is not active (players teleported to table).
+// - Finds all SeatAnchorTag objects.
+// - Chooses the NEAREST anchor to this player.
+// - Writes trays.seatIndex1Based = anchor.seatIndex1Based ONCE.
 //
-// What it does:
-// - Waits until LobbyStage is not active (you pressed 3 and teleported to table).
-// - Then waits a few frames to let transforms settle.
-// - Scans SeatAnchorTag objects (one per chair; seatIndex1Based = 1..5).
-// - Picks the NEAREST FREE tagged seat and assigns PlayerItemTrays.seatIndex1Based once.
-// - Never fights your seat afterwards.
-//
-// Requirements:
-// - One SeatAnchorTag on each chair (Seat 1..5) with correct seatIndex1Based.
-// - Remove any old seat scripts (SeatIndexAutoDetect, SeatIndexFromSpawnName).
+// No global "used" array, no reliance on FindObjectsOfType order.
+// TurnManagerNet.autoSeatOnServer should be OFF so only this script sets seats.
 
 using UnityEngine;
 using Mirror;
-using System.Collections.Generic;
+using System.Collections;
 
-[AddComponentMenu("Gameplay/Seats/Seat Index Authority (Server)")]
+[AddComponentMenu("Gameplay/Turn System/Seat Index Authority")]
 public class SeatIndexAuthority : NetworkBehaviour
 {
     [Header("Timing")]
-    public bool waitForLobbyExit = true;
-    public int settleFramesAfterLobby = 8;
-    public float retrySeconds = 0.25f;
+    [Tooltip("Extra delay after lobby deactivates to allow teleporting to table.")]
+    public float postLobbyDelay = 0.2f;
 
-    [Header("Logs")]
-    public bool verboseLogs = true;
+    [Tooltip("If true, seat assignment will skip the lobby check (for testing).")]
+    public bool ignoreLobbyForTesting = false;
 
     private PlayerItemTrays trays;
-    private bool assigned;
+    private bool seatedOnce = false;
 
     public override void OnStartServer()
     {
@@ -38,85 +33,93 @@ public class SeatIndexAuthority : NetworkBehaviour
         trays = GetComponent<PlayerItemTrays>();
         if (trays == null)
         {
-            enabled = false;
+            Debug.LogWarning("[SeatIndexAuthority] No PlayerItemTrays on " + gameObject.name);
             return;
         }
-        assigned = trays.seatIndex1Based > 0;
-        if (!assigned) StartCoroutine(AssignRoutine());
+
+        // Only the server assigns seats.
+        StartCoroutine(ServerSeatRoutine());
     }
 
-    private System.Collections.IEnumerator AssignRoutine()
+    private IEnumerator ServerSeatRoutine()
     {
-        // 1) Wait for lobby to end (only if desired and LobbyStage exists)
-        if (waitForLobbyExit)
+        // Small initial delay so network spawning / teleport scripts can run.
+        yield return null;
+        yield return new WaitForSeconds(0.05f);
+
+        // Wait until lobby is finished (unless testing flag is on).
+        if (!ignoreLobbyForTesting)
         {
-            while (IsLobbyActive()) yield return null;
+            while (LobbyStage.Instance != null && LobbyStage.Instance.lobbyActive)
+            {
+                yield return new WaitForSeconds(0.25f);
+            }
         }
 
-        // 2) Give teleports a moment to settle
-        for (int i = 0; i < settleFramesAfterLobby; i++) yield return null;
+        // Extra delay so PlayerSpawnManager can teleport players to their seats.
+        if (postLobbyDelay > 0f)
+            yield return new WaitForSeconds(postLobbyDelay);
 
-        // 3) Try until we assign
-        while (isServer && !assigned && trays != null && trays.seatIndex1Based == 0)
-        {
-#pragma warning disable CS0618
-            var allTags = GameObject.FindObjectsOfType<SeatAnchorTag>();
-#pragma warning disable CS0618
-            if (allTags == null || allTags.Length == 0)
-            {
-                if (verboseLogs) Debug.LogWarning("[SeatIndexAuthority] No SeatAnchorTag found. Retrying...");
-                yield return new WaitForSeconds(retrySeconds);
-                continue;
-            }
-
-
-            bool[] taken = new bool[6]; // 1..5
-            var everyone = GameObject.FindObjectsOfType<PlayerItemTrays>();
-            for (int i = 0; i < everyone.Length; i++)
-            {
-                int s = everyone[i].seatIndex1Based;
-                if (s >= 1 && s <= 5) taken[s] = true;
-            }
-
-            // Find nearest FREE tag to our current (post-teleport) position
-            Transform best = null;
-            int bestSeat = 0;
-            float bestDist = float.MaxValue;
-            Vector3 p = transform.position;
-
-            for (int i = 0; i < allTags.Length; i++)
-            {
-                int seat = allTags[i].seatIndex1Based;
-                if (seat < 1 || seat > 5) continue;
-                if (taken[seat]) continue;
-
-                float d = (allTags[i].transform.position - p).sqrMagnitude;
-                if (d < bestDist)
-                {
-                    bestDist = d;
-                    bestSeat = seat;
-                    best = allTags[i].transform;
-                }
-            }
-
-            if (bestSeat != 0)
-            {
-                trays.seatIndex1Based = bestSeat; // SyncVar -> replicates to clients
-                assigned = true;
-                if (verboseLogs)
-                    Debug.Log("[SeatIndexAuthority] netId=" + netId + " assigned Seat " + bestSeat + " (nearest after lobby).");
-                yield break;
-            }
-
-            if (verboseLogs) Debug.Log("[SeatIndexAuthority] No FREE seat found yet. Retrying...");
-            yield return new WaitForSeconds(retrySeconds);
-        }
+        ServerAssignSeatByNearestAnchor();
     }
 
-    private bool IsLobbyActive()
+    [Server]
+    private void ServerAssignSeatByNearestAnchor()
     {
-        var ls = LobbyStage.Instance;
-        if (ls == null) return false; // no lobby in this scene
-        return ls.lobbyActive;
+        if (seatedOnce) return; // do not overwrite seats once assigned
+
+        if (trays == null)
+            trays = GetComponent<PlayerItemTrays>();
+        if (trays == null)
+        {
+            Debug.LogWarning("[SeatIndexAuthority] No PlayerItemTrays, cannot assign seat.");
+            return;
+        }
+
+#pragma warning disable CS0618
+        var anchors = GameObject.FindObjectsOfType<SeatAnchorTag>();
+#pragma warning restore CS0618
+
+        if (anchors == null || anchors.Length == 0)
+        {
+            Debug.LogWarning("[SeatIndexAuthority] No SeatAnchorTag objects found in scene.");
+            return;
+        }
+
+        Transform root = trays.transform;
+        Vector3 myPos = root.position;
+
+        SeatAnchorTag best = null;
+        float bestDistSq = float.MaxValue;
+
+        for (int i = 0; i < anchors.Length; i++)
+        {
+            var a = anchors[i];
+            if (a == null) continue;
+            if (a.seatIndex1Based <= 0) continue;
+
+            float dsq = (a.transform.position - myPos).sqrMagnitude;
+            if (dsq < bestDistSq)
+            {
+                bestDistSq = dsq;
+                best = a;
+            }
+        }
+
+        if (best == null)
+        {
+            Debug.LogWarning("[SeatIndexAuthority] Could not find a suitable seat for " +
+                             gameObject.name + " at pos " + myPos);
+            return;
+        }
+
+        trays.seatIndex1Based = best.seatIndex1Based;
+        seatedOnce = true;
+
+        var id = GetComponent<NetworkIdentity>();
+        uint nid = (id != null ? id.netId : 0);
+
+        Debug.Log("[SeatIndexAuthority] Assigned seat " + best.seatIndex1Based +
+                  " to netId=" + nid + " (distSq=" + bestDistSq + ")");
     }
 }

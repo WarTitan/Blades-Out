@@ -3,6 +3,7 @@
 // even while the global lobby remains active.
 
 using UnityEngine;
+using UnityEngine.Rendering;
 using Mirror;
 using System.Collections;
 using System.Collections.Generic;
@@ -149,17 +150,31 @@ public class LocalCameraActivator : NetworkBehaviour
         if (leaf == null) return;
         List<Transform> chain = new List<Transform>();
         Transform t = leaf;
-        while (t != null) { chain.Add(t); t = t.parent; }
+        while (t != null)
+        {
+            chain.Add(t);
+            t = t.parent;
+        }
         for (int i = chain.Count - 1; i >= 0; i--)
-            if (!chain[i].gameObject.activeSelf) chain[i].gameObject.SetActive(true);
+        {
+            if (!chain[i].gameObject.activeSelf)
+                chain[i].gameObject.SetActive(true);
+        }
     }
 
     private static void NormalizeCameraOutput(Camera cam)
     {
         if (cam == null) return;
+
         cam.targetDisplay = 0;
         cam.rect = new Rect(0f, 0f, 1f, 1f);
-        cam.stereoTargetEye = StereoTargetEyeMask.None;
+
+        // Only allowed in Built-in render pipeline; SRP (URP/HDRP) will throw
+        if (GraphicsSettings.currentRenderPipeline == null)
+        {
+            cam.stereoTargetEye = StereoTargetEyeMask.None;
+        }
+
 #if UNITY_RENDER_PIPELINE_UNIVERSAL
         var acd = cam.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
         if (acd != null && acd.renderType != UnityEngine.Rendering.Universal.CameraRenderType.Base)

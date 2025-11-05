@@ -13,7 +13,8 @@ public class MemoryStrikeTracker : NetworkBehaviour
 
     // netId -> strikes (0..255)
     public class StrikesDict : SyncDictionary<uint, byte> { }
-    public StrikesDict strikesByNetId = new StrikesDict();
+    public readonly StrikesDict strikesByNetId = new StrikesDict();
+
 
     public class Entry
     {

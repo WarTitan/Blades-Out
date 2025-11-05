@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: b1d0a9ed6f6b9b443a86b2a67cd444c1
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  preprocessorOverride: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 326585
+  packageName: 20X Distortion Pro
+  packageVersion: 1.1
+  assetPath: Assets/20X Distortion Pro/Resources/Shaders/TiledDriftDistortion.shader
+  uploadId: 804332
