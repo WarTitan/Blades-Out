@@ -4753,13 +4753,24 @@ MonoBehaviour:
   - {fileID: 8785351317833243926, guid: 35ab844e2fbcb4340b817b642b162551, type: 3}
   - {fileID: 3898776377921779204, guid: b8f3f585958580f429b29099b40d9884, type: 3}
   - {fileID: 6057615055608163073, guid: 8c9de44f3c3099b4f87f21fdf61a8074, type: 3}
-  - {fileID: 976601240214183684, guid: a2e130ff3e211824186bc0071c42c8cd, type: 3}
+  - {fileID: 1087265367783640, guid: 4761d44e7c6ecda40ab25997452646cb, type: 3}
   - {fileID: 3049262417662919634, guid: 13b0bc9a7eede294e89a5be0d9794f71, type: 3}
   - {fileID: 8491909086094295302, guid: 2faa264310a51294dbb5f32fa64b9da3, type: 3}
   - {fileID: 4528745472823861906, guid: 08d1c76980588f44aa6ba265a6b7374d, type: 3}
   - {fileID: 6326278975644218761, guid: 04ce09ca007d9c049b28778aed0b7d74, type: 3}
   - {fileID: 2749865161554111298, guid: 5812aa6f506c0b8479ef2b70ecfad43c, type: 3}
   - {fileID: 1193668209549008694, guid: 8c5955c1556dd0044802085d6e2685b1, type: 3}
+  - {fileID: 1653821062770964, guid: 862c19aa558175849ad0a60d18708f6d, type: 3}
+  - {fileID: 1874913591707902, guid: 0ee090e1fd83f5f42aaa9724335db328, type: 3}
+  - {fileID: 1747046538137580, guid: 385718eb89568a047b5098dafaa23046, type: 3}
+  - {fileID: 1877224738230674, guid: 652b554283212c0498237e783eee70ed, type: 3}
+  - {fileID: 1903355279208026, guid: 2cf3791ad43b2b24f9a9b4e2c7687c9c, type: 3}
+  - {fileID: 1464714943321404, guid: 19e8f2ed480d5a847bd9733a34a087fd, type: 3}
+  - {fileID: 1628710968088830, guid: 039176e64c036304a86eadb2bd97e835, type: 3}
+  - {fileID: 1934170204943414, guid: fa8de4bb0df5dad4eac4829270d06056, type: 3}
+  - {fileID: 1974966766513714, guid: c83522ea817d9594ab4d11a67412bc90, type: 3}
+  - {fileID: 1852140781237550, guid: 334ae9b6aee9c8943a34a2874b3b5b5d, type: 3}
+  - {fileID: 1323607085007430, guid: 4cc717af1e47fe641bc5f8532db756be, type: 3}
   index: 0
 --- !u!114 &-8937863042296900462
 MonoBehaviour:
@@ -4939,6 +4950,7 @@ MonoBehaviour:
   syncInterval: 0
   listRoot: {fileID: 0}
   rowPrefab: {fileID: 554958550652514105, guid: 58957a8bf945fab418dd49ee80dc3e57, type: 3}
+  listRootObjectName: EffectsPanel
   anchorTopRight: 1
   topRightOffset: {x: -12, y: -12}
   refreshInterval: 0.1
