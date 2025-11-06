@@ -20,21 +20,21 @@ public class ItemDeck : MonoBehaviour
         public string itemName;
 
         [Header("Visual on tray")]
-        public GameObject visualPrefab;
+        public GameObject visualPrefab;              // 3D object to show in trays
 
         [Header("Effect")]
-        [Tooltip("Prefab spawned when this item is consumed. Can contain PsychoactiveEffectBase or IItemEffect.")]
-        public GameObject effectPrefab;
+        [Tooltip("Prefab spawned when this item is consumed. Can contain IItemEffect scripts.")]
+        public GameObject effectPrefab;              // Effect prefab to spawn on consume (client-side)
 
         [Tooltip("How long the effect should last (seconds).")]
-        public float effectLifetime = 5f;
+        public float effectLifetime = 5f;            // If > 0, destroys effect after this many seconds
 
         [Tooltip("How strong the effect is. For Flow Mosh this maps to Blend (0..1).")]
         [Range(0f, 1f)]
-        public float effectIntensity = 1f;
+        public float effectIntensity = 1f;           // Passed to IItemEffect.Play as intensity
     }
 
-    [Header("All items in the game")]
+    [Header("Deck")]
     public List<ItemEntry> items = new List<ItemEntry>();
 
     public int Count => (items != null ? items.Count : 0);
@@ -52,3 +52,4 @@ public class ItemDeck : MonoBehaviour
         return Random.Range(0, Count);
     }
 }
+

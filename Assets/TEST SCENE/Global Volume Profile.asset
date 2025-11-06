@@ -55,34 +55,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d1418908a8f7e2d47badc03f7812bb86, type: 3}
   m_Name: VoronoiPatterns
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.VoronoiPatterns
-  active: 0
+  active: 1
   Fade:
     m_OverrideState: 1
     m_Value: 0
   DisplaceMode:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   Size:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 64
   Thikness:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   Speed:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   mask:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {fileID: 0}
     dimension: 1
   maskChannel:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   maskEdgeFineTuning:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.15
   GlobalPostProcessingSettings:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
 --- !u!114 &-7962288224398657420
 MonoBehaviour:
@@ -96,37 +96,37 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b6f2637a509f40e46b74de1bd8548879, type: 3}
   m_Name: SectorKaleidoDistort
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.SectorKaleidoDistort
-  active: 0
+  active: 1
   Fade:
     m_OverrideState: 1
     m_Value: 0
   Intensity:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   InnerRadius:
-    m_OverrideState: 0
-    m_Value: 0.1
+    m_OverrideState: 1
+    m_Value: 0.011
   OuterRadius:
-    m_OverrideState: 0
-    m_Value: 0.49
+    m_OverrideState: 1
+    m_Value: 0.853
   Fill:
-    m_OverrideState: 0
-    m_Value: 0.9
+    m_OverrideState: 1
+    m_Value: -0.263
   Black:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   mask:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {fileID: 0}
     dimension: 1
   maskChannel:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   maskEdgeFineTuning:
-    m_OverrideState: 0
-    m_Value: 0.15
+    m_OverrideState: 1
+    m_Value: 0.148
   GlobalPostProcessingSettings:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
 --- !u!114 &-7793344875218236082
 MonoBehaviour:
@@ -140,31 +140,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8a1fdfe6d13d9024799b24e13a21eef7, type: 3}
   m_Name: FluidWorleyDisplacement
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.FluidWorleyDisplacement
-  active: 0
+  active: 1
   Intensity:
     m_OverrideState: 1
     m_Value: 0.00001
   Offset:
-    m_OverrideState: 0
-    m_Value: 0.1
+    m_OverrideState: 1
+    m_Value: 0.115
   Speed:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   Size:
-    m_OverrideState: 0
-    m_Value: 0.1
+    m_OverrideState: 1
+    m_Value: 0.94
   mask:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {fileID: 0}
     dimension: 1
   maskChannel:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   maskEdgeFineTuning:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.15
   GlobalPostProcessingSettings:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
 --- !u!114 &-7246044420702017869
 MonoBehaviour:
@@ -178,31 +178,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6e9eb3b3ab5f823469cb1efb5c336739, type: 3}
   m_Name: SpeedWarp
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.SpeedWarp
-  active: 0
+  active: 1
   Intensity:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   Frequency:
-    m_OverrideState: 0
-    m_Value: 64
+    m_OverrideState: 1
+    m_Value: 10.7
   Speed:
-    m_OverrideState: 0
-    m_Value: 0.5
+    m_OverrideState: 1
+    m_Value: 0.044
   Center:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {x: 0, y: 0}
   mask:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {fileID: 0}
     dimension: 1
   maskChannel:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   maskEdgeFineTuning:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.15
   GlobalPostProcessingSettings:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
 --- !u!114 &-7162082123931535171
 MonoBehaviour:
@@ -216,31 +216,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6c3b719ffefa7f0438f5abd0f66325df, type: 3}
   m_Name: PrismaticDisplacement
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.PrismaticDisplacement
-  active: 0
+  active: 1
   Fade:
     m_OverrideState: 1
     m_Value: 0
   Size:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 2
   Speed:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.1
   ColorOffset:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.02
   mask:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {fileID: 0}
     dimension: 1
   maskChannel:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   maskEdgeFineTuning:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.15
   GlobalPostProcessingSettings:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
 --- !u!114 &-2895938488531606871
 MonoBehaviour:
@@ -254,7 +254,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e55d7d24607f836469aae4cf781d2dab, type: 3}
   m_Name: CenteredFractalDistortion
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.CenteredFractalDistortion
-  active: 0
+  active: 1
   Intensity:
     m_OverrideState: 1
     m_Value: 0
@@ -266,10 +266,10 @@ MonoBehaviour:
     m_Value: 0
   Size:
     m_OverrideState: 1
-    m_Value: 0.6
+    m_Value: 0.51
   Speed:
     m_OverrideState: 1
-    m_Value: 1
+    m_Value: 0.85
   mask:
     m_OverrideState: 1
     m_Value: {fileID: 0}
@@ -279,7 +279,7 @@ MonoBehaviour:
     m_Value: 0
   maskEdgeFineTuning:
     m_OverrideState: 1
-    m_Value: 0.15
+    m_Value: 0.311
   GlobalPostProcessingSettings:
     m_OverrideState: 1
     m_Value: 0
@@ -295,31 +295,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 635e31a9e2f34aa4abb8d023d3d24592, type: 3}
   m_Name: ZigzagJitterDisplacement
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.ZigzagJitterDisplacement
-  active: 0
+  active: 1
   Intensity:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.00001
   Size:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   Speed:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   Fade:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   mask:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {fileID: 0}
     dimension: 1
   maskChannel:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   maskEdgeFineTuning:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.15
   GlobalPostProcessingSettings:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
 --- !u!114 &-159166205817584876
 MonoBehaviour:
@@ -333,31 +333,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1532a27d9dbecb9488764d74645476a7, type: 3}
   m_Name: CircularRippleWarp
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.CircularRippleWarp
-  active: 0
+  active: 1
   Fade:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   RingsCount:
-    m_OverrideState: 0
-    m_Value: 5
+    m_OverrideState: 1
+    m_Value: 0.7
   Zoom:
-    m_OverrideState: 0
-    m_Value: 0.5
+    m_OverrideState: 1
+    m_Value: 0.881
   Speed:
-    m_OverrideState: 0
-    m_Value: 1
+    m_OverrideState: 1
+    m_Value: 0.407
   mask:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {fileID: 0}
     dimension: 1
   maskChannel:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   maskEdgeFineTuning:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.15
   GlobalPostProcessingSettings:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
 --- !u!114 &11400000
 MonoBehaviour:
@@ -405,7 +405,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 55848e9a74a1a8b42b3807c945b51a61, type: 3}
   m_Name: VortexSwirlDisplacement
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.VortexSwirlDisplacement
-  active: 0
+  active: 1
   Fade:
     m_OverrideState: 1
     m_Value: 0
@@ -449,28 +449,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ddef1def65550eb409a4eb5c4e70aaf2, type: 3}
   m_Name: RadialSliceShifter
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.RadialSliceShifter
-  active: 0
+  active: 1
   LineWidth:
     m_OverrideState: 1
     m_Value: 0
   Speed:
-    m_OverrideState: 0
-    m_Value: 1
+    m_OverrideState: 1
+    m_Value: 0.3
   AnimateLine:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   Mask:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {fileID: 0}
     dimension: 1
   MaskChannel:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   MaskEdgeFineTuning:
-    m_OverrideState: 0
-    m_Value: 0.15
+    m_OverrideState: 1
+    m_Value: 0.000001
   GlobalPostProcessingSettings:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
 --- !u!114 &3682578750696796459
 MonoBehaviour:
@@ -484,28 +484,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 59713ce2b58f4864a8047d3a09e227b9, type: 3}
   m_Name: FluidNoiseDistortion
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.FluidNoiseDistortion
-  active: 0
+  active: 1
   Intensity:
     m_OverrideState: 1
     m_Value: 0.00001
   Speed:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   Size:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.1
   mask:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {fileID: 0}
     dimension: 1
   maskChannel:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   maskEdgeFineTuning:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.15
   GlobalPostProcessingSettings:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
 --- !u!114 &4098663438796137176
 MonoBehaviour:
@@ -519,31 +519,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b345e032a28bbfa48a6b8682be043d89, type: 3}
   m_Name: WorleyDisplacement
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.WorleyDisplacement
-  active: 0
+  active: 1
   Amount:
     m_OverrideState: 1
     m_Value: 0
   Size:
-    m_OverrideState: 0
-    m_Value: 0.056
+    m_OverrideState: 1
+    m_Value: 0.349
   Speed:
-    m_OverrideState: 0
-    m_Value: 1
+    m_OverrideState: 1
+    m_Value: 0.145
   Fade:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   mask:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {fileID: 0}
     dimension: 1
   maskChannel:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   maskEdgeFineTuning:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.15
   GlobalPostProcessingSettings:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
 --- !u!114 &4664899639472837432
 MonoBehaviour:
@@ -557,43 +557,43 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ab89929daf578194182206fa080f7baa, type: 3}
   m_Name: SpiralSliceKaleidoscope
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.SpiralSliceKaleidoscope
-  active: 0
+  active: 1
   Fade:
     m_OverrideState: 1
     m_Value: 0
   Images:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 5
   Scale:
-    m_OverrideState: 0
-    m_Value: 1
+    m_OverrideState: 1
+    m_Value: 1.148
   Rotation:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 45
   Offset:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   NoiseWarpStrength:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.5
   Black:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   Speed:
-    m_OverrideState: 0
-    m_Value: 0.5
+    m_OverrideState: 1
+    m_Value: 0.17
   mask:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {fileID: 0}
     dimension: 1
   maskChannel:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   maskEdgeFineTuning:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.15
   GlobalPostProcessingSettings:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
 --- !u!114 &4936307570380752016
 MonoBehaviour:
@@ -607,28 +607,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2b0cc4cf823c3f54c91c607d8d7ab268, type: 3}
   m_Name: DripMeltDistortion
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.DripMeltDistortion
-  active: 0
+  active: 1
   Strength:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.0001
   Speed:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.05
   Size:
-    m_OverrideState: 0
-    m_Value: 0.1
+    m_OverrideState: 1
+    m_Value: 0.066
   mask:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {fileID: 0}
     dimension: 1
   maskChannel:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   maskEdgeFineTuning:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.15
   GlobalPostProcessingSettings:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
 --- !u!114 &6251439565894363545
 MonoBehaviour:
@@ -642,28 +642,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bbd6b71c5f044f04c91fe3976a7465fc, type: 3}
   m_Name: RecursiveVortexWarp
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.RecursiveVortexWarp
-  active: 0
+  active: 1
   Fade:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   MaximumImages:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   Speed:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.5
   mask:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {fileID: 0}
     dimension: 1
   maskChannel:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   maskEdgeFineTuning:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.15
   GlobalPostProcessingSettings:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
 --- !u!114 &6799913744909464058
 MonoBehaviour:
@@ -677,25 +677,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b2bb84938f4b574396bfbf72b2c2ee2, type: 3}
   m_Name: VortexPixelShatter
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.VortexPixelShatter
-  active: 0
+  active: 1
   Amount:
     m_OverrideState: 1
     m_Value: 0
   Center:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {x: 0, y: 0}
   mask:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {fileID: 0}
     dimension: 1
   maskChannel:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   maskEdgeFineTuning:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.15
   GlobalPostProcessingSettings:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
 --- !u!114 &6839087944613379078
 MonoBehaviour:
@@ -709,28 +709,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe78a531bc59fd2499fbf35365bcdf51, type: 3}
   m_Name: FracturedNoiseDisplacement
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.FracturedNoiseDisplacement
-  active: 0
+  active: 1
   Amount:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.0001
   Fade:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   Speed:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.1
   mask:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {fileID: 0}
     dimension: 1
   maskChannel:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   maskEdgeFineTuning:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.15
   GlobalPostProcessingSettings:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
 --- !u!114 &7560970916353035540
 MonoBehaviour:
@@ -744,31 +744,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 53e2e681a87fcaf419723e3cd409ae51, type: 3}
   m_Name: TwistShrinkDistortion
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.TwistShrinkDistortion
-  active: 0
+  active: 1
   Fade:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   Intensity:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   Delay:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 6
   Speed:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   mask:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {fileID: 0}
     dimension: 1
   maskChannel:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   maskEdgeFineTuning:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.15
   GlobalPostProcessingSettings:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
 --- !u!114 &8751192269617275289
 MonoBehaviour:
@@ -782,28 +782,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ff1b6119bdfe4c4a86dbd44757b9669, type: 3}
   m_Name: TiledDriftDistortion
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.TiledDriftDistortion
-  active: 0
+  active: 1
   Amount:
     m_OverrideState: 1
     m_Value: 0
   Size:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 10
   Speed:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   mask:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {fileID: 0}
     dimension: 1
   maskChannel:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   maskEdgeFineTuning:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.15
   GlobalPostProcessingSettings:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
 --- !u!114 &9122259689572851473
 MonoBehaviour:
@@ -817,23 +817,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d1ba6dbd5db697749a0989aa82c60c2e, type: 3}
   m_Name: SmearDisplacement
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.SmearDisplacement
-  active: 0
+  active: 1
   Intensity:
     m_OverrideState: 1
     m_Value: 0.00001
   Invert:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   mask:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {fileID: 0}
     dimension: 1
   maskChannel:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   maskEdgeFineTuning:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.15
   GlobalPostProcessingSettings:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0

@@ -98,7 +98,6 @@ GameObject:
   - component: {fileID: 5127393552435462056}
   - component: {fileID: 294449105464193021}
   - component: {fileID: 7534591615195073895}
-  - component: {fileID: 2633181136839612329}
   - component: {fileID: 6588158690298036274}
   m_Layer: 7
   m_Name: PlayerCamera
@@ -201,21 +200,6 @@ MonoBehaviour:
   roundOuterCaps: 1
   hideInLobby: 1
   onlyForLocalPlayer: 1
---- !u!114 &2633181136839612329
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3490693020670742134}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 03cedf5aa5b446943936b79e80948eff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EffectFovMixer
-  clampFov: 1
-  minFov: 40
-  maxFov: 150
 --- !u!114 &6588158690298036274
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4638,9 +4622,6 @@ PrefabInstance:
       addedObject: {fileID: 9128577008693587491}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
       insertIndex: -1
-      addedObject: {fileID: -5974264118103359087}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
-      insertIndex: -1
       addedObject: {fileID: 241873791727944675}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
       insertIndex: -1
@@ -4657,9 +4638,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
       insertIndex: -1
       addedObject: {fileID: -538849548442801044}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 2842923046931180872}
   m_SourcePrefab: {fileID: 100100000, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
 --- !u!1 &3784944211829141594 stripped
 GameObject:
@@ -4961,35 +4939,9 @@ MonoBehaviour:
   syncInterval: 0
   listRoot: {fileID: 0}
   rowPrefab: {fileID: 554958550652514105, guid: 58957a8bf945fab418dd49ee80dc3e57, type: 3}
-  forceTopRightAnchor: 1
+  anchorTopRight: 1
   topRightOffset: {x: -12, y: -12}
-  detachToRootCanvas: 1
-  addIgnoreLayout: 1
-  enforceVerticalLayout: 1
-  enforceGridLayout: 1
-  appendNewAtBottom: 1
   refreshInterval: 0.1
-  fallbackTopRightOffset: {x: -12, y: -12}
-  fallbackFontSize: 16
---- !u!114 &-5974264118103359087
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3784944211829141594}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a9a58ac020e937b409749595db65c2a9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PsychoactiveHUDAutoBind
-  syncDirection: 0
-  syncMode: 0
-  syncInterval: 0
-  listRootObjectName: EffectsPanel
-  listRootTag: 
-  hud: {fileID: 0}
-  rowPrefab: {fileID: 554958550652514105, guid: 58957a8bf945fab418dd49ee80dc3e57, type: 3}
 --- !u!114 &241873791727944675
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4997,7 +4949,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3784944211829141594}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f25c2910be03a6c44a653a4b569be8ac, type: 3}
   m_Name: 
@@ -5090,21 +5042,6 @@ MonoBehaviour:
   syncInterval: 0
   postLobbyDelay: 0.2
   ignoreLobbyForTesting: 0
---- !u!114 &2842923046931180872
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3784944211829141594}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2ac9d54aff923cd4884c2ed3b2689c59, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemEffectRunner
-  itemDeck: {fileID: 0}
-  effectParent: {fileID: 2452773262679359239}
-  verboseLogs: 1
 --- !u!4 &4597333103463066336 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}

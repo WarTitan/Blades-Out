@@ -193,8 +193,16 @@ public class PlayerItemTrays : NetworkBehaviour
         Debug.Log("[PlayerItemTrays] Server_ConsumeAllNow seat=" + seatIndex1Based +
                   " count=" + toApply.Count);
 
-        // Clear the SyncList (propagates to all clients) and explicitly clear visuals.
-        consume.Clear();
+        // OLD (just Clear):
+        // consume.Clear();
+
+        // NEW: remove one by one so all clients get proper RemoveAt events.
+        while (consume.Count > 0)
+        {
+            consume.RemoveAt(consume.Count - 1);
+        }
+
+        // Extra safety: also clear visuals on all clients.
         RpcClearConsumeVisuals();
 
         // Tell owning client to spawn effects.
@@ -284,8 +292,8 @@ public class PlayerItemTrays : NetworkBehaviour
 
     // When this player consumes, the server sends the itemIds we drank.
     // We look them up in ItemDeck, group by itemId and spawn one effect prefab
-    // per type, with lifetime equal to sum of effectLifetime values and
-    // intensity equal to the sum of effectIntensity (clamped later by effect).
+    // per type, with lifetime = sum(effectLifetime) and
+    // intensity = sum(effectIntensity).
     [TargetRpc]
     private void Target_ApplyEffects(NetworkConnectionToClient conn, int[] itemIds)
     {
@@ -345,6 +353,9 @@ public class PlayerItemTrays : NetworkBehaviour
             }
         }
 
+        // HUD manager (optional, for showing timers)
+        var hudMgr = GetComponent<PsychoactiveEffectsManager>();
+
         foreach (var kv in agg)
         {
             var e = kv.Value;
@@ -361,32 +372,26 @@ public class PlayerItemTrays : NetworkBehaviour
             float lifetime = e.totalLifetime > 0f ? e.totalLifetime : 5f;
             float intensity = e.totalIntensity > 0f ? e.totalIntensity : 1f;
 
-            // 1) Old pipeline: PsychoactiveEffectBase (Vodka, etc.)
-            var psycho = go.GetComponent<PsychoactiveEffectBase>();
-            if (psycho == null)
-                psycho = go.GetComponentInChildren<PsychoactiveEffectBase>();
-
-            if (psycho != null)
+            // Tell HUD manager (20X Distortion Pro etc.)
+            if (hudMgr != null && lifetime > 0f)
             {
-                psycho.BeginNamed(cam, lifetime, intensity, e.displayName);
+                hudMgr.RegisterEffect(e.displayName, lifetime);
+            }
+
+            // New pipeline: IItemEffect (20X Distortion Pro, etc.)
+            var itemEffect = go.GetComponent<IItemEffect>();
+            if (itemEffect == null)
+                itemEffect = go.GetComponentInChildren<IItemEffect>();
+
+            if (itemEffect != null)
+            {
+                itemEffect.Play(lifetime, intensity);
             }
             else
             {
-                // 2) New pipeline: IItemEffect (20X Distortion Pro, etc.)
-                var itemEffect = go.GetComponent<IItemEffect>();
-                if (itemEffect == null)
-                    itemEffect = go.GetComponentInChildren<IItemEffect>();
-
-                if (itemEffect != null)
-                {
-                    itemEffect.Play(lifetime, intensity);
-                }
-                else
-                {
-                    // No known effect script, just destroy after lifetime.
-                    if (lifetime > 0f)
-                        Object.Destroy(go, lifetime);
-                }
+                // No known effect script, just destroy after lifetime.
+                if (lifetime > 0f)
+                    Object.Destroy(go, lifetime);
             }
         }
     }

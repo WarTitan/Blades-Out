@@ -1,67 +1,90 @@
-// FILE: PsychoactiveEffectsManager.cs
-// FULL REPLACEMENT (ASCII only)
-// No hotkeys. Tracks active effects, raises start/end events,
-// and provides a snapshot for the HUD.
-
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-[AddComponentMenu("Gameplay/Effects/Psychoactive Effects Manager")]
+[AddComponentMenu("Gameplay/Effects/Effects Manager")]
 public class PsychoactiveEffectsManager : MonoBehaviour
 {
+    [Serializable]
     public struct ActiveEffectInfo
     {
-        public string name;
-        public PsychoactiveEffectBase effect;
-        public float endTime;
-        public float duration;
+        public string id;        // internal ID
+        public string name;      // display name
+        public float endTime;    // Time.time when it ends
+        public float duration;   // total duration (seconds)
     }
 
-    public event Action<string, PsychoactiveEffectBase, float, float> OnEffectStarted;
-    public event Action<PsychoactiveEffectBase> OnEffectEnded;
+    public event Action<ActiveEffectInfo> OnEffectStarted;
+    public event Action<string> OnEffectEnded; // id
 
-    private readonly Dictionary<PsychoactiveEffectBase, ActiveEffectInfo> active =
-        new Dictionary<PsychoactiveEffectBase, ActiveEffectInfo>(16);
+    private readonly Dictionary<string, ActiveEffectInfo> active =
+        new Dictionary<string, ActiveEffectInfo>(16);
 
-    // Called by effects
-    public void NotifyStart(string displayName, PsychoactiveEffectBase eff, float endTime, float duration)
+    public string RegisterEffect(string displayName, float duration)
     {
-        if (eff == null) return;
-        ActiveEffectInfo info = new ActiveEffectInfo
+        if (string.IsNullOrEmpty(displayName))
+            displayName = "Effect";
+
+        duration = Mathf.Max(0f, duration);
+        float end = Time.time + duration;
+
+        var info = new ActiveEffectInfo
         {
-            name = string.IsNullOrEmpty(displayName) ? eff.GetType().Name : displayName,
-            effect = eff,
-            endTime = endTime,
+            id = Guid.NewGuid().ToString(),
+            name = displayName,
+            endTime = end,
             duration = duration
         };
-        active[eff] = info;
-        if (OnEffectStarted != null) OnEffectStarted(info.name, eff, info.endTime, info.duration);
+
+        active[info.id] = info;
+
+        Debug.Log("[EffectsManager] RegisterEffect " + info.name + " duration=" + duration);
+        OnEffectStarted?.Invoke(info);
+        return info.id;
     }
 
-    // Called by effects
-    public void NotifyEnd(PsychoactiveEffectBase eff)
+    public void EndEffect(string id)
     {
-        if (eff == null) return;
-        if (active.ContainsKey(eff)) active.Remove(eff);
-        if (OnEffectEnded != null) OnEffectEnded(eff);
+        if (string.IsNullOrEmpty(id)) return;
+        if (!active.Remove(id)) return;
+
+        OnEffectEnded?.Invoke(id);
     }
 
     public List<ActiveEffectInfo> GetActiveEffectsSnapshot()
     {
-        var list = new List<ActiveEffectInfo>(active.Count);
-        foreach (var kv in active) list.Add(kv.Value);
-        return list;
+        return new List<ActiveEffectInfo>(active.Values);
+    }
+
+    private void Update()
+    {
+        if (active.Count == 0) return;
+
+        float now = Time.time;
+        List<string> toEnd = null;
+
+        foreach (var kv in active)
+        {
+            if (kv.Value.endTime <= now)
+            {
+                if (toEnd == null) toEnd = new List<string>(4);
+                toEnd.Add(kv.Key);
+            }
+        }
+
+        if (toEnd != null)
+        {
+            for (int i = 0; i < toEnd.Count; i++)
+                EndEffect(toEnd[i]);
+        }
     }
 
     private void OnDestroy()
     {
         if (active.Count == 0) return;
-        var keys = new List<PsychoactiveEffectBase>(active.Keys);
-        for (int i = 0; i < keys.Count; i++)
-        {
-            if (OnEffectEnded != null) OnEffectEnded(keys[i]);
-        }
+        var ids = new List<string>(active.Keys);
+        for (int i = 0; i < ids.Count; i++)
+            OnEffectEnded?.Invoke(ids[i]);
         active.Clear();
     }
 }
