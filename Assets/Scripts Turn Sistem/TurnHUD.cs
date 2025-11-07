@@ -1,8 +1,3 @@
-// FILE: TurnHUD.cs
-// FULL FILE (ASCII only)
-// Single-instance HUD that shows current player's name/seat, LVL, strikes, and a timer.
-// Optional strike board list can be enabled manually (off by default).
-
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -19,8 +14,8 @@ public class TurnHUD : MonoBehaviour
     public GameObject timerObject;
 
     [Header("Strike Board (optional, manual only)")]
-    public bool showStrikeBoard = false;       // default OFF
-    public GameObject strikeBoardObject;       // Text or TMP_Text, assign manually if enabled
+    public bool showStrikeBoard = false;
+    public GameObject strikeBoardObject;
 
     [Header("Font (optional for legacy Text)")]
     public Font overrideFont;
@@ -58,7 +53,6 @@ public class TurnHUD : MonoBehaviour
 
         CacheRefs();
 
-        // Remove any previously auto-created child called "StrikeBoard"
         var child = transform.Find("StrikeBoard");
         if (child != null) Destroy(child.gameObject);
 
@@ -69,9 +63,15 @@ public class TurnHUD : MonoBehaviour
     private void ResolveSingleton()
     {
         if (s_resolved) return;
+
+#if UNITY_2023_1_OR_NEWER
+        var all = Object.FindObjectsByType<TurnHUD>(FindObjectsSortMode.None);
+#else
 #pragma warning disable CS0618
         var all = FindObjectsOfType<TurnHUD>(true);
-#pragma warning disable CS0618
+#pragma warning restore CS0618
+#endif
+
         int bestScore = int.MinValue;
         TurnHUD best = null;
 
@@ -109,7 +109,14 @@ public class TurnHUD : MonoBehaviour
     void OnEnable()
     {
         if (s_winner != this) return;
+
+#if UNITY_2023_1_OR_NEWER
+        net = Object.FindFirstObjectByType<TurnManagerNet>();
+#else
+#pragma warning disable CS0618
         net = FindObjectOfType<TurnManagerNet>();
+#pragma warning restore CS0618
+#endif
     }
 
     void Update()
@@ -118,15 +125,22 @@ public class TurnHUD : MonoBehaviour
 
         if (net == null)
         {
-            SetTitle("Waiting.");
+            SetTitle("Stage: Waiting");
             SetTimer("");
             return;
         }
 
         if (net.phase == TurnManagerNet.Phase.Waiting)
         {
-            SetTitle("Waiting.");
+            SetTitle("Stage: Waiting");
             SetTimer("");
+        }
+        else if (net.phase == TurnManagerNet.Phase.Crafting)
+        {
+            double remain = net.turnEndTime - NetworkTime.time;
+            if (remain < 0) remain = 0;
+            SetTitle("Stage: Crafting (all players)");
+            SetTimer("Ends in " + FormatTime(remain));
         }
         else if (net.phase == TurnManagerNet.Phase.Turn)
         {
@@ -139,20 +153,19 @@ public class TurnHUD : MonoBehaviour
             {
                 double remain = net.memoryEndTime - NetworkTime.time;
                 if (remain < 0) remain = 0;
-                SetTitle(who + "  |  LVL " + lvl + "  |  Strikes " + strikes + "/" + MemoryStrikeTracker.MaxStrikes + "  |  Memory");
+                SetTitle("Stage: Memory  |  " + who + "  |  LVL " + lvl +
+                         "  |  Strikes " + strikes + "/" + MemoryStrikeTracker.MaxStrikes);
                 SetTimer("Ends in " + FormatTime(remain));
             }
             else
             {
-                double remain = net.turnEndTime - NetworkTime.time;
-                if (remain < 0) remain = 0;
-                SetTitle(who + "  |  LVL " + lvl + "  |  Strikes " + strikes + "/" + MemoryStrikeTracker.MaxStrikes);
-                SetTimer("Ends in " + FormatTime(remain));
+                SetTitle("Stage: Delivery");
+                SetTimer("");
             }
         }
         else
         {
-            SetTitle("Waiting.");
+            SetTitle("Stage: Waiting");
             SetTimer("");
         }
 
@@ -165,7 +178,13 @@ public class TurnHUD : MonoBehaviour
 
     private string BuildStrikeBoard()
     {
+#if UNITY_2023_1_OR_NEWER
+        var trays = Object.FindObjectsByType<PlayerItemTrays>(FindObjectsSortMode.None);
+#else
+#pragma warning disable CS0618
         var trays = GameObject.FindObjectsOfType<PlayerItemTrays>();
+#pragma warning restore CS0618
+#endif
         if (trays.Length == 0) return "No players.";
 
         PlayerItemTrays[] bySeat = new PlayerItemTrays[6]; // seats 1..5
@@ -208,7 +227,13 @@ public class TurnHUD : MonoBehaviour
     {
         if (netId != 0)
         {
+#if UNITY_2023_1_OR_NEWER
+            var all = Object.FindObjectsByType<NetworkIdentity>(FindObjectsSortMode.None);
+#else
+#pragma warning disable CS0618
             var all = GameObject.FindObjectsOfType<NetworkIdentity>();
+#pragma warning restore CS0618
+#endif
             for (int i = 0; i < all.Length; i++)
             {
                 if (all[i].netId == netId)
@@ -220,7 +245,8 @@ public class TurnHUD : MonoBehaviour
                 }
             }
         }
-        return "Seat " + seat;
+        if (seat > 0) return "Seat " + seat;
+        return (netId != 0) ? ("Player " + netId) : "Unknown";
     }
 
     private void CacheRefs()
@@ -240,13 +266,18 @@ public class TurnHUD : MonoBehaviour
             strikeBoardText = strikeBoardObject.GetComponent<Text>();
             strikeBoardTMP = strikeBoardObject.GetComponent<TMP_Text>();
 
-            if (strikeBoardText != null && strikeBoardText.font == null)
-                strikeBoardText.font = GetDefaultFont();
+            if (strikeBoardText != null)
+            {
+                if (overrideFont != null) strikeBoardText.font = overrideFont;
+                else if (strikeBoardText.font == null) strikeBoardText.font = GetDefaultFont();
+            }
         }
     }
 
     private Font GetDefaultFont()
     {
+        if (overrideFont != null) return overrideFont;
+
         Font f = null;
         try { f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); } catch { }
         if (f == null)

@@ -5006,6 +5006,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   rayDistance: 100
+  useMousePosition: 0
+  dragHeightOffset: 0.02
   drawDebugRay: 1
 --- !u!114 &4708702899404729097
 MonoBehaviour:

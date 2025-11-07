@@ -1,6 +1,6 @@
 // FILE: TurnInput.cs
-// NEW FILE (ASCII)
-// Put this on the player prefab. Lets the current-turn player press "1" to end their turn.
+// DROP-IN REPLACEMENT (ASCII)
+// Press "1" to end YOUR current crafting window (or skip where applicable).
 
 using UnityEngine;
 using Mirror;

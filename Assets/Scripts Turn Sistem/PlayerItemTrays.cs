@@ -1,11 +1,32 @@
 // FILE: PlayerItemTrays.cs
-// FULL FILE (ASCII only)
+// DROP-IN REPLACEMENT (ASCII only)
 //
-// Server authoritative inventory + consume SyncLists,
-// trading Command used by ItemInteraction,
-// and simple client visuals (falls back to cubes if no prefab).
+// Key behavior:
 //
-// Seat is NOT handled here (SeatIndexAuthority sets seatIndex1Based).
+// - INVENTORY tray: items you hold.
+// - CONSUME tray: items that will be consumed when you are the target in delivery.
+// - OnStartServer: TurnManagerNet.Server_OnPlayerTraysSpawned(this) seeds starting items.
+// - While seatIndex1Based == 0 (lobby / not seated):
+//       * We DO NOT spawn any tray visuals -> no cards at (0,0,0).
+//
+// Crafting phase:
+//   - Any non-eliminated player can give an item to another player.
+//   - Cmd_GiveItemToPlayer:
+//       * Checks TurnManagerNet.CanTradeNow.
+//       * Uses TurnManagerNet.Server_OnGift(giver, target) to lock the target.
+//       * Moves the item from INVENTORY to TARGET.CONSUME.
+//
+// Delivery phase:
+//   - TurnManagerNet calls Server_ConsumeAllNow() on the target trays.
+//   - This clears CONSUME, removes 3D prefabs, and applies visual screen effects.
+//
+// Effect stacking rule:
+//   - Aggregate by effectPrefab (effect type), NOT by itemId.
+//   - For each effectPrefab:
+//       totalLifetime = sum of lifetimes
+//       maxIntensity  = max of intensities
+//   - We then CLAMP intensity to 0..1 before passing it to IItemEffect.Play().
+//   => Same effect twice = same intensity (0..1), longer duration.
 
 using UnityEngine;
 using Mirror;
@@ -19,7 +40,7 @@ public class PlayerItemTrays : NetworkBehaviour
 
     [Header("Seating")]
     [SyncVar(hook = nameof(OnSeatChanged))]
-    public int seatIndex1Based = 0; // 1.5
+    public int seatIndex1Based = 0; // 1..5
 
     [Header("Visuals")]
     public float itemScale = 0.9f;
@@ -37,6 +58,19 @@ public class PlayerItemTrays : NetworkBehaviour
     private Transform[] conAnchors;
 
     // -------- Mirror lifecycle --------
+
+    public override void OnStartServer()
+    {
+        base.OnStartServer();
+
+        // As soon as this tray exists on server, make sure the player
+        // has starting items (if they were at 0).
+        var tm = TurnManagerNet.Instance;
+        if (tm != null)
+        {
+            tm.Server_OnPlayerTraysSpawned(this);
+        }
+    }
 
     public override void OnStartClient()
     {
@@ -95,6 +129,11 @@ public class PlayerItemTrays : NetworkBehaviour
     private void RebuildInventoryVisuals()
     {
         ClearVisuals(invVisuals);
+
+        // IMPORTANT: do not show cards before the player has a seat.
+        if (seatIndex1Based <= 0)
+            return;
+
         int count = Mathf.Min(inventory.Count, MaxSlots);
         EnsureAnchorArray(ref invAnchors, count, true);
         for (int i = 0; i < count; i++)
@@ -108,6 +147,11 @@ public class PlayerItemTrays : NetworkBehaviour
     private void RebuildConsumeVisuals()
     {
         ClearVisuals(conVisuals);
+
+        // Same: no consume visuals before seat.
+        if (seatIndex1Based <= 0)
+            return;
+
         int count = Mathf.Min(consume.Count, MaxSlots);
         EnsureAnchorArray(ref conAnchors, count, false);
         for (int i = 0; i < count; i++)
@@ -141,7 +185,9 @@ public class PlayerItemTrays : NetworkBehaviour
 #if UNITY_2023_1_OR_NEWER
         deck = Object.FindFirstObjectByType<ItemDeck>();
 #else
+#pragma warning disable CS0618
         deck = Object.FindObjectOfType<ItemDeck>();
+#pragma warning restore CS0618
 #endif
 
         if (deck == null)
@@ -177,15 +223,11 @@ public class PlayerItemTrays : NetworkBehaviour
         return added;
     }
 
-    // Called by TurnManagerNet at the start of this player's turn.
-    // Consumes everything in 'consume', clears the tray everywhere,
-    // then spawns effect prefabs on this player's local camera.
     [Server]
     public void Server_ConsumeAllNow()
     {
         if (consume.Count == 0) return;
 
-        // Copy the IDs we are about to consume.
         List<int> toApply = new List<int>(consume.Count);
         for (int i = 0; i < consume.Count; i++)
             toApply.Add(consume[i]);
@@ -193,19 +235,11 @@ public class PlayerItemTrays : NetworkBehaviour
         Debug.Log("[PlayerItemTrays] Server_ConsumeAllNow seat=" + seatIndex1Based +
                   " count=" + toApply.Count);
 
-        // OLD (just Clear):
-        // consume.Clear();
-
-        // NEW: remove one by one so all clients get proper RemoveAt events.
         while (consume.Count > 0)
-        {
             consume.RemoveAt(consume.Count - 1);
-        }
 
-        // Extra safety: also clear visuals on all clients.
         RpcClearConsumeVisuals();
 
-        // Tell owning client to spawn effects.
         if (connectionToClient != null && toApply.Count > 0)
         {
             Target_ApplyEffects(connectionToClient, toApply.ToArray());
@@ -229,6 +263,7 @@ public class PlayerItemTrays : NetworkBehaviour
         if (!tm.CanTradeNow(senderId)) return;
 
         if (fromSlotIndex < 0 || fromSlotIndex >= inventory.Count) return;
+        if (targetNetId == 0) return;
 
         NetworkIdentity targetIdentity = FindNetIdentity(targetNetId);
         if (targetIdentity == null) return;
@@ -236,14 +271,17 @@ public class PlayerItemTrays : NetworkBehaviour
         var targetTrays = targetIdentity.GetComponent<PlayerItemTrays>();
         if (targetTrays == null) return;
 
-        // Gift goes into CONSUME, not inventory.
+        // Register / lock the target for this round on TurnManager.
+        if (!tm.Server_OnGift(senderId.netId, targetNetId))
+            return;
+
         if (targetTrays.consume.Count >= MaxSlots) return;
 
         int itemId = inventory[fromSlotIndex];
         inventory.RemoveAt(fromSlotIndex);
         targetTrays.consume.Add(itemId);
 
-        Debug.Log("[PlayerItemTrays] Trade seat " + seatIndex1Based +
+        Debug.Log("[PlayerItemTrays] Gift seat " + seatIndex1Based +
                   " -> netId " + targetNetId +
                   " item " + itemId + " (into target.consume)");
     }
@@ -252,11 +290,12 @@ public class PlayerItemTrays : NetworkBehaviour
     private NetworkIdentity FindNetIdentity(uint netId)
     {
         if (netId == 0) return null;
-
 #if UNITY_2023_1_OR_NEWER
         var all = Object.FindObjectsByType<NetworkIdentity>(FindObjectsSortMode.None);
 #else
-        var all = Object.FindObjectsOfType<NetworkIdentity>();
+#pragma warning disable CS0618
+        var all = GameObject.FindObjectsOfType<NetworkIdentity>();
+#pragma warning restore CS0618
 #endif
         for (int i = 0; i < all.Length; i++)
             if (all[i].netId == netId) return all[i];
@@ -268,11 +307,8 @@ public class PlayerItemTrays : NetworkBehaviour
     [ClientRpc]
     private void RpcClearConsumeVisuals()
     {
-        // Clear tracked consume visuals
         ClearVisuals(conVisuals);
 
-        // Extra safety: also destroy ANY children under consume anchors
-        // in case something slipped past our conVisuals list on this client.
         if (conAnchors != null)
         {
             for (int i = 0; i < conAnchors.Length; i++)
@@ -290,10 +326,6 @@ public class PlayerItemTrays : NetworkBehaviour
         }
     }
 
-    // When this player consumes, the server sends the itemIds we drank.
-    // We look them up in ItemDeck, group by itemId and spawn one effect prefab
-    // per type, with lifetime = sum(effectLifetime) and
-    // intensity = sum(effectIntensity).
     [TargetRpc]
     private void Target_ApplyEffects(NetworkConnectionToClient conn, int[] itemIds)
     {
@@ -312,11 +344,14 @@ public class PlayerItemTrays : NetworkBehaviour
             return;
         }
 
+        // Look up deck on client
         ItemDeck deck;
 #if UNITY_2023_1_OR_NEWER
         deck = Object.FindFirstObjectByType<ItemDeck>();
 #else
+#pragma warning disable CS0618
         deck = Object.FindObjectOfType<ItemDeck>();
+#pragma warning restore CS0618
 #endif
 
         if (deck == null)
@@ -325,35 +360,40 @@ public class PlayerItemTrays : NetworkBehaviour
             return;
         }
 
-        // Aggregate by itemId.
-        Dictionary<int, EffectAggregate> agg = new Dictionary<int, EffectAggregate>(16);
+        // Aggregate by effectPrefab (effect type).
+        Dictionary<GameObject, EffectAggregate> agg = new Dictionary<GameObject, EffectAggregate>(16);
+
         for (int i = 0; i < itemIds.Length; i++)
         {
             int id = itemIds[i];
             var def = deck.Get(id);
             if (def == null || def.effectPrefab == null) continue;
 
+            GameObject key = def.effectPrefab;
+
             EffectAggregate ea;
-            if (!agg.TryGetValue(id, out ea))
+            if (!agg.TryGetValue(key, out ea))
             {
-                ea.itemId = id;
-                ea.totalLifetime = Mathf.Max(0f, def.effectLifetime);
-                ea.totalIntensity = Mathf.Max(0f, def.effectIntensity);
-                ea.displayName = string.IsNullOrEmpty(def.itemName)
-                    ? def.effectPrefab.name
-                    : def.itemName;
                 ea.effectPrefab = def.effectPrefab;
-                agg[id] = ea;
+                ea.totalLifetime = Mathf.Max(0f, def.effectLifetime);
+                ea.maxIntensity = Mathf.Max(0f, def.effectIntensity);
+                ea.displayName = string.IsNullOrEmpty(def.itemName)
+                                   ? def.effectPrefab.name
+                                   : def.itemName;
+                agg[key] = ea;
             }
             else
             {
                 ea.totalLifetime += Mathf.Max(0f, def.effectLifetime);
-                ea.totalIntensity = Mathf.Max(0f, def.effectIntensity);
-                agg[id] = ea;
+
+                float intensity = Mathf.Max(0f, def.effectIntensity);
+                if (intensity > ea.maxIntensity)
+                    ea.maxIntensity = intensity;
+
+                agg[key] = ea;
             }
         }
 
-        // HUD manager (optional, for showing timers)
         var hudMgr = GetComponent<PsychoactiveEffectsManager>();
 
         foreach (var kv in agg)
@@ -361,24 +401,23 @@ public class PlayerItemTrays : NetworkBehaviour
             var e = kv.Value;
             if (e.effectPrefab == null) continue;
 
-            Debug.Log("[PlayerItemTrays] Spawning effect prefab '" + e.effectPrefab.name +
-                      "' for itemId=" + e.itemId + " lifetime=" + e.totalLifetime +
-                      " intensity=" + e.totalIntensity);
-
             GameObject go = Object.Instantiate(e.effectPrefab);
             go.name = "Effect_" + e.displayName;
             go.transform.SetParent(cam.transform, false);
 
             float lifetime = e.totalLifetime > 0f ? e.totalLifetime : 5f;
-            float intensity = e.totalIntensity > 0f ? e.totalIntensity : 1f;
+            float intensity = e.maxIntensity > 0f ? e.maxIntensity : 1f;
 
-            // Tell HUD manager (20X Distortion Pro etc.)
+            // Treat deck intensity as normalized 0..1
+            intensity = Mathf.Clamp01(intensity);
+
+            Debug.Log("[PlayerItemTrays] Effect '" + e.displayName +
+                      "' -> lifetime=" + lifetime +
+                      " intensity(norm)=" + intensity);
+
             if (hudMgr != null && lifetime > 0f)
-            {
                 hudMgr.RegisterEffect(e.displayName, lifetime);
-            }
 
-            // New pipeline: IItemEffect (20X Distortion Pro, etc.)
             var itemEffect = go.GetComponent<IItemEffect>();
             if (itemEffect == null)
                 itemEffect = go.GetComponentInChildren<IItemEffect>();
@@ -389,20 +428,19 @@ public class PlayerItemTrays : NetworkBehaviour
             }
             else
             {
-                // No known effect script, just destroy after lifetime.
                 if (lifetime > 0f)
                     Object.Destroy(go, lifetime);
             }
         }
     }
 
+    // Aggregated effect data per effectPrefab.
     private struct EffectAggregate
     {
-        public int itemId;
-        public float totalLifetime;
-        public float totalIntensity;
-        public string displayName;
         public GameObject effectPrefab;
+        public float totalLifetime;
+        public float maxIntensity;
+        public string displayName;
     }
 
     // -------- Visual helpers --------
@@ -415,7 +453,9 @@ public class PlayerItemTrays : NetworkBehaviour
 #if UNITY_2023_1_OR_NEWER
         deck = Object.FindFirstObjectByType<ItemDeck>();
 #else
+#pragma warning disable CS0618
         deck = Object.FindObjectOfType<ItemDeck>();
+#pragma warning restore CS0618
 #endif
 
         if (deck != null)
@@ -470,11 +510,14 @@ public class PlayerItemTrays : NetworkBehaviour
     {
         if (anchors != null && anchors.Length >= expected) return;
 
-        // Ask service again (maybe seat changed)
         RebindAnchors();
 
         if (anchors == null || anchors.Length < expected)
         {
+            // Only auto-create anchors if we actually have a seat.
+            if (seatIndex1Based <= 0)
+                return;
+
             var root = new GameObject(forInventory ? "InvAnchors_Auto" : "ConAnchors_Auto");
             root.transform.SetParent(transform, false);
             anchors = new Transform[expected];

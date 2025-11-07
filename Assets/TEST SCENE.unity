@@ -6585,7 +6585,7 @@ MonoBehaviour:
     visualPrefab: {fileID: 1635129648702532, guid: 754fde22610968144b1830587b3dd083, type: 3}
     effectPrefab: {fileID: 2859851392168645283, guid: f0698d3a735359d428cde52a246c602e, type: 3}
     effectLifetime: 20
-    effectIntensity: 0.7
+    effectIntensity: 0.7003
   - itemName: Ice Cream Piss
     visualPrefab: {fileID: 1130123243935462, guid: 579d9a9e94f90b64c8d5cda150af4ead, type: 3}
     effectPrefab: {fileID: 1896543291838299542, guid: df1649d437b98fb4392d43527a9d1134, type: 3}
@@ -15742,9 +15742,9 @@ MonoBehaviour:
   syncInterval: 0
   seatTurnOrder: 0100000002000000030000000400000005000000
   initialDraw: 4
-  drawAfterTurn: 2
+  drawAfterTurn: 0
+  craftingSeconds: 20
   memorySeconds: 45
-  turnSeconds: 30
   ignoreLobbyForTesting: 0
   autoSeatOnServer: 0
   phase: 0
