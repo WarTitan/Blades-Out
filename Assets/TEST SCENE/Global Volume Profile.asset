@@ -449,7 +449,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ddef1def65550eb409a4eb5c4e70aaf2, type: 3}
   m_Name: RadialSliceShifter
   m_EditorClassIdentifier: Assembly-CSharp::DistortionsPro_20X.RadialSliceShifter
-  active: 1
+  active: 0
   LineWidth:
     m_OverrideState: 1
     m_Value: 0

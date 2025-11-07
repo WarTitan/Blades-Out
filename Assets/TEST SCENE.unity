@@ -6551,109 +6551,104 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemDeck
   items:
-  - itemName: 1
+  - itemName: Tokyo Death
     visualPrefab: {fileID: 1616563364260614, guid: 9a9c626ddab303b418ea259cd7330ed0, type: 3}
     effectPrefab: {fileID: 1576724258534158383, guid: 732c1d45689c87945b22c9c2ea81931f, type: 3}
     effectLifetime: 20
     effectIntensity: 0.2
-  - itemName: 2
+  - itemName: Granddaddy Puke
     visualPrefab: {fileID: 1254268745257912, guid: b91a950ca1351f84bbbb6409dff51c40, type: 3}
     effectPrefab: {fileID: 4979470093972955811, guid: 95e38bbe60f09ee42a6f453034826518, type: 3}
     effectLifetime: 20
     effectIntensity: 1
-  - itemName: 3
+  - itemName: OG Diesel
     visualPrefab: {fileID: 1618972451557900, guid: 67714cf3e1725c148ac27a9e0def86ba, type: 3}
     effectPrefab: {fileID: 875526611132428072, guid: f9152f4e513bcdb419655df712f6dd35, type: 3}
     effectLifetime: 20
     effectIntensity: 0.1
-  - itemName: 4
+  - itemName: Gorilla Cookies
     visualPrefab: {fileID: 1342082947423160, guid: 08bcc0b9ba8442b428c652a4efc46ce8, type: 3}
     effectPrefab: {fileID: 2845833881558288370, guid: 8bae047d496169a409b5a81bee726d8b, type: 3}
     effectLifetime: 20
     effectIntensity: 0.7
-  - itemName: 5
+  - itemName: Wedding Thunderfuck
     visualPrefab: {fileID: 1550171410255482, guid: f167789c151c9de449115b9119f4e90b, type: 3}
     effectPrefab: {fileID: 1296473734665264630, guid: b8737645bc64374449bc253f22d8d4b4, type: 3}
     effectLifetime: 20
     effectIntensity: 0.22
-  - itemName: 6
+  - itemName: Strawberry Haze
     visualPrefab: {fileID: 1460396016348330, guid: 2d1504c58f756304f8c0c27fd1db41d1, type: 3}
     effectPrefab: {fileID: 6702408715467967180, guid: 8548d7cb85553c14eb1f2a5f47d353bd, type: 3}
     effectLifetime: 20
     effectIntensity: 0.4
-  - itemName: 7
+  - itemName: Banana Rhino
     visualPrefab: {fileID: 1635129648702532, guid: 754fde22610968144b1830587b3dd083, type: 3}
     effectPrefab: {fileID: 2859851392168645283, guid: f0698d3a735359d428cde52a246c602e, type: 3}
     effectLifetime: 20
     effectIntensity: 0.7
-  - itemName: 8
+  - itemName: Ice Cream Piss
     visualPrefab: {fileID: 1130123243935462, guid: 579d9a9e94f90b64c8d5cda150af4ead, type: 3}
     effectPrefab: {fileID: 1896543291838299542, guid: df1649d437b98fb4392d43527a9d1134, type: 3}
     effectLifetime: 20
     effectIntensity: 0.2
-  - itemName: 9
+  - itemName: Purple Cheese
     visualPrefab: {fileID: 1643505834713684, guid: 1c1eaf31f14c727468bc1aed173c9e2f, type: 3}
-    effectPrefab: {fileID: 103575385736835232, guid: 9193f193e72037142a335d453e0c3d20, type: 3}
+    effectPrefab: {fileID: 6702404750328058507, guid: b2bd869475fbe0c439b18131ccd569dd, type: 3}
     effectLifetime: 20
-    effectIntensity: 0.002
-  - itemName: 10
+    effectIntensity: 0.02
+  - itemName: Afghan Express
     visualPrefab: {fileID: 1575644977173200, guid: 6ee1276edd0130a4bb9a8b175b43dd78, type: 3}
     effectPrefab: {fileID: 6607927409185720016, guid: a7bb09cfefa60634f9c463cd392dcfe0, type: 3}
     effectLifetime: 20
     effectIntensity: 0.2
-  - itemName: 11
+  - itemName: Nightmare Punch
     visualPrefab: {fileID: 1440283266169602, guid: 955c8c39c8f96034cbcdb1843f04e913, type: 3}
     effectPrefab: {fileID: 8257879563964934042, guid: 56cda940e427b5042822ef54d6f772b6, type: 3}
     effectLifetime: 20
     effectIntensity: 0.2
-  - itemName: 12
+  - itemName: Ultra Bud
     visualPrefab: {fileID: 1246378789271836, guid: 9749a350405395546b64ddc4d1fef223, type: 3}
     effectPrefab: {fileID: 6461819666460780702, guid: 57d1625d43bf5be42a4c4bf17574829f, type: 3}
     effectLifetime: 20
     effectIntensity: 0.7
-  - itemName: 13
+  - itemName: Sexy Fuel
     visualPrefab: {fileID: 1126824068822070, guid: fb29e70946e152d4191a0361efa91ca4, type: 3}
     effectPrefab: {fileID: 9151580286633929865, guid: 17b90d548a48ca3499efbab2c0154651, type: 3}
     effectLifetime: 20
     effectIntensity: 0.4
-  - itemName: 14
+  - itemName: Hairy Monkey
     visualPrefab: {fileID: 1830654024553444, guid: 66bb7dc50c367114da33b16b9b7214e1, type: 3}
     effectPrefab: {fileID: 4940932113121787828, guid: 0abb0ff7c11aba7499b50450967cb3df, type: 3}
     effectLifetime: 20
     effectIntensity: 0.2
-  - itemName: 15
+  - itemName: Big Shart
     visualPrefab: {fileID: 1716246583324324, guid: 52c4430934031b44584376d41c3e1705, type: 3}
     effectPrefab: {fileID: 7890829706876215189, guid: 4ba5abb206f695d4c881ae797fe4598f, type: 3}
     effectLifetime: 20
     effectIntensity: 0.2
-  - itemName: 16
+  - itemName: Fat Gold
     visualPrefab: {fileID: 1851294783575480, guid: 607c60908d1999647913739ee2ac7089, type: 3}
     effectPrefab: {fileID: 821886615772199812, guid: be5fa572082e9c0499e3c973bde0dbe7, type: 3}
     effectLifetime: 20
     effectIntensity: 0.2
-  - itemName: 17
+  - itemName: Thick Slime
     visualPrefab: {fileID: 1450475861619454, guid: f8597233efa759d40958f51979f6f4eb, type: 3}
     effectPrefab: {fileID: 7869115112536016249, guid: 19c2929f51521694181388b1b8a90ce4, type: 3}
     effectLifetime: 20
     effectIntensity: 0.2
-  - itemName: 18
+  - itemName: Stinky Ghost
     visualPrefab: {fileID: 1054871653065026, guid: 953ab808163b5a54d8ae726ff4a2555b, type: 3}
     effectPrefab: {fileID: 2842929004066159535, guid: 4118b22c2be1d724c8110d4a21349a0a, type: 3}
     effectLifetime: 20
     effectIntensity: 0.4
-  - itemName: 19
+  - itemName: Slimy Crack
     visualPrefab: {fileID: 1843373588935224, guid: 95985f6cb2685cc4e9e3b944711c64cd, type: 3}
     effectPrefab: {fileID: 252770693217065138, guid: f899adb7637ca7b49bd76a7092fd6849, type: 3}
     effectLifetime: 20
     effectIntensity: 0.5
-  - itemName: 20
+  - itemName: Miracle Balls
     visualPrefab: {fileID: 1832676937164210, guid: 26de9573d55645d4b834e4991aa96921, type: 3}
     effectPrefab: {fileID: 3142580891683071699, guid: 4f9713a4e4fbfa141aaa013ae0eadbf2, type: 3}
-    effectLifetime: 20
-    effectIntensity: 0.02
-  - itemName: 21
-    visualPrefab: {fileID: 1963121128536412, guid: e23375d5a25a80f469a377e9a67db49d, type: 3}
-    effectPrefab: {fileID: 6702404750328058507, guid: b2bd869475fbe0c439b18131ccd569dd, type: 3}
     effectLifetime: 20
     effectIntensity: 0.02
 --- !u!4 &357020190

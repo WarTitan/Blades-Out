@@ -348,7 +348,7 @@ public class PlayerItemTrays : NetworkBehaviour
             else
             {
                 ea.totalLifetime += Mathf.Max(0f, def.effectLifetime);
-                ea.totalIntensity += Mathf.Max(0f, def.effectIntensity);
+                ea.totalIntensity = Mathf.Max(0f, def.effectIntensity);
                 agg[id] = ea;
             }
         }
