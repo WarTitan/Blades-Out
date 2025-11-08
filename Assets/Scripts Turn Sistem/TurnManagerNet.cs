@@ -90,9 +90,9 @@ public class TurnManagerNet : NetworkBehaviour
     private bool memoryResultArrived = false;
 
     // Kept for compatibility with TurnInput (no behavior now)
-
+#pragma warning disable CS0618
     private bool turnForceEnd = false;
-
+#pragma warning restore CS0618
 
     private void Awake()
     {

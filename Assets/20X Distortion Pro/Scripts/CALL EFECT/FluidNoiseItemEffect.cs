@@ -1,8 +1,3 @@
-// FILE: FluidNoiseItemEffect.cs
-// Attach this to a prefab root (e.g. FluidNoiseEffectPrefabRoot).
-// Drives FluidNoiseDistortion.Intensity 0 -> target -> 0 when the item is consumed.
-// Uses the same VolumeProfile as your Global Volume and resets Intensity to 0 on cleanup.
-
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -61,7 +56,7 @@ public class FluidNoiseItemEffect : MonoBehaviour, IItemEffect
         }
     }
 
-    public void Play(float duration, float intensity)
+    public void Play(float duration, float intensityFromDeck)
     {
         if (running != null)
         {
@@ -69,10 +64,10 @@ public class FluidNoiseItemEffect : MonoBehaviour, IItemEffect
             running = null;
         }
 
-        running = StartCoroutine(RunEffect(duration, intensity));
+        running = StartCoroutine(RunEffect(duration, intensityFromDeck));
     }
 
-    private IEnumerator RunEffect(float duration, float intensity)
+    private IEnumerator RunEffect(float duration, float intensityFromDeck)
     {
         if (profile == null)
         {
@@ -81,7 +76,6 @@ public class FluidNoiseItemEffect : MonoBehaviour, IItemEffect
             yield break;
         }
 
-        // Get the FluidNoiseDistortion override from THIS profile
         if (!profile.TryGet<FluidNoiseDistortion>(out var fx) || fx == null)
         {
             if (verboseLogs)
@@ -89,7 +83,6 @@ public class FluidNoiseItemEffect : MonoBehaviour, IItemEffect
             yield break;
         }
 
-        // Make sure Intensity is overridable
         fx.Intensity.overrideState = true;
 
         if (duration <= 0f)
@@ -108,12 +101,13 @@ public class FluidNoiseItemEffect : MonoBehaviour, IItemEffect
 
         float hold = Mathf.Max(0f, duration - fin - fout);
 
-        // Intensity is 0..1
-        float target = Mathf.Clamp01(intensity);
+        // Deck value is treated as 0..1
+        float target = Mathf.Clamp01(intensityFromDeck);
 
         if (verboseLogs)
             Debug.Log("[FluidNoiseItemEffect] Start duration=" + duration +
-                      " targetIntensity=" + target);
+                      " deckIntensity=" + intensityFromDeck +
+                      " clampedTarget=" + target);
 
         // Start at 0
         fx.Intensity.value = 0f;

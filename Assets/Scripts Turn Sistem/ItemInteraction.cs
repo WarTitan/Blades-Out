@@ -379,7 +379,7 @@ public class ItemInteraction : NetworkBehaviour
         }
     }
 
-    // ---------- Drop / gift ----------
+    // ---------- Drop / gift (MODIFIED: drop onto ConsumableTrayZone) ----------
 
     private void TryDropDraggedItem()
     {
@@ -418,9 +418,10 @@ public class ItemInteraction : NetworkBehaviour
             return;
         }
 
-        PlayerItemTrays targetTrays = null;
-        RaycastHit chosen = hits[0];
-        float best = float.MaxValue;
+        // NEW: find closest ConsumableTrayZone under the ray
+        ConsumableTrayZone bestZone = null;
+        RaycastHit bestHit = hits[0];
+        float bestDist = float.MaxValue;
 
         for (int i = 0; i < hits.Length; i++)
         {
@@ -431,30 +432,48 @@ public class ItemInteraction : NetworkBehaviour
                 continue;
             }
 
-            var t = hits[i].collider.GetComponentInParent<PlayerItemTrays>();
-            if (t != null && t != trays)
+            var zone = hits[i].collider.GetComponentInParent<ConsumableTrayZone>();
+            if (zone == null) continue;
+            if (zone.seatIndex1Based <= 0) continue;
+
+            float d = hits[i].distance;
+            if (d < bestDist)
             {
-                float d = hits[i].distance;
-                if (d < best)
-                {
-                    best = d;
-                    chosen = hits[i];
-                    targetTrays = t;
-                }
+                bestDist = d;
+                bestZone = zone;
+                bestHit = hits[i];
             }
         }
 
+        if (bestZone == null)
+        {
+            Debug.Log("[ItemInteraction] Drop: no ConsumableTrayZone in ray hits, cancel.");
+            CancelDrag("no-tray-zone");
+            return;
+        }
+
+        // Find the PlayerItemTrays that belongs to that seat
+        PlayerItemTrays targetTrays = FindTraysBySeat(bestZone.seatIndex1Based);
         if (targetTrays == null)
         {
-            Debug.Log("[ItemInteraction] Drop: no PlayerItemTrays in ray hits, cancel.");
-            CancelDrag("bad-target");
+            Debug.LogWarning("[ItemInteraction] Drop: no PlayerItemTrays found for seat " +
+                             bestZone.seatIndex1Based);
+            CancelDrag("no-seat-trays");
+            return;
+        }
+
+        // Optional: prevent giving to yourself via your own tray
+        if (targetTrays == trays)
+        {
+            Debug.Log("[ItemInteraction] Drop on own tray ignored.");
+            CancelDrag("own-tray");
             return;
         }
 
         var targetId = targetTrays.GetComponent<NetworkIdentity>();
         if (targetId == null)
         {
-            Debug.LogWarning("[ItemInteraction] Drop: target has no NetworkIdentity.");
+            Debug.LogWarning("[ItemInteraction] Drop: target trays has no NetworkIdentity.");
             CancelDrag("no-netid");
             return;
         }
@@ -462,8 +481,8 @@ public class ItemInteraction : NetworkBehaviour
         // Send to SERVER. Server validates (phase, capacity, etc.).
         trays.Cmd_GiveItemToPlayer(targetId.netId, draggingSlotIndex);
         Debug.Log("[ItemInteraction] Drag-drop gift: fromSlot " + draggingSlotIndex +
-                  " -> netId " + targetId.netId +
-                  " (hit " + chosen.collider.name + ")");
+                  " -> seat " + bestZone.seatIndex1Based +
+                  " (netId " + targetId.netId + ", hit " + bestHit.collider.name + ")");
 
         // Successful gift: keep the original hidden (server will update inventory)
         FinishDrag();
@@ -530,5 +549,26 @@ public class ItemInteraction : NetworkBehaviour
             Destroy(dragGhost);
 
         dragGhost = null;
+    }
+
+    // NEW helper: find trays for a seat index
+    private PlayerItemTrays FindTraysBySeat(int seatIndex1Based)
+    {
+#if UNITY_2023_1_OR_NEWER
+        var all = Object.FindObjectsByType<PlayerItemTrays>(FindObjectsSortMode.None);
+#else
+#pragma warning disable CS0618
+        var all = GameObject.FindObjectsOfType<PlayerItemTrays>();
+#pragma warning restore CS0618
+#endif
+        if (all == null) return null;
+
+        for (int i = 0; i < all.Length; i++)
+        {
+            if (all[i] != null && all[i].seatIndex1Based == seatIndex1Based)
+                return all[i];
+        }
+
+        return null;
     }
 }
