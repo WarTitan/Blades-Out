@@ -1,7 +1,5 @@
 ﻿// FILE: LocalCameraController.cs
-// FULL REPLACEMENT (ASCII only)
-// Yaw on body, pitch on camera. Preserves Z (roll) so mixers can tilt.
-// Option: rotate mouse input by the camera's current roll (so controls align to the tilted screen).
+// ORIGINAL + ForceLookAt helper (ASCII only)
 
 using UnityEngine;
 
@@ -125,6 +123,64 @@ public class LocalCameraController : MonoBehaviour
         }
 
         // Apply pitch to camera, PRESERVING Z roll from mixers/effects
+        if (playerCamera != null)
+        {
+            Transform ct = playerCamera.transform;
+            float currentZ = Normalize180(ct.localEulerAngles.z);
+            Quaternion pitchRot = Quaternion.Euler(pitch, 0f, 0f);
+            Quaternion keepRoll = Quaternion.AngleAxis(currentZ, Vector3.forward);
+            ct.localRotation = pitchRot * keepRoll;
+        }
+    }
+
+    /// <summary>
+    /// Instantly make the player look at a world-space point.
+    /// Used by the memory minigame after the 3-2-1-GO intro.
+    /// This also updates internal yaw/pitch so there is no snap back.
+    /// </summary>
+    public void ForceLookAt(Vector3 worldTarget)
+    {
+        if (playerCamera == null && playerBody == null) return;
+
+        Vector3 eyePos;
+        if (playerCamera != null)
+            eyePos = playerCamera.transform.position;
+        else
+            eyePos = playerBody.position;
+
+        Vector3 dir = worldTarget - eyePos;
+        if (dir.sqrMagnitude < 0.0001f) return;
+
+        dir.Normalize();
+
+        // Yaw from X/Z plane
+        float newYaw = Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg;
+
+        // Pitch from vertical vs horizontal magnitude
+        float flatLen = Mathf.Sqrt(dir.x * dir.x + dir.z * dir.z);
+        float newPitch = 0f;
+        if (flatLen > 0.0001f)
+            newPitch = Mathf.Atan2(dir.y, flatLen) * Mathf.Rad2Deg;
+
+        newPitch = Mathf.Clamp(newPitch, minPitch, maxPitch);
+
+        // Update internal state so controller is in sync
+        yaw = newYaw;
+        pitch = newPitch;
+        velYaw = 0f;
+        velPitch = 0f;
+        inputX = 0f;
+        inputY = 0f;
+
+        // Apply immediately (same logic as LateUpdate)
+        if (playerBody != null)
+        {
+            Vector3 e = playerBody.localEulerAngles;
+            float ex = Normalize180(e.x);
+            float ez = Normalize180(e.z);
+            playerBody.localRotation = Quaternion.Euler(ex, yaw, ez);
+        }
+
         if (playerCamera != null)
         {
             Transform ct = playerCamera.transform;

@@ -6,6 +6,9 @@
 // - Uses MemoryBoardSeatSpawns to anchor; falls back to PlayerSpawn_<seat> then camera.
 // - Wrong click -> immediate fail; success -> ends immediately.
 // - Level curve per your spec; level persists per seat for this play session.
+// - Intro: camera stays at its current position, smoothly rotates toward the SeatBoard_X
+//   for this seat, shows a 3-2-1-GO countdown at board center, then the board appears.
+//   No status text is shown during the game.
 
 using UnityEngine;
 using TMPro;
@@ -13,6 +16,7 @@ using System.Collections;
 using System.Collections.Generic;
 
 [AddComponentMenu("Gameplay/Memory/Memory Sequence UI")]
+[DefaultExecutionOrder(50000)] // run AFTER LocalCameraController
 public class MemorySequenceUI : MonoBehaviour
 {
     public static MemorySequenceUI Instance;
@@ -42,24 +46,33 @@ public class MemorySequenceUI : MonoBehaviour
     public Color colorWrong = new Color(1f, 0.3f, 0.3f, 1f);
 
     [Header("Text")]
-    public float statusSize = 0.25f;
+    public float statusSize = 0.35f; // base size for countdown
+
+    [Header("Intro Camera / Countdown")]
+    public bool enableIntroSequence = true;
+    public float introMoveDuration = 1.2f;     // how long the camera rotation tween takes
+    public float countdownStepDuration = 0.75f;
+    public float countdownFontScale = 4.0f;    // bigger countdown (3,2,1,GO)
 
     private Camera cam;
     private Transform boardRoot;
+    private TextMeshPro countdownTMP;
+
     private Renderer[] padRenderers;
     private Collider[] padColliders;
-    private TextMeshPro statusTMP;
-
-    private int gridN = 3;
-    private int lightsToShow = 3;
     private readonly List<GameObject> pads = new List<GameObject>(64);
     private readonly HashSet<int> solution = new HashSet<int>();
     private readonly HashSet<int> selected = new HashSet<int>();
 
+    private int gridN = 3;
+    private int lightsToShow = 3;
+
     private bool running = false;
+    private bool boardActive = false;
     private bool inputEnabled = false;
     private int token = 0;
     private float deadline = 0f;
+    private float playSeconds = 0f;
     private int hoveredPad = -1;
 
     // Level state per seat (1..5). 0 means "unset" -> treated as level 1.
@@ -70,13 +83,29 @@ public class MemorySequenceUI : MonoBehaviour
     // Optional seat override from server
     private int seatOverride = 0;
 
+    // Intro camera override
+    private bool introActive = false;
+    private float introElapsed = 0f;
+    private float introRotateDuration = 1.0f;
+    private Vector3 introCamPos;
+    private Quaternion introCamRotStart;
+    private Quaternion introCamRotTarget;
+    private LocalCameraController introLcc;
+
     // ---- Public entrypoint ----
 
     public static void BeginStatic(int token, float seconds, int seatOverrideIndex = 0)
     {
-        if (Instance != null) { Object.Destroy(Instance.gameObject); Instance = null; }
+        if (Instance != null)
+        {
+            Object.Destroy(Instance.gameObject);
+            Instance = null;
+        }
+
         EnsureExistence();
+
         if (Instance.running) return;
+
         Instance.seatOverride = seatOverrideIndex;
         Instance.StartRun(token, seconds);
     }
@@ -84,6 +113,7 @@ public class MemorySequenceUI : MonoBehaviour
     private static void EnsureExistence()
     {
         if (Instance != null) return;
+
         var go = new GameObject("MemorySequenceWorld");
         Object.DontDestroyOnLoad(go);
         Instance = go.AddComponent<MemorySequenceUI>();
@@ -97,10 +127,13 @@ public class MemorySequenceUI : MonoBehaviour
         {
             var lcc = reporter.GetComponent<LocalCameraController>();
             if (lcc != null && lcc.playerCamera != null) return lcc.playerCamera;
+
             var cChild = reporter.GetComponentInChildren<Camera>(true);
             if (cChild != null) return cChild;
         }
+
         if (Camera.main != null) return Camera.main;
+
 #pragma warning disable CS0618
         return Object.FindObjectOfType<Camera>();
 #pragma warning restore CS0618
@@ -131,6 +164,7 @@ public class MemorySequenceUI : MonoBehaviour
             var trays = reporter.GetComponent<PlayerItemTrays>();
             if (trays != null && trays.seatIndex1Based > 0) return trays.seatIndex1Based;
         }
+
         return 1;
     }
 
@@ -149,15 +183,17 @@ public class MemorySequenceUI : MonoBehaviour
             globalScale = Mathf.Max(0.01f, MemoryBoardSeatSpawns.Instance.boardScale);
         boardRoot.localScale = Vector3.one * globalScale;
 
-        var statusGO = new GameObject("StatusTMP");
+        // Countdown text at center of board (0,0)
+        var statusGO = new GameObject("CountdownTMP");
         statusGO.transform.SetParent(boardRoot, false);
-        statusTMP = statusGO.AddComponent<TextMeshPro>();
-        statusTMP.text = "Memory Test";
-        statusTMP.font = GetSafeTMPFont();
-        statusTMP.fontSize = statusSize;
-        statusTMP.alignment = TextAlignmentOptions.Center;
-        statusTMP.color = Color.white;
-        statusTMP.rectTransform.sizeDelta = new Vector2(3f, 0.6f);
+        statusGO.transform.localPosition = Vector3.zero;
+        countdownTMP = statusGO.AddComponent<TextMeshPro>();
+        countdownTMP.text = "";
+        countdownTMP.font = GetSafeTMPFont();
+        countdownTMP.fontSize = statusSize;
+        countdownTMP.alignment = TextAlignmentOptions.Center;
+        countdownTMP.color = Color.white;
+        countdownTMP.rectTransform.sizeDelta = new Vector2(3f, 0.6f);
 
         PlaceOnceBySeatAnchors();
     }
@@ -172,11 +208,12 @@ public class MemorySequenceUI : MonoBehaviour
 
         if (MemoryBoardSeatSpawns.Instance != null)
         {
-            var seatAnchor = MemoryBoardSeatSpawns.Instance.GetSeatAnchor(seat);
+            var cfg = MemoryBoardSeatSpawns.Instance;
+            var seatAnchor = cfg.GetSeatAnchor(seat);
             if (seatAnchor != null)
             {
                 anchor = seatAnchor;
-                var cfg = MemoryBoardSeatSpawns.Instance;
+
                 if (cfg.offsetMode == MemoryBoardSeatSpawns.OffsetMode.None)
                     worldPos = seatAnchor.position;
                 else if (cfg.offsetMode == MemoryBoardSeatSpawns.OffsetMode.World)
@@ -200,6 +237,7 @@ public class MemorySequenceUI : MonoBehaviour
         }
 
         cam = cam == null ? ResolveCamera() : cam;
+
         if (anchor == null && cam != null)
         {
             boardRoot.position = cam.transform.position + cam.transform.forward * cameraFallbackOffset.z + Vector3.up * cameraFallbackOffset.y;
@@ -221,7 +259,10 @@ public class MemorySequenceUI : MonoBehaviour
     private void ClearPads()
     {
         for (int i = 0; i < pads.Count; i++)
+        {
             if (pads[i] != null) Object.Destroy(pads[i]);
+        }
+
         pads.Clear();
         padRenderers = null;
         padColliders = null;
@@ -246,12 +287,15 @@ public class MemorySequenceUI : MonoBehaviour
         if (pr != null)
         {
             var mat = SafeClone(pr);
-            if (mat != null) { SetCol(mat, panelTint); pr.material = mat; }
+            if (mat != null)
+            {
+                SetCol(mat, panelTint);
+                pr.material = mat;
+            }
         }
+
         var pcol = panel.GetComponent<Collider>();
         if (pcol) Object.Destroy(pcol);
-
-        statusTMP.transform.localPosition = new Vector3(0f, (totalSize * 0.5f) + 0.28f, 0f);
 
         int count = gridN * gridN;
         padRenderers = new Renderer[count];
@@ -275,12 +319,20 @@ public class MemorySequenceUI : MonoBehaviour
             if (r != null)
             {
                 var m = SafeClone(r);
-                if (m != null) { SetCol(m, colorOff); r.material = m; }
+                if (m != null)
+                {
+                    SetCol(m, colorOff);
+                    r.material = m;
+                }
                 padRenderers[i] = r;
             }
 
             var c = pad.GetComponent<Collider>();
-            if (c != null) { c.isTrigger = false; padColliders[i] = c; }
+            if (c != null)
+            {
+                c.isTrigger = false;
+                padColliders[i] = c;
+            }
 
             var idx = pad.AddComponent<MemoryPadIndex>();
             idx.index = i;
@@ -300,52 +352,156 @@ public class MemorySequenceUI : MonoBehaviour
     private static void SetCol(Material m, Color c)
     {
         if (m == null) return;
+
         if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", c);
         else if (m.HasProperty("_Color")) m.SetColor("_Color", c);
         else m.color = c;
     }
 
+    // ---- Flow ----
+
     private void StartRun(int tkn, float seconds)
     {
         token = tkn;
-        deadline = Time.time + Mathf.Max(1f, seconds);
-        running = true;
-
+        playSeconds = Mathf.Max(1f, seconds);
         currentSeat = GetLocalSeat();
         currentLevel = GetSeatLevel(currentSeat);
 
-        BuildBoardForLevel(currentLevel);
+        running = true;
+        boardActive = false;
+        inputEnabled = false;
+        hoveredPad = -1;
+        introActive = false;
+        introElapsed = 0f;
+        introLcc = null;
+
+        PlaceOnceBySeatAnchors();
 
         StopAllCoroutines();
-        StartCoroutine(RunSet(currentLevel));
+        StartCoroutine(RunSequence(currentLevel));
+    }
+
+    private IEnumerator RunSequence(int level)
+    {
+        SetupIntroCameraLock();
+        yield return PlayIntroCountdown();
+
+        // Now start the actual timed minigame.
+        deadline = Time.time + playSeconds;
+
+        BuildBoardForLevel(level);
+        boardActive = true;
+
+        solution.Clear();
+        selected.Clear();
+
+        yield return RunSet(level);
+    }
+
+    private void SetupIntroCameraLock()
+    {
+        introActive = false;
+        introElapsed = 0f;
+
+        cam = cam == null ? ResolveCamera() : cam;
+        if (!enableIntroSequence || cam == null || boardRoot == null)
+        {
+            introActive = false;
+            return;
+        }
+
+        Transform ct = cam.transform;
+
+        introCamPos = ct.position;
+        introCamRotStart = ct.rotation;
+
+        Vector3 boardPos = boardRoot.position;
+        Vector3 dirToBoard = boardPos - introCamPos;
+        if (dirToBoard.sqrMagnitude < 0.0001f)
+        {
+            dirToBoard = boardRoot.forward;
+        }
+
+        introCamRotTarget = Quaternion.LookRotation(dirToBoard.normalized, Vector3.up);
+        introRotateDuration = Mathf.Max(0.01f, introMoveDuration);
+        introActive = true;
+
+        introLcc = null;
+        var reporter = MemoryMinigameReporter.Local;
+        if (reporter != null)
+            introLcc = reporter.GetComponent<LocalCameraController>();
+        if (introLcc == null)
+            introLcc = ct.GetComponentInParent<LocalCameraController>();
+    }
+
+    private IEnumerator PlayIntroCountdown()
+    {
+        // Countdown at center (0,0) of the board.
+        if (countdownTMP != null)
+        {
+            float originalSize = countdownTMP.fontSize;
+            var originalAlign = countdownTMP.alignment;
+
+            countdownTMP.fontSize = statusSize * countdownFontScale;
+            countdownTMP.alignment = TextAlignmentOptions.Center;
+            countdownTMP.alpha = 1f;
+
+            for (int i = 3; i >= 1; i--)
+            {
+                countdownTMP.text = i.ToString();
+                yield return new WaitForSeconds(countdownStepDuration);
+            }
+
+            countdownTMP.text = "GO";
+            yield return new WaitForSeconds(countdownStepDuration * 0.5f);
+
+            countdownTMP.fontSize = originalSize;
+            countdownTMP.alignment = originalAlign;
+            countdownTMP.text = string.Empty;
+            countdownTMP.gameObject.SetActive(false);
+        }
+        else
+        {
+            float total = 3f * countdownStepDuration + countdownStepDuration * 0.5f;
+            if (total < 0f) total = 0f;
+            yield return new WaitForSeconds(total);
+        }
+
+        // When countdown finishes, snap the LocalCameraController's yaw/pitch
+        // so that the camera looks directly at the board center again.
+        if (introLcc != null && boardRoot != null)
+        {
+            introLcc.ForceLookAt(boardRoot.position);
+        }
+
+        introActive = false;
     }
 
     private IEnumerator RunSet(int level)
     {
-        solution.Clear();
-        selected.Clear();
-
         int total = gridN * gridN;
         if (lightsToShow > total - 1) lightsToShow = total - 1;
-        while (solution.Count < lightsToShow) solution.Add(Random.Range(0, total));
 
-        statusTMP.text = BuildStatus("Memorize the tiles");
+        while (solution.Count < lightsToShow)
+            solution.Add(Random.Range(0, total));
+
+        // Show pattern for memorization
         SetInputEnabled(false);
         yield return FlashSolutionOnce(0.8f, 0.25f);
 
-        statusTMP.text = BuildStatus("Select the same tiles");
+        // Player selects tiles (no status text)
         SetAllPads(colorOff);
         SetInputEnabled(true);
 
         while (Time.time < deadline)
         {
-            statusTMP.text = BuildStatus("Select the same tiles");
             if (selected.Count == lightsToShow)
             {
                 bool success = SetsEqual(selected, solution);
                 Finish(success);
                 yield break;
             }
+
             yield return null;
         }
 
@@ -354,21 +510,58 @@ public class MemorySequenceUI : MonoBehaviour
 
     private IEnumerator FlashSolutionOnce(float onTime, float offTime)
     {
-        foreach (int idx in solution) SetPadColor(idx, colorOn);
+        foreach (int idx in solution)
+            SetPadColor(idx, colorOn);
+
         yield return new WaitForSeconds(onTime);
-        foreach (int idx in solution) SetPadColor(idx, colorOff);
+
+        foreach (int idx in solution)
+            SetPadColor(idx, colorOff);
+
         yield return new WaitForSeconds(offTime);
     }
 
     private void SetAllPads(Color c)
     {
         int count = padRenderers != null ? padRenderers.Length : 0;
-        for (int i = 0; i < count; i++) SetPadColor(i, c);
+        for (int i = 0; i < count; i++)
+            SetPadColor(i, c);
+    }
+
+    private void UpdateIntroCamera()
+    {
+        if (!introActive) return;
+
+        cam = cam == null ? ResolveCamera() : cam;
+        if (cam == null)
+        {
+            introActive = false;
+            return;
+        }
+
+        introElapsed += Time.deltaTime;
+
+        float t = 1f;
+        if (introRotateDuration > 0f)
+            t = Mathf.Clamp01(introElapsed / introRotateDuration);
+
+        Transform ct = cam.transform;
+        ct.position = introCamPos;
+        ct.rotation = Quaternion.Slerp(introCamRotStart, introCamRotTarget, t);
     }
 
     private void LateUpdate()
     {
+        if (introActive)
+        {
+            // Runs AFTER LocalCameraController (DefaultExecutionOrder 40000),
+            // so mouse look cannot cancel our intro rotation.
+            UpdateIntroCamera();
+        }
+
         if (!running) return;
+        if (!boardActive) return;
+
         UpdateHoverAndClick();
     }
 
@@ -393,9 +586,13 @@ public class MemorySequenceUI : MonoBehaviour
 
         if (newHover != hoveredPad)
         {
-            if (hoveredPad >= 0 && !selected.Contains(hoveredPad)) SetPadColor(hoveredPad, colorOff);
+            if (hoveredPad >= 0 && !selected.Contains(hoveredPad))
+                SetPadColor(hoveredPad, colorOff);
+
             hoveredPad = newHover;
-            if (hoveredPad >= 0 && !selected.Contains(hoveredPad)) SetPadColor(hoveredPad, colorHover);
+
+            if (hoveredPad >= 0 && !selected.Contains(hoveredPad))
+                SetPadColor(hoveredPad, colorHover);
         }
 
         if (inputEnabled && Input.GetMouseButtonDown(0))
@@ -422,6 +619,7 @@ public class MemorySequenceUI : MonoBehaviour
         else
         {
             if (selected.Count >= lightsToShow) return;
+
             selected.Add(idx);
             SetPadColor(idx, colorSelected);
 
@@ -436,6 +634,7 @@ public class MemorySequenceUI : MonoBehaviour
     private void SetPadColor(int idx, Color c)
     {
         if (idx < 0 || padRenderers == null || idx >= padRenderers.Length) return;
+
         var r = padRenderers[idx];
         if (r != null && r.material != null)
         {
@@ -448,20 +647,24 @@ public class MemorySequenceUI : MonoBehaviour
     private void SetInputEnabled(bool en)
     {
         inputEnabled = en;
-        if (statusTMP != null) statusTMP.alpha = en ? 1f : 0.85f;
     }
 
     private void Update()
     {
         if (!running) return;
-        statusTMP.text = BuildStatus(inputEnabled ? "Select the same tiles" : "Memorize the tiles");
-        if (Time.time >= deadline) Finish(false);
+        if (!boardActive) return;
+
+        if (Time.time >= deadline)
+            Finish(false);
     }
 
     private void Finish(bool success)
     {
         if (!running) return;
+
         running = false;
+        boardActive = false;
+        introActive = false;
 
         int nextLevel = success ? (currentLevel + 1) : currentLevel;
         SetSeatLevel(currentSeat, nextLevel);
@@ -473,20 +676,13 @@ public class MemorySequenceUI : MonoBehaviour
         seatOverride = 0;
     }
 
-    private string BuildStatus(string phase)
-    {
-        float remain = deadline - Time.time;
-        if (remain < 0f) remain = 0f;
-        int s = Mathf.FloorToInt(remain);
-        int m = s / 60;
-        s = s % 60;
-        return phase + "  " + m.ToString("00") + ":" + s.ToString("00");
-    }
-
     private static bool SetsEqual(HashSet<int> a, HashSet<int> b)
     {
         if (a.Count != b.Count) return false;
-        foreach (var x in a) if (!b.Contains(x)) return false;
+
+        foreach (var x in a)
+            if (!b.Contains(x)) return false;
+
         return true;
     }
 

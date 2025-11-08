@@ -18214,7 +18214,7 @@ MonoBehaviour:
   syncInterval: 0
   seatTurnOrder: 0100000002000000030000000400000005000000
   initialDraw: 4
-  drawAfterTurn: 0
+  drawAfterTurn: 2
   craftingSeconds: 20
   memorySeconds: 45
   ignoreLobbyForTesting: 0
@@ -33650,7 +33650,11 @@ MonoBehaviour:
   panelTint: {r: 0, g: 0, b: 0, a: 0.35}
   colorSelected: {r: 0.9, g: 0.9, b: 0.9, a: 1}
   colorWrong: {r: 1, g: 0.3, b: 0.3, a: 1}
-  statusSize: 0.25
+  statusSize: 1
+  enableIntroSequence: 1
+  introMoveDuration: 1.2
+  countdownStepDuration: 0.75
+  countdownFontScale: 2
 --- !u!4 &1634483785
 Transform:
   m_ObjectHideFlags: 0
