@@ -46,9 +46,12 @@ public class ItemInteraction : NetworkBehaviour
     private float dragPlaneTargetY;
     private bool heightAnimating = false;
 
-    // Hover state
+    // Hover state (inventory items)
     private ItemInstance hoveredInstance;
     private Vector3 hoveredOriginalScale;
+
+    // NEW: hovered tray zone while dragging
+    private ConsumableTrayZone hoveredTrayZone; // <--------------------------- NEW
 
     public override void OnStartLocalPlayer()
     {
@@ -377,9 +380,67 @@ public class ItemInteraction : NetworkBehaviour
             Vector3 p = ray.GetPoint(enter);
             dragGhost.transform.position = p;
         }
+
+        // NEW: update tray hover highlight while dragging --------------------
+        UpdateTrayHoverWhileDragging(); // <---------------------------------- NEW
     }
 
-    // ---------- Drop / gift (MODIFIED: drop onto ConsumableTrayZone) ----------
+    // NEW: highlight the tray we are currently aiming at while dragging
+    private void UpdateTrayHoverWhileDragging()
+    {
+        Ray ray = MakeDragRay();
+        RaycastHit[] hits = Physics.RaycastAll(ray, rayDistance, rayMask, QueryTriggerInteraction.Collide);
+        if (hits == null || hits.Length == 0)
+        {
+            ClearTrayHover();
+            return;
+        }
+
+        ConsumableTrayZone bestZone = null;
+        float bestDist = float.MaxValue;
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            // Skip hits on the drag ghost itself
+            if (dragGhost != null && hits[i].collider != null &&
+                hits[i].collider.transform.IsChildOf(dragGhost.transform))
+            {
+                continue;
+            }
+
+            var zone = hits[i].collider.GetComponentInParent<ConsumableTrayZone>();
+            if (zone == null) continue;
+            if (zone.seatIndex1Based <= 0) continue;
+
+            float d = hits[i].distance;
+            if (d < bestDist)
+            {
+                bestDist = d;
+                bestZone = zone;
+            }
+        }
+
+        if (bestZone == hoveredTrayZone)
+            return;
+
+        // Switch highlight
+        ClearTrayHover();
+        hoveredTrayZone = bestZone;
+        if (hoveredTrayZone != null)
+            hoveredTrayZone.SetHover(true);
+    }
+
+    private void ClearTrayHover()
+    {
+        if (hoveredTrayZone != null)
+        {
+            hoveredTrayZone.SetHover(false);
+            hoveredTrayZone = null;
+        }
+    }
+    // -----------------------------------------------------------------------
+
+    // ---------- Drop / gift (still uses ConsumableTrayZone) ----------
 
     private void TryDropDraggedItem()
     {
@@ -418,7 +479,6 @@ public class ItemInteraction : NetworkBehaviour
             return;
         }
 
-        // NEW: find closest ConsumableTrayZone under the ray
         ConsumableTrayZone bestZone = null;
         RaycastHit bestHit = hits[0];
         float bestDist = float.MaxValue;
@@ -523,12 +583,15 @@ public class ItemInteraction : NetworkBehaviour
     {
         if (isDragging)
             Debug.Log("[ItemInteraction] Cancel drag (" + why + ").");
+
+        ClearTrayHover(); // <-------------------------------------------- NEW
         CleanupDragState(restoreOriginal: true);
     }
 
     private void FinishDrag()
     {
         // Gift sent -> do NOT restore original visual; inventory will change via server
+        ClearTrayHover(); // <-------------------------------------------- NEW
         CleanupDragState(restoreOriginal: false);
     }
 
@@ -551,7 +614,6 @@ public class ItemInteraction : NetworkBehaviour
         dragGhost = null;
     }
 
-    // NEW helper: find trays for a seat index
     private PlayerItemTrays FindTraysBySeat(int seatIndex1Based)
     {
 #if UNITY_2023_1_OR_NEWER
