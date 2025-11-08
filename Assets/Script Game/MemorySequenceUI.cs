@@ -9,6 +9,9 @@
 // - Intro: camera stays at its current position, smoothly rotates toward the SeatBoard_X
 //   for this seat, shows a 3-2-1-GO countdown at board center, then the board appears.
 //   No status text is shown during the game.
+// - Visual extras: optional rounded background material (like Human Benchmark).
+// - Audio extras: SFX on correct click, wrong click, success, and fail.
+// - Reused instance: the same MemorySequenceUI is reused across rounds instead of being destroyed.
 
 using UnityEngine;
 using TMPro;
@@ -45,6 +48,10 @@ public class MemorySequenceUI : MonoBehaviour
     public Color colorSelected = new Color(0.9f, 0.9f, 0.9f, 1f);
     public Color colorWrong = new Color(1f, 0.3f, 0.3f, 1f);
 
+    [Header("Visuals")]
+    // Optional material for a rounded-corner panel (use a texture with transparent corners)
+    public Material roundedPanelMaterial;
+
     [Header("Text")]
     public float statusSize = 0.35f; // base size for countdown
 
@@ -53,6 +60,14 @@ public class MemorySequenceUI : MonoBehaviour
     public float introMoveDuration = 1.2f;     // how long the camera rotation tween takes
     public float countdownStepDuration = 0.75f;
     public float countdownFontScale = 4.0f;    // bigger countdown (3,2,1,GO)
+
+    [Header("Audio")]
+    // Use a persistent AudioSource (e.g., on main camera or a global SFX object)
+    public AudioSource audioSource;
+    public AudioClip clickCorrectClip;
+    public AudioClip clickWrongClip;
+    public AudioClip successClip;
+    public AudioClip failClip;
 
     private Camera cam;
     private Transform boardRoot;
@@ -92,19 +107,54 @@ public class MemorySequenceUI : MonoBehaviour
     private Quaternion introCamRotTarget;
     private LocalCameraController introLcc;
 
-    // ---- Public entrypoint ----
+    // ------------------------------------------------------------------------
+    // Awake: optional auto-wiring (Resources + main camera AudioSource)
+    // ------------------------------------------------------------------------
+
+    private void Awake()
+    {
+        // Only auto-load if not already set in Inspector.
+        if (roundedPanelMaterial == null)
+        {
+            roundedPanelMaterial = Resources.Load<Material>("RoundedPanel");
+        }
+
+        if (audioSource == null)
+        {
+            Camera mainCam = Camera.main;
+            if (mainCam != null)
+            {
+                audioSource = mainCam.GetComponent<AudioSource>();
+            }
+        }
+
+        if (clickCorrectClip == null)
+            clickCorrectClip = Resources.Load<AudioClip>("ClickCorrect");
+
+        if (clickWrongClip == null)
+            clickWrongClip = Resources.Load<AudioClip>("ClickWrong");
+
+        if (successClip == null)
+            successClip = Resources.Load<AudioClip>("Success");
+
+        if (failClip == null)
+            failClip = Resources.Load<AudioClip>("Fail");
+    }
+
+    // ------------------------------------------------------------------------
+    // Public entrypoint
+    // ------------------------------------------------------------------------
 
     public static void BeginStatic(int token, float seconds, int seatOverrideIndex = 0)
     {
-        if (Instance != null)
-        {
-            Object.Destroy(Instance.gameObject);
-            Instance = null;
-        }
-
         EnsureExistence();
 
-        if (Instance.running) return;
+        // If a previous run is somehow still active, stop and clean it.
+        if (Instance.running)
+        {
+            Instance.StopAllCoroutines();
+            Instance.CleanForReuse();
+        }
 
         Instance.seatOverride = seatOverrideIndex;
         Instance.StartRun(token, seconds);
@@ -114,6 +164,15 @@ public class MemorySequenceUI : MonoBehaviour
     {
         if (Instance != null) return;
 
+        // FIRST: try to reuse an existing MemorySequenceUI in the scene
+        Instance = Object.FindObjectOfType<MemorySequenceUI>();
+        if (Instance != null)
+        {
+            Instance.BuildShell();
+            return;
+        }
+
+        // Otherwise create a new hidden one (old behaviour)
         var go = new GameObject("MemorySequenceWorld");
         Object.DontDestroyOnLoad(go);
         Instance = go.AddComponent<MemorySequenceUI>();
@@ -168,10 +227,14 @@ public class MemorySequenceUI : MonoBehaviour
         return 1;
     }
 
-    // ---- Build & layout ----
+    // ------------------------------------------------------------------------
+    // Build & layout
+    // ------------------------------------------------------------------------
 
     private void BuildShell()
     {
+        if (boardRoot != null) return; // already built
+
         cam = ResolveCamera();
 
         var rootGO = new GameObject("BoardRoot");
@@ -283,14 +346,24 @@ public class MemorySequenceUI : MonoBehaviour
         panel.name = "Panel";
         panel.transform.SetParent(boardRoot, false);
         panel.transform.localScale = new Vector3(totalSize + panelMarginX, totalSize + panelMarginY, 1f);
+
         var pr = panel.GetComponent<Renderer>();
         if (pr != null)
         {
-            var mat = SafeClone(pr);
-            if (mat != null)
+            if (roundedPanelMaterial != null)
             {
-                SetCol(mat, panelTint);
-                pr.material = mat;
+                // Use a rounded-corner material if provided
+                pr.material = roundedPanelMaterial;
+            }
+            else
+            {
+                // Fallback to solid tinted quad
+                var mat = SafeClone(pr);
+                if (mat != null)
+                {
+                    SetCol(mat, panelTint);
+                    pr.material = mat;
+                }
             }
         }
 
@@ -358,7 +431,46 @@ public class MemorySequenceUI : MonoBehaviour
         else m.color = c;
     }
 
-    // ---- Flow ----
+    // ------------------------------------------------------------------------
+    // Audio helper
+    // ------------------------------------------------------------------------
+
+    private void PlaySfx(AudioClip clip, float volume = 1f)
+    {
+        if (clip == null) return;
+        if (audioSource == null) return;
+        audioSource.PlayOneShot(clip, volume);
+    }
+
+    // ------------------------------------------------------------------------
+    // Flow / state reset
+    // ------------------------------------------------------------------------
+
+    private void CleanForReuse()
+    {
+        running = false;
+        boardActive = false;
+        inputEnabled = false;
+        introActive = false;
+        introElapsed = 0f;
+        hoveredPad = -1;
+        deadline = 0f;
+        token = 0;
+        playSeconds = 0f;
+
+        solution.Clear();
+        selected.Clear();
+
+        ClearPads();
+
+        if (countdownTMP != null)
+        {
+            countdownTMP.text = string.Empty;
+            countdownTMP.gameObject.SetActive(true);
+            countdownTMP.fontSize = statusSize;
+            countdownTMP.alignment = TextAlignmentOptions.Center;
+        }
+    }
 
     private void StartRun(int tkn, float seconds)
     {
@@ -605,10 +717,15 @@ public class MemorySequenceUI : MonoBehaviour
     {
         if (!solution.Contains(idx))
         {
+            // Wrong tile: color + SFX + fail
             SetPadColor(idx, colorWrong);
+            PlaySfx(clickWrongClip);
             Finish(false);
             return;
         }
+
+        // Correct tile was clicked (either new or toggling)
+        PlaySfx(clickCorrectClip);
 
         if (selected.Contains(idx))
         {
@@ -666,14 +783,21 @@ public class MemorySequenceUI : MonoBehaviour
         boardActive = false;
         introActive = false;
 
+        // Play completion SFX
+        if (success)
+            PlaySfx(successClip);
+        else
+            PlaySfx(failClip);
+
         int nextLevel = success ? (currentLevel + 1) : currentLevel;
         SetSeatLevel(currentSeat, nextLevel);
 
         MemoryMinigameReporter.ReportResult(token, success ? 1 : 0);
 
-        Object.Destroy(gameObject);
-        Instance = null;
+        // Do NOT destroy this object; clean it so the next round behaves like the first.
+        CleanForReuse();
         seatOverride = 0;
+        // Keep Instance as-is so colors/audio from inspector persist.
     }
 
     private static bool SetsEqual(HashSet<int> a, HashSet<int> b)

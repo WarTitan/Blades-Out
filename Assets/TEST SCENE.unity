@@ -28934,6 +28934,135 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1704674359}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1412913342
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1412913344}
+  - component: {fileID: 1412913343}
+  m_Layer: 0
+  m_Name: Audio Source
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!82 &1412913343
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1412913342}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 1
+  m_Volume: 0.7
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!4 &1412913344
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1412913342}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 3.14346, y: 1.53661, z: -18.72962}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1417499697
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -33644,17 +33773,23 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   rayDistance: 10
-  colorOff: {r: 0.25, g: 0.25, b: 0.25, a: 1}
-  colorOn: {r: 0.1273585, g: 0.68460166, b: 1, a: 1}
-  colorHover: {r: 0.65, g: 0.65, b: 0.65, a: 1}
-  panelTint: {r: 0, g: 0, b: 0, a: 0.35}
-  colorSelected: {r: 0.9, g: 0.9, b: 0.9, a: 1}
-  colorWrong: {r: 1, g: 0.3, b: 0.3, a: 1}
+  colorOff: {r: 0.15686275, g: 0.29411766, b: 0.50980395, a: 1}
+  colorOn: {r: 1, g: 1, b: 1, a: 1}
+  colorHover: {r: 0.4117647, g: 0.65882355, b: 1, a: 1}
+  panelTint: {r: 0.21960786, g: 0.21960786, b: 0.21960786, a: 0.35}
+  colorSelected: {r: 1, g: 1, b: 1, a: 1}
+  colorWrong: {r: 0.12941177, g: 0.12941177, b: 0.12941177, a: 1}
+  roundedPanelMaterial: {fileID: 2100000, guid: bf535835e6392a545a33245188caa5c8, type: 2}
   statusSize: 1
   enableIntroSequence: 1
   introMoveDuration: 1.2
   countdownStepDuration: 0.75
   countdownFontScale: 2
+  audioSource: {fileID: 1412913343}
+  clickCorrectClip: {fileID: 8300000, guid: ae0907ee592c2644687588c92475d0a7, type: 3}
+  clickWrongClip: {fileID: 8300000, guid: 714dbefb211eb93428a11028aa6963d7, type: 3}
+  successClip: {fileID: 8300000, guid: db5421adbd18cfd4389a86c6ccc41461, type: 3}
+  failClip: {fileID: 8300000, guid: 714dbefb211eb93428a11028aa6963d7, type: 3}
 --- !u!4 &1634483785
 Transform:
   m_ObjectHideFlags: 0
@@ -43126,3 +43261,4 @@ SceneRoots:
   - {fileID: 961960362}
   - {fileID: 1702374015}
   - {fileID: 1802260465}
+  - {fileID: 1412913344}
