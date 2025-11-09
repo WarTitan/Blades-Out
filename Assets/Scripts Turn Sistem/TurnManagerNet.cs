@@ -6,21 +6,23 @@
 //      - Any non-eliminated player can gift items.
 //      - When you gift, the item moves immediately from your INVENTORY
 //        into the TARGET's CONSUME tray.
-//      - TurnManager remembers WHICH target each giver used this round.
 //   2) DELIVERY / MEMORY phase:
-//      - For seats 1..5:
-//          * If that seat chose a target, and the target has items in CONSUME:
+//      - For seats 1..5 (in seatTurnOrder):
+//          * If that seat's player has items in CONSUME:
 //                - Target consumes everything
-//                - Target plays memory minigame
+//                - Target plays the memory minigame once
 //      - After seat 5, go back to step 1 (new crafting phase).
 //
 // New in this version:
-//   - Server_OnPlayerTraysSpawned(PlayerItemTrays) is called whenever a
-//     PlayerItemTrays appears on server. If that player has 0 items,
-//     they are given 'initialDraw' items immediately (even in lobby).
-//     => fixes the "clone sometimes gets 0 items if I start too fast" bug.
-//   - LogWaiting() now logs at most once every 3 seconds, so lobby log
-//     spam is reduced.
+//   - Server_OnPlayerTraysSpawned(PlayerItemTrays) seeds 'initialDraw' items
+//     when a PlayerItemTrays first appears on the server and has 0 inventory.
+//   - At the start of EVERY crafting phase *after the first*, each seated,
+//     non-eliminated player draws 'drawAfterTurn' new items into their
+//     INVENTORY.
+//   - A giver may give items to multiple different targets in the same
+//     crafting phase. There is no longer a "locked target" per round.
+//     In the delivery phase, each seat that has anything in its CONSUME
+//     tray will consume those items and play the memory minigame once.
 //
 // Requires:
 //   - PlayerItemTrays
@@ -28,6 +30,8 @@
 //   - MemoryStrikeTracker
 //   - MemoryLevelTracker
 //   - LobbyStage
+//
+// NOTE: This uses Mirror networking (NetworkBehaviour, [Server], [Command], etc.).
 
 using UnityEngine;
 using Mirror;
@@ -53,7 +57,7 @@ public class TurnManagerNet : NetworkBehaviour
     [Tooltip("How many items a player gets if they start with 0 items.")]
     public int initialDraw = 4;
 
-    [Tooltip("Currently unused, kept for compatibility.")]
+    [Tooltip("How many items each seated, non-eliminated player draws at the start of every crafting phase (except the first).")]
     public int drawAfterTurn = 0;
 
     [Header("Timing")]
@@ -78,11 +82,11 @@ public class TurnManagerNet : NetworkBehaviour
     [SyncVar] public double memoryEndTime = 0;
 
     // Internal state
-    private readonly HashSet<uint> seededThisCycle = new HashSet<uint>();          // who got seeded this crafting cycle
-    private readonly Dictionary<uint, uint> giftTargets = new Dictionary<uint, uint>(); // giverNetId -> targetNetId
+    private readonly HashSet<uint> seededThisCycle = new HashSet<uint>(); // who got seeded this crafting cycle
 
     private bool loopStarted = false;
     private float nextWaitLog = 0f;
+    private bool hasHadAtLeastOneCraftPhase = false; // used to avoid drawing extra items at very first craft
 
     // Memory flow
     private int memoryToken = 0;
@@ -98,7 +102,7 @@ public class TurnManagerNet : NetworkBehaviour
     {
         if (Instance != null && Instance != this)
         {
-            Destroy(this);
+            Destroy(gameObject);
             return;
         }
         Instance = this;
@@ -131,12 +135,23 @@ public class TurnManagerNet : NetworkBehaviour
         }
     }
 
+    public override void OnStopServer()
+    {
+        base.OnStopServer();
+        loopStarted = false;
+        StopAllCoroutines();
+        SetWaiting();
+        Debug.Log("[TurnManagerNet] Server loop stopped.");
+    }
+
     // Called by TurnInput (hotkey 1) in older versions. Currently a no-op.
     [Server]
     public void Server_EndCurrentTurnBy(uint requesterNetId)
     {
-        // If you ever want "skip to next seat" hotkey, implement here.
-        // Left as no-op so existing TurnInput keeps compiling.
+        if (!NetworkServer.active) return;
+        // Legacy hook kept for compatibility. We no longer skip ahead
+        // mid-phase, but we keep this so older TurnInput scripts compile.
+        Debug.Log("[TurnManagerNet] Server_EndCurrentTurnBy called by netId " + requesterNetId + " (no-op).");
     }
 
     // Called from PlayerItemTrays.OnStartServer when a tray spawns on server.
@@ -168,29 +183,19 @@ public class TurnManagerNet : NetworkBehaviour
     }
 
     // Called by PlayerItemTrays.Cmd_GiveItemToPlayer when a gift happens.
-    // Locks which target this giver is using for the current round.
+    // We no longer lock the giver to a single target; this simply checks
+    // that gifting is allowed right now (phase, elimination).
     [Server]
     public bool Server_OnGift(uint giverNetId, uint targetNetId)
     {
         if (phase != Phase.Crafting) return false;
         if (giverNetId == 0 || targetNetId == 0) return false;
 
-        uint existing;
-        if (giftTargets.TryGetValue(giverNetId, out existing))
-        {
-            // Already chosen someone this round: must gift to the same person.
-            if (existing != targetNetId)
-            {
-                Debug.LogWarning("[TurnManagerNet] Giver " + giverNetId +
-                                 " tried to change target in same crafting phase. Gift rejected.");
-                return false;
-            }
-        }
-        else
-        {
-            giftTargets[giverNetId] = targetNetId;
-            Debug.Log("[TurnManagerNet] Giver " + giverNetId + " locked target " + targetNetId + " for this round.");
-        }
+        var giverEntry = MemoryStrikeTracker.FindForNetId(giverNetId);
+        if (giverEntry != null && giverEntry.eliminated) return false;
+
+        var targetEntry = MemoryStrikeTracker.FindForNetId(targetNetId);
+        if (targetEntry != null && targetEntry.eliminated) return false;
 
         return true;
     }
@@ -203,7 +208,6 @@ public class TurnManagerNet : NetworkBehaviour
 
         while (true)
         {
-            // WAITING FOR A VALID GAME STATE
             if (!HasAnyPlayers())
             {
                 LogWaiting("no players found");
@@ -212,15 +216,9 @@ public class TurnManagerNet : NetworkBehaviour
                 continue;
             }
 
-            // Only auto-seat if SeatIndexAuthority is NOT present.
-            if (autoSeatOnServer && !HasSeatIndexAuthority())
-            {
-                Server_AutoSeatAllPlayersIfNeeded();
-            }
-
             if (IsLobbyBlockingStart())
             {
-                LogWaiting("lobbyActive == true");
+                LogWaiting("waiting for lobby / game start");
                 SetWaiting();
                 yield return new WaitForSeconds(0.25f);
                 continue;
@@ -229,6 +227,29 @@ public class TurnManagerNet : NetworkBehaviour
             if (!HasAnySeatedPlayer())
             {
                 LogWaiting("no seated players (seatIndex1Based == 0)");
+                SetWaiting();
+                yield return new WaitForSeconds(0.25f);
+                continue;
+            }
+
+            if (!HasSeatIndexAuthority())
+            {
+                if (autoSeatOnServer)
+                {
+                    Server_AutoSeatAllPlayersIfNeeded();
+                }
+                else
+                {
+                    LogWaiting("no SeatIndexAuthority and autoSeatOnServer = false");
+                    SetWaiting();
+                    yield return new WaitForSeconds(0.25f);
+                    continue;
+                }
+            }
+
+            if (!HasAnySeatedPlayer())
+            {
+                LogWaiting("no seated players after auto-seat");
                 SetWaiting();
                 yield return new WaitForSeconds(0.25f);
                 continue;
@@ -244,10 +265,16 @@ public class TurnManagerNet : NetworkBehaviour
             memoryEndTime = 0;
 
             seededThisCycle.Clear();
-            giftTargets.Clear();
 
             Server_LogSeatMap("pre-crafting");
             Server_SeedSeatedIfEmpty("crafting start");
+
+            // Only start per-turn draws after the very first crafting phase,
+            // so players begin the game with exactly 'initialDraw' items.
+            if (hasHadAtLeastOneCraftPhase)
+            {
+                Server_DrawAtCraftStartForAll("crafting start");
+            }
 
             double craftEnd = NetworkTime.time + craftingSeconds;
             turnEndTime = craftEnd;
@@ -256,6 +283,10 @@ public class TurnManagerNet : NetworkBehaviour
 
             while (NetworkTime.time < craftEnd)
                 yield return null;
+
+            // First crafting phase completed; from now on we draw
+            // 'drawAfterTurn' items at the start of each crafting phase.
+            hasHadAtLeastOneCraftPhase = true;
 
             // ----------------------------------------------------
             // 2) DELIVERY / MEMORY PHASE (SEATS 1..5)
@@ -276,67 +307,34 @@ public class TurnManagerNet : NetworkBehaviour
 
             for (int i = 0; i < seatTurnOrder.Length; i++)
             {
-                var giver = ResolveBySeat(order, seatTurnOrder[i]);
-                if (giver == null) continue;
+                var trays = ResolveBySeat(order, seatTurnOrder[i]);
+                if (trays == null) continue;
 
-                var giverId = giver.GetComponent<NetworkIdentity>();
-                if (giverId == null) continue;
-                if (IsEliminated(giverId.netId)) continue;
+                var id = trays.GetComponent<NetworkIdentity>();
+                if (id == null) continue;
+                if (IsEliminated(id.netId)) continue;
 
-                uint targetNetId;
-                if (!giftTargets.TryGetValue(giverId.netId, out targetNetId) || targetNetId == 0)
+                int seat = trays.seatIndex1Based;
+                if (seat <= 0) continue;
+
+                int pending = trays.consume.Count;
+                if (pending <= 0)
                 {
-                    // This seat did not give anything this round.
-                    Debug.Log("[TurnManagerNet] Seat " + giver.seatIndex1Based + " had no target this round.");
+                    Debug.Log("[TurnManagerNet] Seat " + seat + " has no items in CONSUME; skipping memory.");
                     continue;
                 }
 
-                var targetId = FindNetIdentity(targetNetId);
-                if (targetId == null)
-                {
-                    Debug.LogWarning("[TurnManagerNet] Target netId " + targetNetId +
-                                     " for giver netId " + giverId.netId + " not found. Skipping.");
-                    continue;
-                }
+                // HUD: show the RECEIVING player (the one consuming)
+                currentSeat = seat;
+                currentTurnNetId = id.netId;
 
-                var targetTrays = targetId.GetComponent<PlayerItemTrays>();
-                if (targetTrays == null) continue;
-                if (IsEliminated(targetId.netId))
-                {
-                    Debug.Log("[TurnManagerNet] Target netId " + targetId.netId +
-                              " is eliminated; skipping delivery for this seat.");
-                    continue;
-                }
+                Debug.Log("[TurnManagerNet] Delivery: Seat " + seat +
+                          " consumes " + pending + " item(s) from CONSUME and plays memory. netId " + id.netId);
 
-                int targetSeat = targetTrays.seatIndex1Based;
-                if (targetSeat <= 0)
-                {
-                    Debug.Log("[TurnManagerNet] Target has no seat; skipping.");
-                    continue;
-                }
+                trays.Server_ConsumeAllNow();
 
-                // HUD: show the RECEIVING player
-                currentSeat = targetSeat;
-                currentTurnNetId = targetId.netId;
-
-                Debug.Log("[TurnManagerNet] Delivery: Seat " + giver.seatIndex1Based +
-                          " -> Seat " + targetSeat +
-                          " (giver netId " + giverId.netId + " -> target netId " + targetId.netId + ")");
-
-                int before = targetTrays.consume.Count;
-                targetTrays.Server_ConsumeAllNow();
-
-                if (before <= 0)
-                {
-                    Debug.Log("[TurnManagerNet] Target seat " + targetSeat +
-                              " had no items to consume; skipping memory.");
-                    currentSeat = 0;
-                    currentTurnNetId = 0;
-                    continue;
-                }
-
-                // Play memory minigame for the target.
-                yield return Server_PlayMemory(targetId, targetSeat);
+                // Play memory minigame for this seat's player.
+                yield return Server_PlayMemory(id, seat);
 
                 currentSeat = 0;
                 currentTurnNetId = 0;
@@ -372,9 +370,11 @@ public class TurnManagerNet : NetworkBehaviour
     [Server]
     private IEnumerator Server_PlayMemory(NetworkIdentity playerId, int seatIndex1Based)
     {
-        memoryPlayerNetId = playerId.netId;
-        memoryToken = Random.Range(100000, 999999);
+        if (playerId == null) yield break;
+
         memoryResultArrived = false;
+        memoryToken++;
+        memoryPlayerNetId = playerId.netId;
 
         memoryActive = true;
         memoryEndTime = NetworkTime.time + memorySeconds;
@@ -403,6 +403,8 @@ public class TurnManagerNet : NetworkBehaviour
         MemorySequenceUI.BeginStatic(token, seconds, seatIndex1Based);
     }
 
+    // Called by MemoryMinigameReporter when the local player finishes the minigame.
+    // best = 1 (success) or 0 (fail).
     [Server]
     public void Server_OnMemoryResult(uint playerNetId, int token, int best)
     {
@@ -446,15 +448,13 @@ public class TurnManagerNet : NetworkBehaviour
         return ls.lobbyActive;
     }
 
+#pragma warning disable CS0618
     private bool HasAnyPlayers()
     {
-#pragma warning disable CS0618
         var trays = GameObject.FindObjectsOfType<PlayerItemTrays>();
-#pragma warning restore CS0618
         return trays != null && trays.Length > 0;
     }
 
-#pragma warning disable CS0618
     private bool HasAnySeatedPlayer()
     {
         var trays = GameObject.FindObjectsOfType<PlayerItemTrays>();
@@ -525,6 +525,8 @@ public class TurnManagerNet : NetworkBehaviour
             Debug.LogError("[TurnManagerNet] ItemDeck has 0 entries. Populate items.");
         }
 
+        if (traysAll == null || traysAll.Length == 0) return;
+
         for (int i = 0; i < traysAll.Length; i++)
         {
             var t = traysAll[i];
@@ -540,6 +542,38 @@ public class TurnManagerNet : NetworkBehaviour
             seededThisCycle.Add(id.netId);
             Debug.Log("[TurnManagerNet] Seed " + label + ": Seat " + t.seatIndex1Based +
                       " netId=" + (id != null ? id.netId.ToString() : "0") + " added=" + added);
+        }
+    }
+
+    // Draw 'drawAfterTurn' items for every seated, non-eliminated player
+    // at the start of each crafting phase (except the very first).
+    [Server]
+    private void Server_DrawAtCraftStartForAll(string label)
+    {
+        if (drawAfterTurn <= 0) return;
+
+#pragma warning disable CS0618
+        var traysAll = GameObject.FindObjectsOfType<PlayerItemTrays>();
+#pragma warning restore CS0618
+        if (traysAll == null || traysAll.Length == 0) return;
+
+        for (int i = 0; i < traysAll.Length; i++)
+        {
+            var t = traysAll[i];
+            if (t == null) continue;
+            if (t.seatIndex1Based <= 0) continue; // only seated players
+
+            var id = t.GetComponent<NetworkIdentity>();
+            if (id == null) continue;
+            if (IsEliminated(id.netId)) continue;
+
+            int added = t.Server_AddSeveralToInventoryClamped(drawAfterTurn);
+            if (added > 0)
+            {
+                Debug.Log("[TurnManagerNet] Draw " + label + ": Seat " + t.seatIndex1Based +
+                          " netId=" + id.netId + " added=" + added +
+                          " (drawAfterTurn=" + drawAfterTurn + ")");
+            }
         }
     }
 
@@ -621,7 +655,9 @@ public class TurnManagerNet : NetworkBehaviour
 #if UNITY_2023_1_OR_NEWER
         var all = Object.FindObjectsByType<NetworkIdentity>(FindObjectsSortMode.None);
 #else
-        var all = Object.FindObjectsOfType<NetworkIdentity>();
+#pragma warning disable CS0618
+        var all = GameObject.FindObjectsOfType<NetworkIdentity>();
+#pragma warning restore CS0618
 #endif
         for (int i = 0; i < all.Length; i++)
             if (all[i].netId == netId) return all[i];

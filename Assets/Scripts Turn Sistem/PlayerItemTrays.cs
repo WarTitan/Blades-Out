@@ -11,7 +11,7 @@
 //   - Any non-eliminated player can give an item to another player.
 //   - Cmd_GiveItemToPlayer:
 //       * Checks TurnManagerNet.CanTradeNow.
-//       * Uses TurnManagerNet.Server_OnGift(giver, target) to lock the target.
+//       * Uses TurnManagerNet.Server_OnGift(giver, target) to validate the gift.
 //       * Moves the item from INVENTORY to TARGET.CONSUME.
 //
 // Delivery phase:
@@ -277,6 +277,10 @@ public class PlayerItemTrays : NetworkBehaviour
         Debug.Log("[PlayerItemTrays] Gift seat " + seatIndex1Based +
                   " -> netId " + targetNetId +
                   " item " + itemId + " (into target.consume)");
+
+        // 🔄 Force all clients to rebuild visuals for both trays
+        RpcRefreshTrays();             // giver's inventory visuals
+        targetTrays.RpcRefreshTrays(); // target's consume visuals
     }
 
     [Server]
@@ -317,6 +321,14 @@ public class PlayerItemTrays : NetworkBehaviour
                 }
             }
         }
+    }
+
+    // NEW: rebuild both trays on all clients when gifts happen
+    [ClientRpc]
+    private void RpcRefreshTrays()
+    {
+        RebuildInventoryVisuals();
+        RebuildConsumeVisuals();
     }
 
     [TargetRpc]
