@@ -1314,6 +1314,7 @@ MonoBehaviour:
   evaluationMethod: 0
   evaluationInterval: 3
   timeInterpolationGui: 0
+  lobbySpawnPoints: []
   spawnPoints:
   - {fileID: 945981542}
   - {fileID: 1873155903}
@@ -1357,7 +1358,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 81e7110950e697c4782cef58b6f9b793, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MirrorBootstrap
-  useSteamInEditor: 0
+  networkManager: {fileID: 0}
+  telepathy: {fileID: 0}
+  fizzy: {fileID: 0}
+  defaultMode: 1
+  preferTelepathyInEditor: 1
+  autoStartOnPlay: 0
+  startAsHost: 1
+  clientAddress: 127.0.0.1
   telepathyPort: 7777
 --- !u!114 &651592313
 MonoBehaviour:
@@ -1687,7 +1695,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 81e7110950e697c4782cef58b6f9b793, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MirrorBootstrap
-  useSteamInEditor: 0
+  networkManager: {fileID: 0}
+  telepathy: {fileID: 0}
+  fizzy: {fileID: 0}
+  defaultMode: 1
+  preferTelepathyInEditor: 1
+  autoStartOnPlay: 0
+  startAsHost: 1
+  clientAddress: 127.0.0.1
   telepathyPort: 7777
 --- !u!1 &820280584
 GameObject:

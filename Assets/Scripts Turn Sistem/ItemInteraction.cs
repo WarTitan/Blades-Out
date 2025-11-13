@@ -27,6 +27,10 @@ public class ItemInteraction : NetworkBehaviour
     [Tooltip("Scale multiplier when hovering an inventory item.")]
     public float hoverScaleMultiplier = 1.12f;
 
+    [Header("Timing Safety")]
+    [Tooltip("Client-side safety: do not allow drop if crafting has less time left than this (seconds).")]
+    public float dropPhaseBufferSeconds = 0.12f; // NEW: avoid sending last-frame drops
+
     [Header("Debug")]
     public bool drawDebugRay = true;
 
@@ -50,8 +54,8 @@ public class ItemInteraction : NetworkBehaviour
     private ItemInstance hoveredInstance;
     private Vector3 hoveredOriginalScale;
 
-    // NEW: hovered tray zone while dragging
-    private ConsumableTrayZone hoveredTrayZone; // <--------------------------- NEW
+    // hovered tray zone while dragging
+    private ConsumableTrayZone hoveredTrayZone;
 
     public override void OnStartLocalPlayer()
     {
@@ -160,8 +164,7 @@ public class ItemInteraction : NetworkBehaviour
             return;
         }
 
-        // If not crafting, you can still SEE your cards,
-        // but let's turn off the hover "I can interact" feeling.
+        // If not crafting, show no hover affordance
         if (!crafting)
         {
             ClearCurrentHover();
@@ -381,11 +384,10 @@ public class ItemInteraction : NetworkBehaviour
             dragGhost.transform.position = p;
         }
 
-        // NEW: update tray hover highlight while dragging --------------------
-        UpdateTrayHoverWhileDragging(); // <---------------------------------- NEW
+        // update tray hover highlight while dragging
+        UpdateTrayHoverWhileDragging();
     }
 
-    // NEW: highlight the tray we are currently aiming at while dragging
     private void UpdateTrayHoverWhileDragging()
     {
         Ray ray = MakeDragRay();
@@ -438,9 +440,8 @@ public class ItemInteraction : NetworkBehaviour
             hoveredTrayZone = null;
         }
     }
-    // -----------------------------------------------------------------------
 
-    // ---------- Drop / gift (still uses ConsumableTrayZone) ----------
+    // ---------- Drop / gift ----------
 
     private void TryDropDraggedItem()
     {
@@ -462,10 +463,10 @@ public class ItemInteraction : NetworkBehaviour
             return;
         }
 
-        // If phase ended right before mouse up, treat as cancel
-        if (!IsCraftingPhase())
+        // If phase about to end, cancel locally to avoid server rejection (NEW)
+        if (!IsCraftingPhase() || CraftingTimeRemaining() < dropPhaseBufferSeconds)
         {
-            CancelDrag("phase-ended-on-drop");
+            CancelDrag("crafting-timeout");
             return;
         }
 
@@ -544,7 +545,7 @@ public class ItemInteraction : NetworkBehaviour
                   " -> seat " + bestZone.seatIndex1Based +
                   " (netId " + targetId.netId + ", hit " + bestHit.collider.name + ")");
 
-        // Successful gift: keep the original hidden (server will update inventory)
+        // Successful gift attempt: keep the original hidden (server will update inventory or reject)
         FinishDrag();
     }
 
@@ -579,19 +580,26 @@ public class ItemInteraction : NetworkBehaviour
         return tm.phase == TurnManagerNet.Phase.Crafting;
     }
 
+    private double CraftingTimeRemaining()
+    {
+        var tm = TurnManagerNet.Instance;
+        if (tm == null) return 0;
+        return tm.turnEndTime - NetworkTime.time;
+    }
+
     private void CancelDrag(string why)
     {
         if (isDragging)
             Debug.Log("[ItemInteraction] Cancel drag (" + why + ").");
 
-        ClearTrayHover(); // <-------------------------------------------- NEW
+        ClearTrayHover();
         CleanupDragState(restoreOriginal: true);
     }
 
     private void FinishDrag()
     {
         // Gift sent -> do NOT restore original visual; inventory will change via server
-        ClearTrayHover(); // <-------------------------------------------- NEW
+        ClearTrayHover();
         CleanupDragState(restoreOriginal: false);
     }
 

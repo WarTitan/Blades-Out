@@ -171,8 +171,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TurnHUD
   titleObject: {fileID: 647040754}
   timerObject: {fileID: 818532403}
+  showStrikeBoard: 0
   strikeBoardObject: {fileID: 0}
   overrideFont: {fileID: 0}
+  preferThisInstance: 0
+  dontDestroyOnLoad: 1
 --- !u!1 &43646213
 GameObject:
   m_ObjectHideFlags: 0
@@ -2086,23 +2089,23 @@ MonoBehaviour:
   - itemName: Vodka
     visualPrefab: {fileID: 9182566599383929454, guid: 445194c87e721334fb34894c587b557e, type: 3}
     effectPrefab: {fileID: 8592099208058942138, guid: 9ae91ec52406859408ebe416130d17f3, type: 3}
-    durationSeconds: 10
-    intensity: 1
+    effectLifetime: 5
+    effectIntensity: 1
   - itemName: Speed
     visualPrefab: {fileID: 4466164222530615821, guid: d2a07f31166ea1243a1479315a336732, type: 3}
     effectPrefab: {fileID: 803944652759227712, guid: 6bc219c16e15cae409c409a11b7935da, type: 3}
-    durationSeconds: 10
-    intensity: 1
+    effectLifetime: 5
+    effectIntensity: 1
   - itemName: Lsd
     visualPrefab: {fileID: 6436441196386703791, guid: d3ee30beb45b64c4ea7fe259446fdaec, type: 3}
     effectPrefab: {fileID: 1174183902846764924, guid: f902d7b1997db0345b09b38127e5cdb5, type: 3}
-    durationSeconds: 10
-    intensity: 1
+    effectLifetime: 5
+    effectIntensity: 1
   - itemName: Keramin
     visualPrefab: {fileID: 4061434974024459310, guid: 4e0ce4c9a1634c649a413de8870e9e4f, type: 3}
     effectPrefab: {fileID: 5627519088009419456, guid: 694d22c95cdbabe48a6ee3ef90df8cdc, type: 3}
-    durationSeconds: 10
-    intensity: 1
+    effectLifetime: 5
+    effectIntensity: 1
 --- !u!4 &357020190
 Transform:
   m_ObjectHideFlags: 0
@@ -5870,10 +5873,11 @@ MonoBehaviour:
   seatTurnOrder: 0100000002000000030000000400000005000000
   initialDraw: 4
   drawAfterTurn: 2
-  turnSeconds: 30
-  memorySecondsMax: 45
+  craftingSeconds: 20
+  memorySeconds: 45
+  ignoreLobbyForTesting: 0
+  autoSeatOnServer: 0
   phase: 0
-  phaseEndTime: 0
   currentSeat: 0
   currentTurnNetId: 0
   turnEndTime: 0
@@ -7191,8 +7195,9 @@ MonoBehaviour:
   - {fileID: 1475917192}
   - {fileID: 1960765368}
   - {fileID: 983535233}
-  offsetMode: 0
+  boardScale: 1
   offset: {x: 0, y: 0, z: 0}
+  offsetMode: 0
   alignWithSeatAnchorForward: 1
 --- !u!1 &1164006554
 GameObject:
@@ -9352,13 +9357,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7431c417daeac1b4c9b496af53402255, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MemorySequenceUI
-  boardScale: 1
-  panelMarginX: 0.12
-  panelMarginY: 0.22
   cameraFallbackOffset: {x: 0, y: 0, z: 0}
   padSize: 0.24
   padSpacing: 0.06
   boardThickness: 0.02
+  panelMarginX: 0.12
+  panelMarginY: 0.22
   rayMask:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -9367,8 +9371,19 @@ MonoBehaviour:
   colorOn: {r: 0.85, g: 0.85, b: 0.85, a: 1}
   colorHover: {r: 0.65, g: 0.65, b: 0.65, a: 1}
   panelTint: {r: 0, g: 0, b: 0, a: 0.35}
-  titleSize: 0.25
-  timerSize: 0.18
+  colorSelected: {r: 0.9, g: 0.9, b: 0.9, a: 1}
+  colorWrong: {r: 1, g: 0.3, b: 0.3, a: 1}
+  roundedPanelMaterial: {fileID: 0}
+  statusSize: 0.35
+  enableIntroSequence: 1
+  introMoveDuration: 1.2
+  countdownStepDuration: 0.75
+  countdownFontScale: 4
+  audioSource: {fileID: 0}
+  clickCorrectClip: {fileID: 0}
+  clickWrongClip: {fileID: 0}
+  successClip: {fileID: 0}
+  failClip: {fileID: 0}
 --- !u!4 &1634483785
 Transform:
   m_ObjectHideFlags: 0

@@ -1,37 +1,8 @@
 // FILE: TurnManagerNet.cs
-// DROP-IN REPLACEMENT (ASCII only)
-//
-// Loop:
-//   1) CRAFTING for ALL players (global timer).
-//      - Any non-eliminated player can gift items.
-//      - When you gift, the item moves immediately from your INVENTORY
-//        into the TARGET's CONSUME tray.
-//   2) DELIVERY / MEMORY phase:
-//      - For seats 1..5 (in seatTurnOrder):
-//          * If that seat's player has items in CONSUME:
-//                - Target consumes everything
-//                - Target plays the memory minigame once
-//      - After seat 5, go back to step 1 (new crafting phase).
-//
-// New in this version:
-//   - Server_OnPlayerTraysSpawned(PlayerItemTrays) seeds 'initialDraw' items
-//     when a PlayerItemTrays first appears on the server and has 0 inventory.
-//   - At the start of EVERY crafting phase *after the first*, each seated,
-//     non-eliminated player draws 'drawAfterTurn' new items into their
-//     INVENTORY.
-//   - A giver may give items to multiple different targets in the same
-//     crafting phase. There is no longer a "locked target" per round.
-//     In the delivery phase, each seat that has anything in its CONSUME
-//     tray will consume those items and play the memory minigame once.
-//
-// Requires:
-//   - PlayerItemTrays
-//   - ItemDeck
-//   - MemoryStrikeTracker
-//   - MemoryLevelTracker
-//   - LobbyStage
-//
-// NOTE: This uses Mirror networking (NetworkBehaviour, [Server], [Command], etc.).
+// Fix: players were sometimes getting initialDraw again at later craft starts.
+// Change: Server_SeedSeatedIfEmpty() is now called ONLY before the FIRST crafting phase
+// (as a fallback) and at spawn (via Server_OnPlayerTraysSpawned). Subsequent crafting
+// phases draw ONLY drawAfterTurn items, so you get exactly N per turn, not 4+ unexpectedly.
 
 using UnityEngine;
 using Mirror;
@@ -54,11 +25,11 @@ public class TurnManagerNet : NetworkBehaviour
     public int[] seatTurnOrder = new int[] { 1, 2, 3, 4, 5 };
 
     [Header("Draw Counts")]
-    [Tooltip("How many items a player gets if they start with 0 items.")]
+    [Tooltip("How many items a player gets if they start with 0 items (spawn or very first crafting only).")]
     public int initialDraw = 4;
 
     [Tooltip("How many items each seated, non-eliminated player draws at the start of every crafting phase (except the first).")]
-    public int drawAfterTurn = 0;
+    public int drawAfterTurn = 2;
 
     [Header("Timing")]
     [Tooltip("Duration of global crafting phase where all players can give items.")]
@@ -66,6 +37,10 @@ public class TurnManagerNet : NetworkBehaviour
 
     [Tooltip("How long the memory minigame lasts for the target player.")]
     public float memorySeconds = 45f;
+
+    [Header("Trading Safety")]
+    [Tooltip("Server-side grace window right after Crafting ends where late gifts are still accepted (seconds).")]
+    public float giftGraceSeconds = 0.25f; // keep: avoids last-frame rejects
 
     [Header("Gating")]
     public bool ignoreLobbyForTesting = false;
@@ -82,20 +57,19 @@ public class TurnManagerNet : NetworkBehaviour
     [SyncVar] public double memoryEndTime = 0;
 
     // Internal state
-    private readonly HashSet<uint> seededThisCycle = new HashSet<uint>(); // who got seeded this crafting cycle
-
+    private readonly HashSet<uint> seededThisCycle = new HashSet<uint>(); // used by the first-craft fallback
     private bool loopStarted = false;
     private float nextWaitLog = 0f;
-    private bool hasHadAtLeastOneCraftPhase = false; // used to avoid drawing extra items at very first craft
+    private bool hasHadAtLeastOneCraftPhase = false; // critical: controls seeding vs per-turn draws
+    private double lastCraftingEndTime = 0; // for grace window
 
     // Memory flow
     private int memoryToken = 0;
     private uint memoryPlayerNetId = 0;
     private bool memoryResultArrived = false;
 
-    // Kept for compatibility with TurnInput (no behavior now)
 #pragma warning disable CS0618
-    private bool turnForceEnd = false;
+    private bool turnForceEnd = false; // legacy hook (kept)
 #pragma warning restore CS0618
 
     private void Awake()
@@ -144,18 +118,15 @@ public class TurnManagerNet : NetworkBehaviour
         Debug.Log("[TurnManagerNet] Server loop stopped.");
     }
 
-    // Called by TurnInput (hotkey 1) in older versions. Currently a no-op.
+    // Legacy endpoint retained so other scripts compile
     [Server]
     public void Server_EndCurrentTurnBy(uint requesterNetId)
     {
         if (!NetworkServer.active) return;
-        // Legacy hook kept for compatibility. We no longer skip ahead
-        // mid-phase, but we keep this so older TurnInput scripts compile.
         Debug.Log("[TurnManagerNet] Server_EndCurrentTurnBy called by netId " + requesterNetId + " (no-op).");
     }
 
-    // Called from PlayerItemTrays.OnStartServer when a tray spawns on server.
-    // Ensures a new player does NOT start with 0 items even if lobby ends quickly.
+    // Seed on spawn so late-joiners or fresh spawns never start with 0 items.
     [Server]
     public void Server_OnPlayerTraysSpawned(PlayerItemTrays trays)
     {
@@ -167,7 +138,7 @@ public class TurnManagerNet : NetworkBehaviour
                   " added=" + added + " items (initialDraw=" + initialDraw + ")");
     }
 
-    // Allow trading ONLY during crafting, and only for non-eliminated players.
+    // Allow trading during crafting, or within a small grace window after it ends.
     [Server]
     public bool CanTradeNow(NetworkIdentity who)
     {
@@ -176,19 +147,19 @@ public class TurnManagerNet : NetworkBehaviour
         var e = MemoryStrikeTracker.FindForNetId(who.netId);
         if (e != null && e.eliminated) return false;
 
-        if (phase == Phase.Crafting)
+        if (phase == Phase.Crafting) return true;
+
+        // small grace after crafting ended to accept late drops
+        if (giftGraceSeconds > 0f && (NetworkTime.time - lastCraftingEndTime) <= giftGraceSeconds)
             return true;
 
         return false;
     }
 
-    // Called by PlayerItemTrays.Cmd_GiveItemToPlayer when a gift happens.
-    // We no longer lock the giver to a single target; this simply checks
-    // that gifting is allowed right now (phase, elimination).
+    // Validate a specific gift (also respects grace)
     [Server]
     public bool Server_OnGift(uint giverNetId, uint targetNetId)
     {
-        if (phase != Phase.Crafting) return false;
         if (giverNetId == 0 || targetNetId == 0) return false;
 
         var giverEntry = MemoryStrikeTracker.FindForNetId(giverNetId);
@@ -197,7 +168,13 @@ public class TurnManagerNet : NetworkBehaviour
         var targetEntry = MemoryStrikeTracker.FindForNetId(targetNetId);
         if (targetEntry != null && targetEntry.eliminated) return false;
 
-        return true;
+        if (phase == Phase.Crafting) return true;
+
+        // grace acceptance
+        if (giftGraceSeconds > 0f && (NetworkTime.time - lastCraftingEndTime) <= giftGraceSeconds)
+            return true;
+
+        return false;
     }
 
     // ---------------- Main Loop ----------------
@@ -267,10 +244,17 @@ public class TurnManagerNet : NetworkBehaviour
             seededThisCycle.Clear();
 
             Server_LogSeatMap("pre-crafting");
-            Server_SeedSeatedIfEmpty("crafting start");
 
-            // Only start per-turn draws after the very first crafting phase,
-            // so players begin the game with exactly 'initialDraw' items.
+            // IMPORTANT:
+            // Only run "seed if empty" BEFORE the FIRST crafting phase, as a fallback
+            // (spawn seeding already handles late-joiners). This prevents handing out
+            // initialDraw (e.g., 4) again in later rounds when someone ended with 0 items.
+            if (!hasHadAtLeastOneCraftPhase)
+            {
+                Server_SeedSeatedIfEmpty("first crafting start");
+            }
+
+            // From the SECOND crafting phase onward, draw fixed per-turn items only.
             if (hasHadAtLeastOneCraftPhase)
             {
                 Server_DrawAtCraftStartForAll("crafting start");
@@ -284,8 +268,8 @@ public class TurnManagerNet : NetworkBehaviour
             while (NetworkTime.time < craftEnd)
                 yield return null;
 
-            // First crafting phase completed; from now on we draw
-            // 'drawAfterTurn' items at the start of each crafting phase.
+            // mark end for grace window and flag that we've had our first crafting already
+            lastCraftingEndTime = craftEnd;
             hasHadAtLeastOneCraftPhase = true;
 
             // ----------------------------------------------------
@@ -324,7 +308,7 @@ public class TurnManagerNet : NetworkBehaviour
                     continue;
                 }
 
-                // HUD: show the RECEIVING player (the one consuming)
+                // HUD: show the RECEIVING player (consuming target)
                 currentSeat = seat;
                 currentTurnNetId = id.netId;
 
@@ -403,8 +387,6 @@ public class TurnManagerNet : NetworkBehaviour
         MemorySequenceUI.BeginStatic(token, seconds, seatIndex1Based);
     }
 
-    // Called by MemoryMinigameReporter when the local player finishes the minigame.
-    // best = 1 (success) or 0 (fail).
     [Server]
     public void Server_OnMemoryResult(uint playerNetId, int token, int best)
     {
@@ -507,7 +489,7 @@ public class TurnManagerNet : NetworkBehaviour
         return 0;
     }
 
-    // Draw items for any seated player with 0 inventory at the start of crafting.
+    // Fallback seeding: ONLY before the very first crafting phase
     [Server]
     private void Server_SeedSeatedIfEmpty(string label)
     {
@@ -536,7 +518,7 @@ public class TurnManagerNet : NetworkBehaviour
             var id = t.GetComponent<NetworkIdentity>();
             if (id == null) continue;
             if (seededThisCycle.Contains(id.netId)) continue;
-            if (t.inventory.Count > 0) continue;
+            if (t.inventory.Count > 0) continue; // ONLY seed those who have 0
 
             int added = t.Server_AddSeveralToInventoryClamped(initialDraw);
             seededThisCycle.Add(id.netId);
@@ -545,8 +527,7 @@ public class TurnManagerNet : NetworkBehaviour
         }
     }
 
-    // Draw 'drawAfterTurn' items for every seated, non-eliminated player
-    // at the start of each crafting phase (except the very first).
+    // Per-turn draw: ONLY from the second crafting phase and onward
     [Server]
     private void Server_DrawAtCraftStartForAll(string label)
     {

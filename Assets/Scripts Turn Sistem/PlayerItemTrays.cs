@@ -1,29 +1,6 @@
 ﻿// FILE: PlayerItemTrays.cs
-// Key behavior:
-//
-// - INVENTORY tray: items you hold.
-// - CONSUME tray: items that will be consumed when you are the target in delivery.
-// - OnStartServer: TurnManagerNet.Server_OnPlayerTraysSpawned(this) seeds starting items.
-// - While seatIndex1Based == 0 (lobby / not seated):
-//       * We DO NOT spawn any tray visuals -> no cards at (0,0,0).
-//
-// Crafting phase:
-//   - Any non-eliminated player can give an item to another player.
-//   - Cmd_GiveItemToPlayer:
-//       * Checks TurnManagerNet.CanTradeNow.
-//       * Uses TurnManagerNet.Server_OnGift(giver, target) to validate the gift.
-//       * Moves the item from INVENTORY to TARGET.CONSUME.
-//
-// Delivery phase:
-//   - TurnManagerNet calls Server_ConsumeAllNow() on the target trays.
-//   - This clears CONSUME, removes 3D prefabs, and applies visual screen effects.
-//
-// Effect stacking rule (per consume):
-//   - Aggregate by effect PREFAB (not itemId):
-//       totalLifetime = sum of lifetimes
-//       maxIntensity  = max of ItemDeck.effectIntensity
-//   - Clamp intensity to 0..1 before calling IItemEffect.Play().
-//   => Playing 3 of the same item: same intensity (max from deck), longer duration.
+// (unchanged behavior, plus: RpcRefreshTrays already present;
+//  now adds Target_GiftRejected and uses it on all early rejects)
 
 using UnityEngine;
 using Mirror;
@@ -253,22 +230,21 @@ public class PlayerItemTrays : NetworkBehaviour
         if (senderId == null) return;
 
         var tm = TurnManagerNet.Instance;
-        if (tm == null) return;
-        if (!tm.CanTradeNow(senderId)) return;
+        if (tm == null) { if (senderId.connectionToClient != null) Target_GiftRejected(senderId.connectionToClient, "No TurnManager"); return; }
+        if (!tm.CanTradeNow(senderId)) { if (senderId.connectionToClient != null) Target_GiftRejected(senderId.connectionToClient, "Not in Crafting"); return; }
 
-        if (fromSlotIndex < 0 || fromSlotIndex >= inventory.Count) return;
-        if (targetNetId == 0) return;
+        if (fromSlotIndex < 0 || fromSlotIndex >= inventory.Count) { if (senderId.connectionToClient != null) Target_GiftRejected(senderId.connectionToClient, "Bad slot"); return; }
+        if (targetNetId == 0) { if (senderId.connectionToClient != null) Target_GiftRejected(senderId.connectionToClient, "No target"); return; }
 
         NetworkIdentity targetIdentity = FindNetIdentity(targetNetId);
-        if (targetIdentity == null) return;
+        if (targetIdentity == null) { if (senderId.connectionToClient != null) Target_GiftRejected(senderId.connectionToClient, "Target missing"); return; }
 
         var targetTrays = targetIdentity.GetComponent<PlayerItemTrays>();
-        if (targetTrays == null) return;
+        if (targetTrays == null) { if (senderId.connectionToClient != null) Target_GiftRejected(senderId.connectionToClient, "No target trays"); return; }
 
-        if (!tm.Server_OnGift(senderId.netId, targetNetId))
-            return;
+        if (!tm.Server_OnGift(senderId.netId, targetNetId)) { if (senderId.connectionToClient != null) Target_GiftRejected(senderId.connectionToClient, "Server_OnGift rejected"); return; }
 
-        if (targetTrays.consume.Count >= MaxSlots) return;
+        if (targetTrays.consume.Count >= MaxSlots) { if (senderId.connectionToClient != null) Target_GiftRejected(senderId.connectionToClient, "Target consume full"); return; }
 
         int itemId = inventory[fromSlotIndex];
         inventory.RemoveAt(fromSlotIndex);
@@ -278,7 +254,7 @@ public class PlayerItemTrays : NetworkBehaviour
                   " -> netId " + targetNetId +
                   " item " + itemId + " (into target.consume)");
 
-        // 🔄 Force all clients to rebuild visuals for both trays
+        // Force all clients to rebuild visuals for both trays
         RpcRefreshTrays();             // giver's inventory visuals
         targetTrays.RpcRefreshTrays(); // target's consume visuals
     }
@@ -323,10 +299,18 @@ public class PlayerItemTrays : NetworkBehaviour
         }
     }
 
-    // NEW: rebuild both trays on all clients when gifts happen
     [ClientRpc]
     private void RpcRefreshTrays()
     {
+        RebuildInventoryVisuals();
+        RebuildConsumeVisuals();
+    }
+
+    // NEW: tell the giver client a gift was rejected so visuals pop back immediately
+    [TargetRpc]
+    private void Target_GiftRejected(NetworkConnectionToClient conn, string reason)
+    {
+        Debug.LogWarning("[PlayerItemTrays] Gift rejected: " + reason);
         RebuildInventoryVisuals();
         RebuildConsumeVisuals();
     }
@@ -365,9 +349,7 @@ public class PlayerItemTrays : NetworkBehaviour
             return;
         }
 
-        // ✅ Aggregate by EFFECT PREFAB (not itemId):
-        //  - totalLifetime = sum of lifetimes
-        //  - maxIntensity  = max of intensities
+        // Aggregate by effect prefab: sum lifetimes, max intensities
         Dictionary<GameObject, EffectAggregate> agg = new Dictionary<GameObject, EffectAggregate>(16);
 
         for (int i = 0; i < itemIds.Length; i++)
@@ -390,20 +372,15 @@ public class PlayerItemTrays : NetworkBehaviour
             }
             else
             {
-                // ⏱ add time
                 ea.totalLifetime += Mathf.Max(0f, def.effectLifetime);
-
-                // 💪 keep the strongest intensity seen so far
                 float thisIntensity = Mathf.Max(0f, def.effectIntensity);
                 if (thisIntensity > ea.maxIntensity)
                     ea.maxIntensity = thisIntensity;
             }
 
-            // write back
             agg[key] = ea;
         }
 
-        // HUD manager (optional, for showing timers)
         var hudMgr = GetComponent<PsychoactiveEffectsManager>();
 
         foreach (var kv in agg)
@@ -413,8 +390,6 @@ public class PlayerItemTrays : NetworkBehaviour
 
             float lifetime = e.totalLifetime > 0f ? e.totalLifetime : 5f;
             float intensity = e.maxIntensity > 0f ? e.maxIntensity : 1f;
-
-            // Treat deck intensity as normalized 0..1 and clamp just in case
             intensity = Mathf.Clamp01(intensity);
 
             Debug.Log("[PlayerItemTrays] Spawning effect prefab '" + e.effectPrefab.name +
@@ -430,7 +405,6 @@ public class PlayerItemTrays : NetworkBehaviour
                 hudMgr.RegisterEffect(e.displayName, lifetime);
             }
 
-            // IItemEffect pipeline
             var itemEffect = go.GetComponent<IItemEffect>();
             if (itemEffect == null)
                 itemEffect = go.GetComponentInChildren<IItemEffect>();
@@ -441,7 +415,6 @@ public class PlayerItemTrays : NetworkBehaviour
             }
             else
             {
-                // No effect script, just auto-destroy after lifetime.
                 if (lifetime > 0f)
                     Object.Destroy(go, lifetime);
             }
