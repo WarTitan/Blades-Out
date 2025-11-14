@@ -257,7 +257,7 @@ MonoBehaviour:
   active: 1
   Intensity:
     m_OverrideState: 1
-    m_Value: 0
+    m_Value: 0.5
   CenterFocus:
     m_OverrideState: 1
     m_Value: 0

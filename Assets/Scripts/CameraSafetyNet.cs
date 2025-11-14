@@ -1,10 +1,13 @@
 // FILE: CameraSafetyNet.cs
-// PURPOSE: Last-resort guard. If Display 1 has no rendering camera in a frame,
-// it will pick the local player's camera, activate its entire parent chain,
-// normalize settings, enable it, and disable other cameras and stray AudioListeners.
-// Put this on any always-present scene object. Execution order is very late.
+// PURPOSE: Last-resort guard. If Display 1 has no rendering camera this frame,
+// pick the local player's camera, activate its parent chain, normalize settings,
+// enable it, disable other cameras and keep exactly one AudioListener.
+//
+// SRP-SAFE: never touches Camera.stereoTargetEye when a Scriptable Render Pipeline is active.
+// Also rate-limits the "Recovered player camera" log so it does not spam.
 
 using UnityEngine;
+using UnityEngine.Rendering; // for GraphicsSettings.currentRenderPipeline
 using Mirror;
 
 [DefaultExecutionOrder(70000)]
@@ -12,11 +15,16 @@ public class CameraSafetyNet : MonoBehaviour
 {
     public bool verboseLogs = false;
 
+    // simple rate-limit for recovery logs
+    private static Camera s_lastRecovered;
+    private static float s_nextLogTime = 0f;
+
     void LateUpdate()
     {
+        // if something is already rendering to Display 1, do nothing
         if (HasAnyRenderingCameraForDisplay(0)) return;
 
-        // Find local player's LocalCameraActivator first (best signal)
+        // Find the local player's preferred camera (via LocalCameraActivator first)
         LocalCameraActivator lca = FindLocalLca();
         Camera playerCam = null;
 
@@ -29,7 +37,7 @@ public class CameraSafetyNet : MonoBehaviour
 
         if (playerCam == null)
         {
-            // Fallback: any camera under a NetworkBehaviour that isLocalPlayer
+            // Fallback: any camera under an isLocalPlayer object
 #if UNITY_2023_1_OR_NEWER
             var cams = Object.FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
 #else
@@ -51,16 +59,20 @@ public class CameraSafetyNet : MonoBehaviour
 
         if (playerCam == null)
         {
-            if (verboseLogs) Debug.LogWarning("[CameraSafetyNet] No local player camera found.");
+            if (verboseLogs && Time.time >= s_nextLogTime)
+            {
+                s_nextLogTime = Time.time + 1f;
+                Debug.LogWarning("[CameraSafetyNet] No local player camera found.");
+            }
             return;
         }
 
-        // Activate full parent chain and normalize
+        // Activate full parent chain and normalize output
         ActivateAncestorsAndSelf(playerCam.transform);
         NormalizeCameraOutput(playerCam);
         playerCam.enabled = true;
 
-        // Disable all other cameras (scene-only)
+        // Disable all other scene cameras (leave only the chosen one enabled)
 #if UNITY_2023_1_OR_NEWER
         var allCams = Object.FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
 #else
@@ -73,18 +85,17 @@ public class CameraSafetyNet : MonoBehaviour
             if (!cam.gameObject.scene.IsValid()) continue;
             if (cam == playerCam) continue;
 
-            // If it is a known lobby camera, turn it off
+            // If it is the known lobby camera, definitely turn it off
             if (LobbyStage.Instance != null && LobbyStage.Instance.lobbyCamera == cam)
             {
                 cam.enabled = false;
                 continue;
             }
 
-            // Disable all other cameras to guarantee one clear winner
             cam.enabled = false;
         }
 
-        // Single AudioListener policy
+        // Single AudioListener policy: keep only on the chosen camera
         var playerAL = playerCam.GetComponent<AudioListener>();
 #if UNITY_2023_1_OR_NEWER
         var allAL = Object.FindObjectsByType<AudioListener>(FindObjectsInactive.Include, FindObjectsSortMode.None);
@@ -99,7 +110,12 @@ public class CameraSafetyNet : MonoBehaviour
             al.enabled = (al == playerAL);
         }
 
-        if (verboseLogs) Debug.Log("[CameraSafetyNet] Recovered player camera: " + playerCam.name);
+        if (verboseLogs && (playerCam != s_lastRecovered) && Time.time >= s_nextLogTime)
+        {
+            s_lastRecovered = playerCam;
+            s_nextLogTime = Time.time + 0.5f;
+            Debug.Log("[CameraSafetyNet] Recovered player camera: " + playerCam.name);
+        }
     }
 
     private static bool HasAnyRenderingCameraForDisplay(int display)
@@ -159,11 +175,20 @@ public class CameraSafetyNet : MonoBehaviour
     private static void NormalizeCameraOutput(Camera cam)
     {
         if (cam == null) return;
-        cam.targetDisplay = 0; // Display 1
+
+        // Ensure rendering to Display 1 fullscreen
+        cam.targetDisplay = 0;
         cam.rect = new Rect(0f, 0f, 1f, 1f);
-        cam.stereoTargetEye = StereoTargetEyeMask.None;
+
+        // SRP-safe: only touch stereoTargetEye on the built-in renderer
+        bool isSRP = GraphicsSettings.currentRenderPipeline != null;
+        if (!isSRP)
+        {
+            cam.stereoTargetEye = StereoTargetEyeMask.None;
+        }
 
 #if UNITY_RENDER_PIPELINE_UNIVERSAL
+        // Make sure URP additional data uses Base render type so it shows up
         var acd = cam.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
         if (acd != null && acd.renderType != UnityEngine.Rendering.Universal.CameraRenderType.Base)
             acd.renderType = UnityEngine.Rendering.Universal.CameraRenderType.Base;

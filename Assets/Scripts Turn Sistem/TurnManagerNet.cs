@@ -1,8 +1,6 @@
 // FILE: TurnManagerNet.cs
-// Fix: players were sometimes getting initialDraw again at later craft starts.
-// Change: Server_SeedSeatedIfEmpty() is now called ONLY before the FIRST crafting phase
-// (as a fallback) and at spawn (via Server_OnPlayerTraysSpawned). Subsequent crafting
-// phases draw ONLY drawAfterTurn items, so you get exactly N per turn, not 4+ unexpectedly.
+// Darts test phase + immediate draw when returning to table (press 3).
+// Adds skipNextCraftDraw so the next Crafting start won't double-draw after the immediate grant.
 
 using UnityEngine;
 using Mirror;
@@ -18,50 +16,49 @@ public class TurnManagerNet : NetworkBehaviour
     {
         Waiting,
         Crafting,
-        Turn    // Delivery / Memory
+        Turn,
+        Darts
     }
 
     [Header("Turn Order (seats 1..5)")]
     public int[] seatTurnOrder = new int[] { 1, 2, 3, 4, 5 };
 
     [Header("Draw Counts")]
-    [Tooltip("How many items a player gets if they start with 0 items (spawn or very first crafting only).")]
     public int initialDraw = 4;
-
-    [Tooltip("How many items each seated, non-eliminated player draws at the start of every crafting phase (except the first).")]
     public int drawAfterTurn = 2;
 
     [Header("Timing")]
-    [Tooltip("Duration of global crafting phase where all players can give items.")]
     public float craftingSeconds = 20f;
-
-    [Tooltip("How long the memory minigame lasts for the target player.")]
     public float memorySeconds = 45f;
 
     [Header("Trading Safety")]
-    [Tooltip("Server-side grace window right after Crafting ends where late gifts are still accepted (seconds).")]
-    public float giftGraceSeconds = 0.25f; // keep: avoids last-frame rejects
+    public float giftGraceSeconds = 0.25f;
 
     [Header("Gating")]
     public bool ignoreLobbyForTesting = false;
-    public bool autoSeatOnServer = false;
 
-    // HUD sync
+    // HUD / phase sync
     [SyncVar] public Phase phase = Phase.Waiting;
-    [SyncVar] public int currentSeat = 0;          // seat of player currently in memory
-    [SyncVar] public uint currentTurnNetId = 0;    // netId of player currently in memory
-    [SyncVar] public double turnEndTime = 0;       // crafting end time
+    [SyncVar] public int currentSeat = 0;
+    [SyncVar] public uint currentTurnNetId = 0;
+    [SyncVar] public double turnEndTime = 0;
 
     // Memory HUD sync
     [SyncVar] public bool memoryActive = false;
     [SyncVar] public double memoryEndTime = 0;
 
-    // Internal state
-    private readonly HashSet<uint> seededThisCycle = new HashSet<uint>(); // used by the first-craft fallback
+    // Darts test
+    [SyncVar] public bool dartsTestActive = false;
+
+    // Internal
+    private readonly HashSet<uint> seededThisCycle = new HashSet<uint>();
     private bool loopStarted = false;
     private float nextWaitLog = 0f;
-    private bool hasHadAtLeastOneCraftPhase = false; // critical: controls seeding vs per-turn draws
-    private double lastCraftingEndTime = 0; // for grace window
+    private bool hasHadAtLeastOneCraftPhase = false;
+    private double lastCraftingEndTime = 0;
+
+    // Avoid double-draw after we grant items immediately when returning from darts
+    private bool skipNextCraftDraw = false;
 
     // Memory flow
     private int memoryToken = 0;
@@ -69,16 +66,12 @@ public class TurnManagerNet : NetworkBehaviour
     private bool memoryResultArrived = false;
 
 #pragma warning disable CS0618
-    private bool turnForceEnd = false; // legacy hook (kept)
+    private bool turnForceEnd = false;
 #pragma warning restore CS0618
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         StartCoroutine(ServerLoopGuard());
     }
@@ -118,7 +111,7 @@ public class TurnManagerNet : NetworkBehaviour
         Debug.Log("[TurnManagerNet] Server loop stopped.");
     }
 
-    // Legacy endpoint retained so other scripts compile
+    // Legacy no-op kept for compatibility
     [Server]
     public void Server_EndCurrentTurnBy(uint requesterNetId)
     {
@@ -126,115 +119,115 @@ public class TurnManagerNet : NetworkBehaviour
         Debug.Log("[TurnManagerNet] Server_EndCurrentTurnBy called by netId " + requesterNetId + " (no-op).");
     }
 
-    // Seed on spawn so late-joiners or fresh spawns never start with 0 items.
+    // Called when trays spawn
     [Server]
     public void Server_OnPlayerTraysSpawned(PlayerItemTrays trays)
     {
         if (trays == null) return;
         if (trays.inventory.Count > 0) return;
-
         int added = trays.Server_AddSeveralToInventoryClamped(initialDraw);
-        Debug.Log("[TurnManagerNet] Spawn seed: seat=" + trays.seatIndex1Based +
-                  " added=" + added + " items (initialDraw=" + initialDraw + ")");
+        Debug.Log("[TurnManagerNet] Spawn seed: seat=" + trays.seatIndex1Based + " added=" + added);
     }
 
-    // Allow trading during crafting, or within a small grace window after it ends.
+    // Darts control
+    [Server]
+    public void Server_BeginDartsTest()
+    {
+        dartsTestActive = true;
+        phase = Phase.Darts;            // <-- original HUD should show "Playing Darts" when phase == Darts
+        currentSeat = 0;
+        currentTurnNetId = 0;
+        memoryActive = false;
+        memoryEndTime = 0;
+        turnEndTime = 0;
+        Debug.Log("[TurnManagerNet] Darts test ACTIVE. Main loop paused.");
+    }
+
+    [Server]
+    public void Server_EndDartsTest()
+    {
+        dartsTestActive = false;
+        Debug.Log("[TurnManagerNet] Darts test ENDED. Main loop will resume.");
+    }
+
+    // Grant immediate per-turn draw on return from darts; skip the next Crafting-start draw once.
+    [Server]
+    public void Server_GrantReturnToTableDraw()
+    {
+#pragma warning disable CS0618
+        var traysAll = GameObject.FindObjectsOfType<PlayerItemTrays>();
+#pragma warning restore CS0618
+        if (traysAll == null) return;
+
+        for (int i = 0; i < traysAll.Length; i++)
+        {
+            var t = traysAll[i];
+            if (t == null || t.seatIndex1Based <= 0) continue;
+            var id = t.GetComponent<NetworkIdentity>();
+            if (id == null) continue;
+            var e = MemoryStrikeTracker.FindForNetId(id.netId);
+            if (e != null && e.eliminated) continue;
+
+            int added = t.Server_AddSeveralToInventoryClamped(drawAfterTurn);
+            if (added > 0)
+                Debug.Log("[TurnManagerNet] Return-to-table draw: Seat " + t.seatIndex1Based + " added=" + added);
+        }
+
+        // Avoid double grant at the very next crafting start.
+        skipNextCraftDraw = true;
+    }
+
+    // Trade windows
     [Server]
     public bool CanTradeNow(NetworkIdentity who)
     {
         if (who == null) return false;
-
         var e = MemoryStrikeTracker.FindForNetId(who.netId);
         if (e != null && e.eliminated) return false;
-
         if (phase == Phase.Crafting) return true;
-
-        // small grace after crafting ended to accept late drops
-        if (giftGraceSeconds > 0f && (NetworkTime.time - lastCraftingEndTime) <= giftGraceSeconds)
-            return true;
-
+        if (giftGraceSeconds > 0f && (NetworkTime.time - lastCraftingEndTime) <= giftGraceSeconds) return true;
         return false;
     }
 
-    // Validate a specific gift (also respects grace)
     [Server]
     public bool Server_OnGift(uint giverNetId, uint targetNetId)
     {
         if (giverNetId == 0 || targetNetId == 0) return false;
-
-        var giverEntry = MemoryStrikeTracker.FindForNetId(giverNetId);
-        if (giverEntry != null && giverEntry.eliminated) return false;
-
-        var targetEntry = MemoryStrikeTracker.FindForNetId(targetNetId);
-        if (targetEntry != null && targetEntry.eliminated) return false;
-
+        var giver = MemoryStrikeTracker.FindForNetId(giverNetId);
+        if (giver != null && giver.eliminated) return false;
+        var target = MemoryStrikeTracker.FindForNetId(targetNetId);
+        if (target != null && target.eliminated) return false;
         if (phase == Phase.Crafting) return true;
-
-        // grace acceptance
-        if (giftGraceSeconds > 0f && (NetworkTime.time - lastCraftingEndTime) <= giftGraceSeconds)
-            return true;
-
+        if (giftGraceSeconds > 0f && (NetworkTime.time - lastCraftingEndTime) <= giftGraceSeconds) return true;
         return false;
     }
 
     // ---------------- Main Loop ----------------
-
     private IEnumerator ServerMainLoop()
     {
         yield return new WaitForSeconds(0.25f);
 
         while (true)
         {
-            if (!HasAnyPlayers())
+            // Park in Darts
+            if (dartsTestActive)
             {
-                LogWaiting("no players found");
-                SetWaiting();
-                yield return new WaitForSeconds(0.25f);
+                phase = Phase.Darts;
+                currentSeat = 0;
+                currentTurnNetId = 0;
+                memoryActive = false;
+                memoryEndTime = 0;
+                turnEndTime = 0;
+                yield return null;
                 continue;
             }
 
-            if (IsLobbyBlockingStart())
-            {
-                LogWaiting("waiting for lobby / game start");
-                SetWaiting();
-                yield return new WaitForSeconds(0.25f);
-                continue;
-            }
+            if (!HasAnyPlayers()) { LogWaiting("no players found"); SetWaiting(); yield return new WaitForSeconds(0.25f); continue; }
+            if (IsLobbyBlockingStart()) { LogWaiting("waiting for lobby / game start"); SetWaiting(); yield return new WaitForSeconds(0.25f); continue; }
+            if (!HasAnySeatedPlayer()) { LogWaiting("no seated players (seatIndex1Based == 0)"); SetWaiting(); yield return new WaitForSeconds(0.25f); continue; }
+            if (!HasSeatIndexAuthority()) { LogWaiting("no SeatIndexAuthority"); SetWaiting(); yield return new WaitForSeconds(0.25f); continue; }
 
-            if (!HasAnySeatedPlayer())
-            {
-                LogWaiting("no seated players (seatIndex1Based == 0)");
-                SetWaiting();
-                yield return new WaitForSeconds(0.25f);
-                continue;
-            }
-
-            if (!HasSeatIndexAuthority())
-            {
-                if (autoSeatOnServer)
-                {
-                    Server_AutoSeatAllPlayersIfNeeded();
-                }
-                else
-                {
-                    LogWaiting("no SeatIndexAuthority and autoSeatOnServer = false");
-                    SetWaiting();
-                    yield return new WaitForSeconds(0.25f);
-                    continue;
-                }
-            }
-
-            if (!HasAnySeatedPlayer())
-            {
-                LogWaiting("no seated players after auto-seat");
-                SetWaiting();
-                yield return new WaitForSeconds(0.25f);
-                continue;
-            }
-
-            // ----------------------------------------------------
-            // 1) CRAFTING PHASE FOR ALL PLAYERS
-            // ----------------------------------------------------
+            // -------- Crafting (All) --------
             phase = Phase.Crafting;
             currentSeat = 0;
             currentTurnNetId = 0;
@@ -242,22 +235,21 @@ public class TurnManagerNet : NetworkBehaviour
             memoryEndTime = 0;
 
             seededThisCycle.Clear();
-
             Server_LogSeatMap("pre-crafting");
 
-            // IMPORTANT:
-            // Only run "seed if empty" BEFORE the FIRST crafting phase, as a fallback
-            // (spawn seeding already handles late-joiners). This prevents handing out
-            // initialDraw (e.g., 4) again in later rounds when someone ended with 0 items.
             if (!hasHadAtLeastOneCraftPhase)
-            {
                 Server_SeedSeatedIfEmpty("first crafting start");
-            }
 
-            // From the SECOND crafting phase onward, draw fixed per-turn items only.
             if (hasHadAtLeastOneCraftPhase)
             {
-                Server_DrawAtCraftStartForAll("crafting start");
+                if (!skipNextCraftDraw)
+                {
+                    Server_DrawAtCraftStartForAll("crafting start");
+                }
+                else
+                {
+                    skipNextCraftDraw = false; // consume the skip
+                }
             }
 
             double craftEnd = NetworkTime.time + craftingSeconds;
@@ -266,31 +258,28 @@ public class TurnManagerNet : NetworkBehaviour
             Debug.Log("[TurnManagerNet] Crafting phase started for ALL players (" + craftingSeconds + "s).");
 
             while (NetworkTime.time < craftEnd)
+            {
+                if (dartsTestActive) break;
                 yield return null;
+            }
 
-            // mark end for grace window and flag that we've had our first crafting already
             lastCraftingEndTime = craftEnd;
             hasHadAtLeastOneCraftPhase = true;
+            if (dartsTestActive) continue;
 
-            // ----------------------------------------------------
-            // 2) DELIVERY / MEMORY PHASE (SEATS 1..5)
-            // ----------------------------------------------------
+            // -------- Memory/Delivery per seat --------
             phase = Phase.Turn;
             turnEndTime = 0;
             currentSeat = 0;
             currentTurnNetId = 0;
 
             var order = BuildOrderSkippingEliminated();
-            if (order.Count == 0)
-            {
-                LogWaiting("no active players for delivery");
-                SetWaiting();
-                yield return new WaitForSeconds(0.25f);
-                continue;
-            }
+            if (order.Count == 0) { LogWaiting("no active players for delivery"); SetWaiting(); yield return new WaitForSeconds(0.25f); continue; }
 
             for (int i = 0; i < seatTurnOrder.Length; i++)
             {
+                if (dartsTestActive) break;
+
                 var trays = ResolveBySeat(order, seatTurnOrder[i]);
                 if (trays == null) continue;
 
@@ -308,7 +297,6 @@ public class TurnManagerNet : NetworkBehaviour
                     continue;
                 }
 
-                // HUD: show the RECEIVING player (consuming target)
                 currentSeat = seat;
                 currentTurnNetId = id.netId;
 
@@ -317,7 +305,6 @@ public class TurnManagerNet : NetworkBehaviour
 
                 trays.Server_ConsumeAllNow();
 
-                // Play memory minigame for this seat's player.
                 yield return Server_PlayMemory(id, seat);
 
                 currentSeat = 0;
@@ -325,8 +312,6 @@ public class TurnManagerNet : NetworkBehaviour
 
                 yield return new WaitForSeconds(0.1f);
             }
-
-            // After seats 1..5, loop back to crafting.
         }
     }
 
@@ -344,13 +329,12 @@ public class TurnManagerNet : NetworkBehaviour
     {
         if (Time.time >= nextWaitLog)
         {
-            nextWaitLog = Time.time + 3f; // log at most once every 3 seconds
+            nextWaitLog = Time.time + 3f;
             Debug.Log("[TurnManagerNet] Waiting: " + why);
         }
     }
 
-    // ---------------- Memory flow ----------------
-
+    // -------- Memory --------
     [Server]
     private IEnumerator Server_PlayMemory(NetworkIdentity playerId, int seatIndex1Based)
     {
@@ -368,7 +352,11 @@ public class TurnManagerNet : NetworkBehaviour
         if (playerId.connectionToClient != null)
             Target_StartMemoryGame(playerId.connectionToClient, memoryToken, memorySeconds, seatIndex1Based);
 
-        while (!memoryResultArrived && NetworkTime.time < memoryEndTime) yield return null;
+        while (!memoryResultArrived && NetworkTime.time < memoryEndTime)
+        {
+            if (dartsTestActive) break;
+            yield return null;
+        }
 
         if (!memoryResultArrived)
         {
@@ -420,13 +408,12 @@ public class TurnManagerNet : NetworkBehaviour
         }
     }
 
-    // ---------------- Helper checks ----------------
-
+    // -------- Helpers --------
     private bool IsLobbyBlockingStart()
     {
         if (ignoreLobbyForTesting) return false;
         var ls = LobbyStage.Instance;
-        if (ls == null) return true;
+        if (ls == null) return false;
         return ls.lobbyActive;
     }
 
@@ -455,42 +442,6 @@ public class TurnManagerNet : NetworkBehaviour
     }
 
     [Server]
-    private void Server_AutoSeatAllPlayersIfNeeded()
-    {
-#pragma warning disable CS0618
-        var traysAll = GameObject.FindObjectsOfType<PlayerItemTrays>();
-#pragma warning restore CS0618
-        if (traysAll == null || traysAll.Length == 0) return;
-
-        bool[] used = new bool[6]; // 1..5
-        for (int i = 0; i < traysAll.Length; i++)
-        {
-            int s = traysAll[i].seatIndex1Based;
-            if (s >= 1 && s <= 5) used[s] = true;
-        }
-
-        for (int i = 0; i < traysAll.Length; i++)
-        {
-            var t = traysAll[i];
-            if (t.seatIndex1Based > 0) continue;
-
-            int free = FindFirstFreeSeat(used);
-            if (free == 0) break;
-            t.seatIndex1Based = free;
-            used[free] = true;
-            Debug.Log("[TurnManagerNet] Auto-seated player at Seat " + free);
-        }
-    }
-
-    private int FindFirstFreeSeat(bool[] used)
-    {
-        for (int s = 1; s <= 5; s++)
-            if (!used[s]) return s;
-        return 0;
-    }
-
-    // Fallback seeding: ONLY before the very first crafting phase
-    [Server]
     private void Server_SeedSeatedIfEmpty(string label)
     {
 #pragma warning disable CS0618
@@ -498,27 +449,18 @@ public class TurnManagerNet : NetworkBehaviour
         var deck = Object.FindObjectOfType<ItemDeck>();
 #pragma warning restore CS0618
 
-        if (deck == null)
-        {
-            Debug.LogError("[TurnManagerNet] No ItemDeck found in scene. Seeding will add 0 items.");
-        }
-        else if (deck.Count <= 0)
-        {
-            Debug.LogError("[TurnManagerNet] ItemDeck has 0 entries. Populate items.");
-        }
-
         if (traysAll == null || traysAll.Length == 0) return;
 
         for (int i = 0; i < traysAll.Length; i++)
         {
             var t = traysAll[i];
             if (t == null) continue;
-            if (t.seatIndex1Based <= 0) continue; // only seated players
+            if (t.seatIndex1Based <= 0) continue;
 
             var id = t.GetComponent<NetworkIdentity>();
             if (id == null) continue;
             if (seededThisCycle.Contains(id.netId)) continue;
-            if (t.inventory.Count > 0) continue; // ONLY seed those who have 0
+            if (t.inventory.Count > 0) continue;
 
             int added = t.Server_AddSeveralToInventoryClamped(initialDraw);
             seededThisCycle.Add(id.netId);
@@ -527,12 +469,9 @@ public class TurnManagerNet : NetworkBehaviour
         }
     }
 
-    // Per-turn draw: ONLY from the second crafting phase and onward
     [Server]
     private void Server_DrawAtCraftStartForAll(string label)
     {
-        if (drawAfterTurn <= 0) return;
-
 #pragma warning disable CS0618
         var traysAll = GameObject.FindObjectsOfType<PlayerItemTrays>();
 #pragma warning restore CS0618
@@ -542,7 +481,7 @@ public class TurnManagerNet : NetworkBehaviour
         {
             var t = traysAll[i];
             if (t == null) continue;
-            if (t.seatIndex1Based <= 0) continue; // only seated players
+            if (t.seatIndex1Based <= 0) continue;
 
             var id = t.GetComponent<NetworkIdentity>();
             if (id == null) continue;
@@ -552,8 +491,7 @@ public class TurnManagerNet : NetworkBehaviour
             if (added > 0)
             {
                 Debug.Log("[TurnManagerNet] Draw " + label + ": Seat " + t.seatIndex1Based +
-                          " netId=" + id.netId + " added=" + added +
-                          " (drawAfterTurn=" + drawAfterTurn + ")");
+                          " netId=" + id.netId + " added=" + added + " (drawAfterTurn=" + drawAfterTurn + ")");
             }
         }
     }
@@ -593,20 +531,15 @@ public class TurnManagerNet : NetworkBehaviour
 #pragma warning disable CS0618
         var traysAll = GameObject.FindObjectsOfType<PlayerItemTrays>();
 #pragma warning restore CS0618
-
         Dictionary<int, PlayerItemTrays> bySeat = new Dictionary<int, PlayerItemTrays>();
-
         for (int i = 0; i < traysAll.Length; i++)
         {
             var t = traysAll[i];
             if (t.seatIndex1Based <= 0) continue;
-
             var id = t.GetComponent<NetworkIdentity>();
             if (id == null) continue;
             if (IsEliminated(id.netId)) continue;
-
-            if (!bySeat.ContainsKey(t.seatIndex1Based))
-                bySeat[t.seatIndex1Based] = t;
+            if (!bySeat.ContainsKey(t.seatIndex1Based)) bySeat[t.seatIndex1Based] = t;
         }
 
         var result = new List<PlayerItemTrays>(seatTurnOrder.Length);
@@ -614,8 +547,7 @@ public class TurnManagerNet : NetworkBehaviour
         {
             int seat = seatTurnOrder[i];
             PlayerItemTrays t;
-            if (bySeat.TryGetValue(seat, out t))
-                result.Add(t);
+            if (bySeat.TryGetValue(seat, out t)) result.Add(t);
         }
         return result;
     }
@@ -623,25 +555,7 @@ public class TurnManagerNet : NetworkBehaviour
     private PlayerItemTrays ResolveBySeat(List<PlayerItemTrays> order, int seat)
     {
         for (int i = 0; i < order.Count; i++)
-            if (order[i].seatIndex1Based == seat)
-                return order[i];
-        return null;
-    }
-
-    [Server]
-    private NetworkIdentity FindNetIdentity(uint netId)
-    {
-        if (netId == 0) return null;
-
-#if UNITY_2023_1_OR_NEWER
-        var all = Object.FindObjectsByType<NetworkIdentity>(FindObjectsSortMode.None);
-#else
-#pragma warning disable CS0618
-        var all = GameObject.FindObjectsOfType<NetworkIdentity>();
-#pragma warning restore CS0618
-#endif
-        for (int i = 0; i < all.Length; i++)
-            if (all[i].netId == netId) return all[i];
+            if (order[i].seatIndex1Based == seat) return order[i];
         return null;
     }
 }

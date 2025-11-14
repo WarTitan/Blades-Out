@@ -4736,6 +4736,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
       insertIndex: -1
       addedObject: {fileID: -538849548442801044}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -2955240250869831491}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -621762837652521810}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -5191089134245537059}
   m_SourcePrefab: {fileID: 100100000, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
 --- !u!1 &3784944211829141594 stripped
 GameObject:
@@ -4972,6 +4981,9 @@ MonoBehaviour:
   crosshairRoot: {fileID: 3490693020670742134}
   autoFindUnderPlayerCamera: 1
   crosshairObjectName: Crosshair
+  hideInLobby: 1
+  hideDuringDarts: 1
+  debugLogs: 0
 --- !u!114 &7611691601451606183
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5108,6 +5120,7 @@ MonoBehaviour:
   dragHeightOffset: 0.02
   heightAnimDuration: 0.12
   hoverScaleMultiplier: 1.12
+  dropPhaseBufferSeconds: 0.12
   drawDebugRay: 1
 --- !u!114 &4708702899404729097
 MonoBehaviour:
@@ -5156,6 +5169,79 @@ MonoBehaviour:
   syncInterval: 0
   postLobbyDelay: 0.2
   ignoreLobbyForTesting: 0
+--- !u!114 &-2955240250869831491
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3784944211829141594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd132b8aa668e774a83c1604b1496d65, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DartsMinigameHotkey
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  onlyInLobby: 1
+--- !u!114 &-621762837652521810
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3784944211829141594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9477d12cfaf528146846f7692cfc70e7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DartsAimer
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  redXSprite: {fileID: 579369002, guid: dfd5ac3489b77c7469276b0a183b9b92, type: 3}
+  sizePixels: 100
+  spinDegreesPerSec: 260
+  initialAngleDeg: 0
+  aimRadiusPixels: 50
+  aimAngleOffsetDeg: 45
+  centerOffsetPixels: {x: -5, y: -25}
+  debugLogs: 0
+--- !u!114 &-5191089134245537059
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3784944211829141594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c90003d05d4b8ff468afabc962f44477, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerDartsShooter
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  cameraController: {fileID: 8027732371095978563}
+  aimer: {fileID: -621762837652521810}
+  dartPrefab: {fileID: 6971991209537554564, guid: 547b040bcabdba04daaaddb4677f6826, type: 3}
+  dartSpeed: 17
+  holsterForward: 1
+  holsterRight: 0.33
+  holsterUp: -0.18
+  holsterSpinDegPerSec: 60
+  modelForward: 1
+  extraModelEulerOffset: {x: 0, y: 0, z: 0}
+  tipInset: 0.01
+  destroyAfterStickSeconds: 500
+  slideInStartOffset: {x: 0.9, y: -0.6, z: 0.4}
+  slideInDuration: 0.35
+  useArcFlight: 1
+  arcHeightPerMeter: 0.15
+  minArcHeight: 0.25
+  arcDurationScale: 1
+  arcUseWorldUp: 1
 --- !u!4 &4597333103463066336 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: d1e91f4e741f14d448e0238ba47bc964, type: 3}
