@@ -9225,13 +9225,10 @@ MonoBehaviour:
   boardIndex1Based: 5
   label: {fileID: 228413932}
   uiLabelLegacy: {fileID: 0}
+  autoBindOwnerBySeat: 1
   ownerNameNet: {fileID: 0}
   ownerIdentity: {fileID: 0}
-  autoBindOwnerBySeat: 1
-  bindByNearestIfSeatFails: 1
-  boardAnchorForProximity: {fileID: 0}
   retryUntilBound: 1
-  fallbackName: Player
   debugLogs: 0
 --- !u!1001 &298070128
 PrefabInstance:
@@ -19361,7 +19358,8 @@ MonoBehaviour:
   playerPrefab: {fileID: 3784944211829141594, guid: ea41e926605160147b7f3a480f1de9cf, type: 3}
   autoCreatePlayer: 1
   playerSpawnMethod: 0
-  spawnPrefabs: []
+  spawnPrefabs:
+  - {fileID: 2309882827748022449, guid: 67325c2d92832bd43aa1d0b5ce50fd3d, type: 3}
   exceptionsDisconnect: 1
   snapshotSettings:
     bufferTimeMultiplier: 2
@@ -28868,13 +28866,10 @@ MonoBehaviour:
   boardIndex1Based: 4
   label: {fileID: 1496162067}
   uiLabelLegacy: {fileID: 0}
+  autoBindOwnerBySeat: 1
   ownerNameNet: {fileID: 0}
   ownerIdentity: {fileID: 0}
-  autoBindOwnerBySeat: 1
-  bindByNearestIfSeatFails: 1
-  boardAnchorForProximity: {fileID: 0}
   retryUntilBound: 1
-  fallbackName: Player
   debugLogs: 0
 --- !u!1001 &942794262
 PrefabInstance:
@@ -29568,13 +29563,10 @@ MonoBehaviour:
   boardIndex1Based: 3
   label: {fileID: 129025207}
   uiLabelLegacy: {fileID: 0}
+  autoBindOwnerBySeat: 1
   ownerNameNet: {fileID: 0}
   ownerIdentity: {fileID: 0}
-  autoBindOwnerBySeat: 1
-  bindByNearestIfSeatFails: 1
-  boardAnchorForProximity: {fileID: 0}
   retryUntilBound: 1
-  fallbackName: Player
   debugLogs: 0
 --- !u!1001 &961925847
 PrefabInstance:
@@ -42209,6 +42201,11 @@ MonoBehaviour:
   requireExactFinish: 1
   delayScoreUntilImpact: 1
   serverDartSpeed: 40
+  dartProjectilePrefab: {fileID: 2309882827748022449, guid: 67325c2d92832bd43aa1d0b5ce50fd3d, type: 3}
+  projArcHeight: 0.15
+  projSpinSpeed: 540
+  projStickDepth: 0.02
+  projLifeAfterStick: 8
   debugLogs: 1
   autoLearnLayerFromFallback: 1
   drawDebugRay: 1
@@ -48802,13 +48799,10 @@ MonoBehaviour:
   boardIndex1Based: 2
   label: {fileID: 872801727}
   uiLabelLegacy: {fileID: 0}
+  autoBindOwnerBySeat: 1
   ownerNameNet: {fileID: 0}
   ownerIdentity: {fileID: 0}
-  autoBindOwnerBySeat: 1
-  bindByNearestIfSeatFails: 1
-  boardAnchorForProximity: {fileID: 0}
   retryUntilBound: 1
-  fallbackName: Player
   debugLogs: 0
 --- !u!1001 &1530308519
 PrefabInstance:
@@ -54211,13 +54205,10 @@ MonoBehaviour:
   boardIndex1Based: 1
   label: {fileID: 677515552}
   uiLabelLegacy: {fileID: 0}
+  autoBindOwnerBySeat: 1
   ownerNameNet: {fileID: 0}
   ownerIdentity: {fileID: 0}
-  autoBindOwnerBySeat: 1
-  bindByNearestIfSeatFails: 1
-  boardAnchorForProximity: {fileID: 0}
   retryUntilBound: 1
-  fallbackName: Player
   debugLogs: 0
 --- !u!64 &1732055663
 MeshCollider:

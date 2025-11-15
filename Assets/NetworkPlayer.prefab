@@ -5225,7 +5225,7 @@ MonoBehaviour:
   syncInterval: 0
   cameraController: {fileID: 8027732371095978563}
   aimer: {fileID: -621762837652521810}
-  dartPrefab: {fileID: 6971991209537554564, guid: 547b040bcabdba04daaaddb4677f6826, type: 3}
+  dartPrefab: {fileID: 2309882827748022449, guid: 67325c2d92832bd43aa1d0b5ce50fd3d, type: 3}
   dartSpeed: 17
   holsterForward: 1
   holsterRight: 0.33

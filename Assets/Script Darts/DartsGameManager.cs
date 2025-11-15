@@ -1,7 +1,6 @@
 // FILE: DartsGameManager.cs
-// Scores via mask first (EncodedRed/Palette), then optional legacy hitbox fallback.
-// Exact-finish rule: if val > current score, ignore (no change). You must hit exact to finish.
-// Ignores 0/implausible values and invalid board indexes.
+// Spawns a networked DartsProjectile so ALL players see the dart fly and stick.
+// Still uses your mask scorer / hitboxes and exact-finish rule.
 
 using System.Collections;
 using Mirror;
@@ -19,11 +18,18 @@ public class DartsGameManager : NetworkBehaviour
     [Header("Rules")]
     public int startingScore = 501;
     public float rayMaxDistance = 100f;
-    public bool requireExactFinish = true; // NEW
+    public bool requireExactFinish = true;
 
-    [Header("Landing Delay")]
+    [Header("Landing Delay / Timing")]
     public bool delayScoreUntilImpact = true;
     public float serverDartSpeed = 40f;
+
+    [Header("Projectile Visuals")]
+    public GameObject dartProjectilePrefab;   // assign a NetworkIdentity prefab
+    public float projArcHeight = 0.15f;
+    public float projSpinSpeed = 540f;
+    public float projStickDepth = 0.02f;
+    public float projLifeAfterStick = 8f;
 
     [Header("Debug")]
     public bool debugLogs = true;
@@ -114,11 +120,6 @@ public class DartsGameManager : NetworkBehaviour
             }
             else
             {
-                if (debugLogs) Debug.Log("[Darts] No DartsBoardMaskScorer in parents of " + hit.collider.name);
-            }
-
-            if (val <= 0)
-            {
                 var hb = hit.collider.GetComponent<DartsHitbox>();
                 if (hb != null)
                 {
@@ -128,33 +129,27 @@ public class DartsGameManager : NetworkBehaviour
                 }
             }
 
-            if (!IsPlausibleScore(val))
-            {
-                if (debugLogs) Debug.Log("[Darts] Ignored score=" + val + " from '" + hit.collider.name + "' (edge/outside/invalid).");
-                return;
-            }
-
-            if (boardIndex < 1 || boardIndex > 5)
-            {
-                if (debugLogs) Debug.Log("[Darts] Ignored: invalid board index " + boardIndex + ". Check boardIndex1Based on each board.");
-                return;
-            }
-
+            // Spawn networked projectile so everyone sees it
             float distance = hit.distance;
+            float travel = Mathf.Max(0.05f, distance / Mathf.Max(0.01f, serverDartSpeed));
+            Server_SpawnProjectile(ray.origin, hit.point, hit.normal, travel);
 
-            if (delayScoreUntilImpact && serverDartSpeed > 0.01f)
+            // Validate score
+            if (!IsPlausibleScore(val) || boardIndex < 1 || boardIndex > 5)
             {
-                float delay = Mathf.Max(0f, distance / serverDartSpeed);
-                if (debugLogs)
-                    Debug.Log("[Darts] SCHEDULE seat " + boardIndex + " val=" + val +
-                              " dist=" + distance.ToString("F2") +
-                              " delay=" + delay.ToString("F2") +
-                              " netId=" + shooterNetId);
+                if (debugLogs) Debug.Log("[Darts] Ignored score=" + val + " board=" + boardIndex + " (invalid or outside).");
+                return;
+            }
+
+            if (delayScoreUntilImpact)
+            {
+                float delay = travel;
+                if (debugLogs) Debug.Log("[Darts] SCHEDULE seat " + boardIndex + " val=" + val + " delay=" + delay.ToString("F2"));
                 StartCoroutine(Server_ApplyScoreAfterDelay(boardIndex, val, delay));
             }
             else
             {
-                Server_ApplyScoreNow(boardIndex, val, shooterNetId, hit.collider);
+                Server_ApplyScoreNow(boardIndex, val, 0, hit.collider);
             }
         }
         else
@@ -184,6 +179,27 @@ public class DartsGameManager : NetworkBehaviour
     }
 
     [Server]
+    private void Server_SpawnProjectile(Vector3 start, Vector3 end, Vector3 normal, float travel)
+    {
+        if (dartProjectilePrefab == null) return;
+        var go = Instantiate(dartProjectilePrefab, start, Quaternion.identity);
+        var proj = go.GetComponent<DartsProjectile>();
+        if (proj != null)
+        {
+            proj.startPos = start;
+            proj.endPos = end;
+            proj.hitNormal = (normal.sqrMagnitude > 0.0001f) ? normal.normalized : Vector3.forward;
+            proj.startTime = NetworkTime.time;
+            proj.travelTime = Mathf.Max(0.05f, travel);
+            proj.arcHeight = Mathf.Max(0.01f, projArcHeight);
+            proj.spinSpeed = projSpinSpeed;
+            proj.stickDepth = Mathf.Max(0f, projStickDepth);
+            proj.lifeAfterStick = Mathf.Max(0f, projLifeAfterStick);
+        }
+        NetworkServer.Spawn(go);
+    }
+
+    [Server]
     IEnumerator Server_ApplyScoreAfterDelay(int boardIndex1Based, int val, float delay)
     {
         if (delay > 0f) yield return new WaitForSeconds(delay);
@@ -196,11 +212,10 @@ public class DartsGameManager : NetworkBehaviour
         int idx = Mathf.Clamp(boardIndex1Based - 1, 0, 4);
         int before = scores[idx];
 
-        // Exact finish rule
         if (requireExactFinish && val > before)
         {
             if (debugLogs)
-                Debug.Log("[Darts] Exact finish rule: val " + val + " > current " + before + " -> no change.");
+                Debug.Log("[Darts] Exact finish: val " + val + " > current " + before + " -> no change.");
             return;
         }
 
